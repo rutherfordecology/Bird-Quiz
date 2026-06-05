@@ -655,11 +655,11 @@ async function saveToLibrary() {
     const spD = await spR.json();
     const photoTaxon = spD.results?.[0]?.taxon?.name || null;
 
-    // 5. Add entry
+    // 5. Add entry (ASCII only to avoid encoding issues on GitHub Pages)
     data.quizzes.push({
-      name: `WhatDatBird? — ${PLACE_NAME}`,
+      name: `WhatDatBird? - ${PLACE_NAME}`,
       continent, country,
-      description: `${country}${continent !== country ? ' · ' + continent : ''}`,
+      description: `${PLACE_NAME} - ${country}${continent !== country && country !== PLACE_NAME ? ', ' + continent : ''}`,
       species: null,
       type: 'dynamic',
       url: `quiz.html?place_id=${PLACE_ID}&place_name=${encodeURIComponent(PLACE_NAME)}`,

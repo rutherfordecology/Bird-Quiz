@@ -1,10 +1,10 @@
 {
   "quizzes": [
     {
-      "name": "WhatDatBird? — Samoa",
+      "name": "WhatDatBird? - Samoa",
       "continent": "Oceania",
       "country": "Samoa",
-      "description": "Polynesia · South Pacific Ocean",
+      "description": "Polynesia - South Pacific Ocean",
       "species": 88,
       "type": "preset",
       "url": "samoa/",
@@ -13,10 +13,10 @@
       "added": "2026-06-06"
     },
     {
-      "name": "WhatDatBird? — Gisborne, NZ",
+      "name": "WhatDatBird? - Gisborne, NZ",
       "continent": "Oceania",
       "country": "New Zealand",
-      "description": "Gisborne · New Zealand",
+      "description": "Gisborne - New Zealand",
       "species": null,
       "type": "dynamic",
       "url": "quiz.html?place_id=11508&place_name=Gisborne%2C%20NZ",
