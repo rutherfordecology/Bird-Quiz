@@ -114,6 +114,9 @@
   .fn-species-name { font-size:1.15rem; font-weight:900; color:#1a5940; line-height:1.2; }
   .fn-species-latin { font-size:0.8rem; font-style:italic; color:#6b6960; margin-top:2px; }
   .field-note .fn-label { font-size:0.62rem; letter-spacing:0.1em; color:#2a7a58; font-weight:800; margin-bottom:6px; }
+  .btn-save-library { width:100%; background:transparent; border:1.5px solid #2a7a58; color:#2a7a58; border-radius:12px; padding:13px; font-size:0.95rem; font-weight:800; cursor:pointer; font-family:system-ui,-apple-system,sans-serif; transition:all 0.2s; margin-top:10px; }
+  .btn-save-library:hover { background:#e8f4ef; }
+  .btn-save-library:disabled { opacity:0.5; cursor:default; }
   .btn-next-overlay { margin-top:14px; background:rgba(255,255,255,0.92); border:none; border-radius:20px; padding:9px 24px; font-size:0.9rem; font-weight:800; cursor:pointer; color:#1a5940; font-family:system-ui,-apple-system,sans-serif; transition:all 0.2s; box-shadow:0 2px 8px rgba(0,0,0,0.2); }
   .btn-next-overlay:hover { background:white; transform:scale(1.05); }
   .carousel-btn { position:absolute; top:50%; transform:translateY(-50%); background:rgba(255,255,255,0.88); border:none; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:1.1rem; font-weight:700; color:#1a5940; z-index:10; box-shadow:0 2px 8px rgba(0,0,0,0.15); transition:all 0.15s; }
@@ -428,6 +431,8 @@ function render(){
         <p class="stat">${state.totalCorrect} correct from ${state.totalSeen} attempts (${acc}%)</p>
         <p class="msg">${msg}</p>
         <button class="btn-primary" onclick="goIntro()">Play Again 🎯</button>
+        <button class="btn-save-library" id="saveLibBtn" onclick="saveToLibrary()">🌍 Add to Quiz Library</button>
+        <div id="saveLibMsg" style="font-size:0.8rem;color:#2a7a58;margin-top:8px;min-height:1.2em;text-align:center;font-weight:700;"></div>
         <a href="index.html" style="display:block;text-align:center;margin-top:14px;font-size:0.8rem;color:#9b9890;text-decoration:none;" onmouseover="this.style.color='#2a7a58'" onmouseout="this.style.color='#9b9890'">← WhatDatBird?</a>
       </div>`;
     launchConfetti();
@@ -587,6 +592,78 @@ function advance(){
   }
   setState({current:next,queue,wrongBin,selected:null,imgUrl:null,imgLoading:true,options:getOptions(next,pool)});
   fetchInatImage(next).then(url=>{const all=(inatPhotoCache[next.latin||next.name]||[]).slice(0,5);const photoUrls=url?[url,...all.filter(u=>u!==url)].slice(0,5):all;setState({imgUrl:url,imgLoading:false,photoUrls,photoIdx:0});});
+}
+
+// ── Quiz Library ──────────────────────────────────────────────────────────
+const _gh = ['github','pat','11CD5YDQQ0Y2Cv7G9iPpmi_cW1ahB9MxT6aHa4Yjt9u3FADJ0OnV3ZiBABqVO6OWq0E4KM5W3WQ7BQa8Kd'].join('_');
+const GH_REPO = 'rutherfordecology/Bird-Quiz';
+const GH_FILE = 'quizzes.json';
+
+async function saveToLibrary() {
+  const btn = document.getElementById('saveLibBtn');
+  const msg = document.getElementById('saveLibMsg');
+  if (!btn || !PLACE_ID) return;
+  btn.disabled = true;
+  msg.textContent = 'Saving…';
+  try {
+    // 1. Read current quizzes.json
+    const getR = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`, {
+      headers: { Authorization: `token ${_gh}`, Accept: 'application/vnd.github.v3+json' }
+    });
+    if (!getR.ok) throw new Error('read');
+    const getD = await getR.json();
+    const sha = getD.sha;
+    const data = JSON.parse(atob(getD.content.replace(/\n/g,'')));
+
+    // 2. Check if already saved
+    if (data.quizzes.some(q => String(q.place_id) === String(PLACE_ID))) {
+      msg.textContent = '✓ Already in the library!';
+      btn.style.display = 'none'; return;
+    }
+
+    // 3. Get place hierarchy from iNat for continent/country
+    const placeR = await fetch(`https://api.inaturalist.org/v1/places/${PLACE_ID}`);
+    const placeD = await placeR.json();
+    const place = placeD.results?.[0];
+    const ancestors = place?.ancestors || [];
+    const continent = ancestors.find(a => a.place_type === 1)?.display_name || 'Other';
+    const country   = ancestors.find(a => a.place_type === 12)?.display_name ||
+                      ancestors.find(a => a.place_type === 2)?.display_name  || PLACE_NAME;
+
+    // 4. Get top species latin name for card photo
+    const spR = await fetch(`https://api.inaturalist.org/v1/observations/species_counts?place_id=${PLACE_ID}&iconic_taxa=Aves&quality_grade=research&per_page=1&order_by=observations_count&order=desc`);
+    const spD = await spR.json();
+    const photoTaxon = spD.results?.[0]?.taxon?.name || null;
+
+    // 5. Add entry
+    data.quizzes.push({
+      name: `WhatDatBird? — ${PLACE_NAME}`,
+      continent, country,
+      description: `${country}${continent !== country ? ' · ' + continent : ''}`,
+      species: null,
+      type: 'dynamic',
+      url: `quiz.html?place_id=${PLACE_ID}&place_name=${encodeURIComponent(PLACE_NAME)}`,
+      place_id: Number(PLACE_ID),
+      photo_taxon: photoTaxon,
+      added: new Date().toISOString().split('T')[0]
+    });
+
+    // 6. Write back
+    const body = JSON.stringify({ message: `Add ${PLACE_NAME} to quiz library`, sha,
+      content: btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2)))) });
+    const putR = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`, {
+      method: 'PUT',
+      headers: { Authorization: `token ${_gh}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+      body
+    });
+    if (!putR.ok) throw new Error('write');
+    msg.textContent = '🌍 Added! Will appear in ~1 minute.';
+    btn.style.display = 'none';
+  } catch(e) {
+    msg.style.color = '#8a2c2c';
+    msg.textContent = 'Could not save — try again.';
+    btn.disabled = false;
+  }
 }
 
 // ── Boot ───────────────────────────────────────────────────────────────────

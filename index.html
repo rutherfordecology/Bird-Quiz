@@ -97,7 +97,7 @@
   <div class="topbar-left">
     <span style="font-size:1.3rem">🦜</span>
     <span class="topbar-title">WhatDatBird?</span>
-    <span style="font-size:0.7rem;font-weight:400;color:rgba(255,255,255,0.35);letter-spacing:0.04em;">v2.2</span>
+    <span style="font-size:0.7rem;font-weight:400;color:rgba(255,255,255,0.35);letter-spacing:0.04em;">v2.5</span>
   </div>
   <span class="topbar-re">by <a href="https://sites.google.com/view/rutherford-ecology/home" target="_blank"><strong>Rutherford</strong> ecology</a></span>
 </div>
@@ -114,31 +114,7 @@
   <div class="search-drop" id="searchDrop"></div>
 </div>
 
-<div class="section-label">Preset quizzes</div>
-<div class="cards-grid">
-
-  <a class="place-card" href="samoa/">
-    <div class="card-img" id="samoaImg"><div class="card-img-ph">🌺</div></div>
-    <div class="card-body">
-      <div class="card-name">WhatDatBird? — Samoa</div>
-      <div class="card-sub">Polynesia · South Pacific Ocean</div>
-      <div class="card-meta">
-        <span class="card-count">88 species</span>
-        <span class="tag tag-preset">Curated</span>
-      </div>
-    </div>
-  </a>
-
-  <div class="place-card dim">
-    <div class="card-img"><div class="card-img-ph">🌍</div></div>
-    <div class="card-body">
-      <div class="card-name" style="color:#9b9890">More coming soon</div>
-      <div class="card-sub">Search above to quiz yourself on birds from any location right now</div>
-      <div class="card-meta"><span class="tag tag-dynamic">Dynamic</span></div>
-    </div>
-  </div>
-
-</div>
+<div id="quizLibrary"><div class="section-label" style="max-width:640px;margin:0 auto 14px;padding:0 20px;">Loading quiz library…</div></div>
 
 <footer>
   Photos from <a href="https://www.inaturalist.org" target="_blank">iNaturalist</a> · CC licensed ·
@@ -146,14 +122,86 @@
 </footer>
 
 <script>
-// Load Samoa card header photo
-fetch('https://api.inaturalist.org/v1/observations?taxon_name=Tooth-billed+Pigeon&photos=true&per_page=5&quality_grade=research&order_by=faves&iconic_taxa=Aves')
-  .then(r => r.json()).then(d => {
-    const url = d.results?.[0]?.photos?.[0]?.url?.replace('/square.', '/medium.');
-    if (url) document.getElementById('samoaImg').innerHTML = `<img src="${url}" alt="Samoa">`;
-  }).catch(() => {});
+// ── Quiz library ───────────────────────────────────────────────────────────
+const CONTINENT_ORDER = ['Africa','Antarctica','Asia','Europe','North America','Oceania','South America','Other'];
 
-// Search
+async function loadLibrary() {
+  try {
+    const r = await fetch(`quizzes.json?_=${Date.now()}`);
+    const d = await r.json();
+    const quizzes = d.quizzes || [];
+
+    // Group by continent
+    const groups = {};
+    for (const q of quizzes) {
+      const c = q.continent || 'Other';
+      if (!groups[c]) groups[c] = [];
+      groups[c].push(q);
+    }
+
+    const lib = document.getElementById('quizLibrary');
+    let html = '';
+    const continents = CONTINENT_ORDER.filter(c => groups[c]);
+    for (const continent of continents) {
+      html += `<div class="section-label" style="max-width:640px;margin:0 auto 14px;padding:0 20px;">${continent}</div>
+               <div class="cards-grid">`;
+      for (const q of groups[continent]) {
+        const tag = q.type === 'preset'
+          ? `<span class="tag tag-preset">Curated</span>`
+          : `<span class="tag tag-dynamic">Dynamic</span>`;
+        const count = q.species ? `<span class="card-count">${q.species} species</span>` : '';
+        const imgId = `card-img-${q.place_id || q.url.replace(/\W/g,'')}`;
+        html += `<a class="place-card" href="${q.url}">
+          <div class="card-img" id="${imgId}"><div class="card-img-ph">🦜</div></div>
+          <div class="card-body">
+            <div class="card-name">${q.name}</div>
+            <div class="card-sub">${q.description}</div>
+            <div class="card-meta">${count}${tag}</div>
+          </div>
+        </a>`;
+      }
+      html += `</div>`;
+    }
+    lib.innerHTML = html;
+
+    // Load photos for each card
+    for (const q of quizzes) {
+      const imgId = `card-img-${q.place_id || q.url.replace(/\W/g,'')}`;
+      const el = document.getElementById(imgId);
+      if (!el) continue;
+      if (q.photo_taxon) {
+        loadTaxonPhoto(q.photo_taxon, el);
+      } else if (q.place_id) {
+        loadPlacePhoto(q.place_id, el);
+      }
+    }
+  } catch(e) {
+    document.getElementById('quizLibrary').innerHTML =
+      '<div class="section-label" style="max-width:640px;margin:0 auto 14px;padding:0 20px;color:#d47a7a">Could not load quiz library.</div>';
+  }
+}
+
+async function loadTaxonPhoto(taxon, el) {
+  try {
+    const r = await fetch(`https://api.inaturalist.org/v1/observations?taxon_name=${encodeURIComponent(taxon)}&photos=true&per_page=5&quality_grade=research&order_by=faves&iconic_taxa=Aves`);
+    const d = await r.json();
+    const url = d.results?.[0]?.photos?.[0]?.url?.replace('/square.','/medium.');
+    if (url) el.innerHTML = `<img src="${url}" alt="${taxon}">`;
+  } catch {}
+}
+
+async function loadPlacePhoto(placeId, el) {
+  try {
+    const r = await fetch(`https://api.inaturalist.org/v1/observations/species_counts?place_id=${placeId}&iconic_taxa=Aves&quality_grade=research&per_page=1&order_by=observations_count&order=desc`);
+    const d = await r.json();
+    const photo = d.results?.[0]?.taxon?.default_photo?.medium_url;
+    if (photo) el.innerHTML = `<img src="${photo}" alt="">`;
+  } catch {}
+}
+
+loadLibrary();
+
+// ── Search ─────────────────────────────────────────────────────────────────
 const inp = document.getElementById('searchInput');
 const drop = document.getElementById('searchDrop');
 let timer;
