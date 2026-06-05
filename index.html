@@ -504,6 +504,37 @@ async function fetchWikiImage(bird) {
 
 // ── iNaturalist images (used for Standard / Expert modes) ──────────────────
 const inatPhotoCache = {}; // bird name → array of photo URLs
+const colorVarianceCache = new Map(); // url → true (good) / false (dull)
+
+function checkColorVariance(url) {
+  if (colorVarianceCache.has(url)) return Promise.resolve(colorVarianceCache.get(url));
+  return new Promise(resolve => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    const done = (v) => { colorVarianceCache.set(url, v); resolve(v); };
+    const timer = setTimeout(() => done(true), 4000); // timeout = assume ok
+    img.onerror = () => { clearTimeout(timer); done(true); };
+    img.onload = () => {
+      clearTimeout(timer);
+      try {
+        const c = document.createElement('canvas');
+        c.width = c.height = 40;
+        const ctx = c.getContext('2d');
+        ctx.drawImage(img, 0, 0, 40, 40);
+        const d = ctx.getImageData(0, 0, 40, 40).data;
+        const n = d.length >> 2;
+        let sR = 0, sG = 0, sB = 0;
+        for (let i = 0; i < d.length; i += 4) { sR += d[i]; sG += d[i+1]; sB += d[i+2]; }
+        const mR = sR/n, mG = sG/n, mB = sB/n;
+        let v = 0;
+        for (let i = 0; i < d.length; i += 4)
+          v += (d[i]-mR)**2 + (d[i+1]-mG)**2 + (d[i+2]-mB)**2;
+        done(Math.sqrt(v / (n * 3)) > 22); // stdDev > 22 = enough colour variation
+      } catch { done(true); } // CORS blocked — assume ok
+    };
+    img.src = url;
+  });
+}
 
 async function fetchInatImage(bird) {
   const taxonName = typeof bird === 'string' ? bird : bird.name;
@@ -532,7 +563,12 @@ async function fetchInatImage(bird) {
   }
   const urls = inatPhotoCache[taxonName];
   if (!urls.length) return null;
-  return urls[Math.floor(Math.random() * urls.length)];
+  // Try up to 5 random candidates; return first with sufficient colour variance
+  const candidates = shuffle([...urls]).slice(0, 5);
+  for (const url of candidates) {
+    if (await checkColorVariance(url)) return url;
+  }
+  return candidates[0] ?? null; // fallback if all fail
 }
 
 function getPool(mode) {
