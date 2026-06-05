@@ -179,13 +179,16 @@ async function doSearch(q) {
     const results = (d.results || []).slice(0, 7);
     if (!results.length) { drop.innerHTML = '<div class="search-msg">No places found.</div>'; return; }
     drop.innerHTML = results.map(p => `
-      <div class="search-item" onmousedown="goPlace(${p.id},'${p.display_name.replace(/'/g,&quot;\\&#39;&quot;)}')">
+      <div class="search-item" data-id="${p.id}" data-name="${p.display_name.replace(/"/g,'&quot;')}">
         <span style="font-size:1.1rem">📍</span>
         <div>
           <div class="search-item-name">${p.display_name}</div>
           <div class="search-item-type">${TYPE_LABEL[p.place_type] || 'Place'}</div>
         </div>
       </div>`).join('');
+    drop.querySelectorAll('.search-item').forEach(el =>
+      el.addEventListener('mousedown', () => goPlace(el.dataset.id, el.dataset.name))
+    );
   } catch { drop.innerHTML = '<div class="search-msg">Search failed — try again.</div>'; }
 }
 
