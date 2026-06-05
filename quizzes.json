@@ -1,16 +1,28 @@
 {
   "quizzes": [
     {
-      "name": "WhatDatBird? — Samoa",
+      "name": "WhatDatBird? â Samoa",
       "continent": "Oceania",
       "country": "Samoa",
-      "description": "Polynesia · South Pacific Ocean",
+      "description": "Polynesia Â· South Pacific Ocean",
       "species": 88,
       "type": "preset",
       "url": "samoa/",
       "place_id": null,
       "photo_taxon": "Didunculus strigirostris",
       "added": "2026-06-06"
+    },
+    {
+      "name": "WhatDatBird? — Gisborne, NZ",
+      "continent": "Other",
+      "country": "Gisborne, NZ",
+      "description": "Gisborne, NZ · Other",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?place_id=11508&place_name=Gisborne%2C%20NZ",
+      "place_id": 11508,
+      "photo_taxon": "Hemiphaga novaeseelandiae",
+      "added": "2026-06-05"
     }
   ]
 }
