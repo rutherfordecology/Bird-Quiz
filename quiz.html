@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bird Quiz</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh; background: #f3f2ee;
+    font-family: system-ui, -apple-system, sans-serif;
+    color: #1c1b18; padding: 20px 16px 48px;
+    display: flex; justify-content: center; overflow-x: hidden;
+  }
+  #app { width: 100%; max-width: 500px; position: relative; }
+
+  @keyframes fadeUp   { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes fadeIn   { from{opacity:0} to{opacity:1} }
+  @keyframes pop      { 0%{transform:scale(0.7)} 60%{transform:scale(1.15)} 100%{transform:scale(1)} }
+  @keyframes wiggle   { 0%{transform:rotate(0)} 25%{transform:rotate(-8deg)} 75%{transform:rotate(8deg)} 100%{transform:rotate(0)} }
+  @keyframes floatUp  { 0%{opacity:1;transform:translateY(0) scale(1)} 100%{opacity:0;transform:translateY(-120px) scale(1.6)} }
+  @keyframes starBurst{ 0%{opacity:1;transform:translate(0,0) scale(1)} 100%{opacity:0;transform:translate(var(--tx),var(--ty)) scale(0)} }
+  @keyframes celebrate{ 0%{transform:scale(1) rotate(0)} 25%{transform:scale(1.2) rotate(-5deg)} 75%{transform:scale(1.2) rotate(5deg)} 100%{transform:scale(1) rotate(0)} }
+  @keyframes rainFall { 0%{transform:translateY(-20px) rotate(0deg);opacity:1} 100%{transform:translateY(100vh) rotate(720deg);opacity:0} }
+  @keyframes spin     { to{transform:rotate(360deg)} }
+
+  .fade { animation: fadeUp 0.4s ease both; }
+
+  /* Header */
+  .header { text-align:center; margin-bottom:24px; }
+  .header .eyebrow { font-size:0.7rem; letter-spacing:0.2em; color:#2a7a58; font-weight:800; margin-bottom:6px; }
+  .header h1 { font-size:2rem; font-weight:900; color:#1a5940; line-height:1.1; }
+  .header p { color:#9b9890; font-size:0.85rem; margin-top:4px; }
+  .header-brand { display:inline-block; background:#1a5940; border-radius:8px; padding:7px 18px; margin-top:10px; font-size:1rem; }
+  .header-brand a { text-decoration:none; color:inherit; }
+  .by-word { color:rgba(255,255,255,0.45); font-weight:300; }
+  .re-bold { color:#fff; font-weight:700; }
+  .re-light { color:rgba(255,255,255,0.55); font-weight:300; }
+
+  /* Loading */
+  .loading-wrap { text-align:center; padding:60px 20px; }
+  .spinner { width:40px; height:40px; border:3px solid #dddbd3; border-top-color:#2a7a58; border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 20px; }
+  .loading-text { color:#6b6960; font-size:0.9rem; }
+  .loading-sub { color:#9b9890; font-size:0.78rem; margin-top:6px; }
+  .error-box { background:#faf0f0; border:1.5px solid #d47a7a; border-radius:12px; padding:20px; text-align:center; }
+  .error-box p { color:#8a2c2c; font-size:0.9rem; font-weight:600; margin-bottom:12px; }
+
+  /* Mode picker */
+  .mode-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+  .mode-btn { background:#fff; border:1.5px solid #dddbd3; border-radius:12px; padding:18px 14px; cursor:pointer; text-align:center; transition:all 0.2s; }
+  .mode-btn:hover { border-color:#2a7a58; transform:translateY(-2px); box-shadow:0 4px 12px rgba(42,122,88,0.1); }
+  .mode-btn.active { border-color:#2a7a58; background:#e8f4ef; box-shadow:0 0 0 3px rgba(42,122,88,0.12); }
+  .mode-btn .mode-emoji { font-size:1.8rem; margin-bottom:6px; }
+  .mode-btn .mode-title { font-size:1rem; font-weight:800; color:#1c1b18; margin-bottom:4px; }
+  .mode-btn .mode-count { font-size:0.7rem; color:#2a7a58; font-weight:700; letter-spacing:0.05em; margin-bottom:6px; }
+  .mode-btn .mode-desc { font-size:0.72rem; color:#6b6960; line-height:1.4; }
+
+  /* Info box */
+  .info-box { background:#e8f4ef; border:1.5px solid #6dba9a; border-radius:12px; padding:16px 18px; margin-bottom:16px; }
+  .info-box p { color:#1a5940; font-size:0.85rem; line-height:1.6; }
+
+  /* Buttons */
+  .btn-primary { width:100%; background:#1a5940; border:none; color:white; border-radius:12px; padding:16px; font-size:1.1rem; font-weight:800; cursor:pointer; font-family:system-ui,-apple-system,sans-serif; transition:all 0.2s; box-shadow:0 4px 12px rgba(26,89,64,0.25); }
+  .btn-primary:hover { background:#2a7a58; transform:translateY(-2px); }
+  .btn-secondary { width:100%; background:transparent; border:1.5px solid #dddbd3; color:#2a7a58; border-radius:12px; padding:13px; font-size:0.95rem; font-weight:800; cursor:pointer; font-family:system-ui,-apple-system,sans-serif; transition:all 0.2s; margin-top:10px; }
+  .btn-secondary:hover { border-color:#2a7a58; background:#e8f4ef; }
+
+  /* Badges */
+  .badges { display:flex; gap:6px; flex-wrap:wrap; }
+  .badge { font-size:0.62rem; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; padding:3px 8px; border-radius:20px; }
+  .badge-blue { background:#e8f0f7; color:#2c5f8a; border:1.5px solid #7aaed4; }
+
+  /* Quiz meta */
+  .meta-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+  .q-label { font-size:0.8rem; font-weight:700; color:#9b9890; }
+  .mode-pill { display:inline-block; font-size:0.58rem; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; padding:2px 8px; border-radius:20px; margin-left:6px; }
+  .pill-easy { background:#e8f0f7; color:#2c5f8a; border:1px solid #7aaed4; }
+  .pill-hard { background:#faf2e0; color:#8a6020; border:1px solid #d4a84b; }
+
+  /* Streak */
+  .streak-row { display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+  .streak-dots { display:flex; gap:5px; }
+  .dot { width:24px; height:24px; border-radius:50%; border:2px solid #dddbd3; background:#eeede8; display:flex; align-items:center; justify-content:center; font-size:0.75rem; transition:all 0.3s; }
+  .dot.correct { background:#2a7a58; border-color:#6dba9a; box-shadow:0 0 10px rgba(42,122,88,0.35); animation:pop 0.4s ease; }
+  .dot.wrong { background:#8a2c2c; border-color:#d47a7a; animation:wiggle 0.4s ease; }
+  .streak-label { font-size:0.78rem; font-weight:700; color:#9b9890; white-space:nowrap; }
+
+  /* Image */
+  .img-box { width:100%; border-radius:12px; overflow:hidden; background:#eeede8; display:flex; align-items:center; justify-content:center; border:1.5px solid #dddbd3; position:relative; margin-bottom:14px; min-height:160px; }
+  .img-box img { width:100%; display:block; object-fit:cover; }
+  .img-placeholder { color:#9b9890; text-align:center; padding:20px; }
+  .img-placeholder .icon { font-size:3rem; margin-bottom:8px; }
+  .img-placeholder span { font-size:0.8rem; font-style:italic; display:block; }
+  .img-overlay { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:3.5rem; backdrop-filter:blur(3px); animation:fadeIn 0.25s ease; }
+  .overlay-correct { background:rgba(26,89,64,0.75); }
+  .overlay-wrong { background:rgba(138,44,44,0.75); }
+  .overlay-msg { font-size:1.1rem; font-weight:800; color:white; margin-top:8px; text-shadow:0 2px 8px rgba(0,0,0,0.3); }
+
+  /* Options */
+  .question-text { color:#6b6960; font-size:0.9rem; font-weight:700; text-align:center; margin-bottom:12px; letter-spacing:0.03em; }
+  .options { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+  .option { background:#fff; border:1.5px solid #dddbd3; color:#1c1b18; border-radius:10px; padding:14px 10px; font-size:0.8rem; font-weight:700; font-family:system-ui,-apple-system,sans-serif; cursor:pointer; transition:all 0.15s; text-align:center; line-height:1.3; display:flex; flex-direction:column; align-items:center; gap:3px; }
+  .opt-english { font-size:0.82rem; font-weight:700; line-height:1.3; }
+  .opt-latin { font-size:0.66rem; font-weight:400; opacity:0.5; font-style:italic; line-height:1.2; }
+  .option:not(:disabled):hover { border-color:#2a7a58; background:#e8f4ef; }
+  .option:disabled { cursor:default; }
+  .option.correct { background:#e8f4ef; border-color:#2a7a58; color:#1a5940; animation:pop 0.4s ease; }
+  .option.wrong { background:#faf0f0; border-color:#d47a7a; color:#8a2c2c; animation:wiggle 0.3s ease; }
+  .option.dimmed { background:#f3f2ee; color:#c8c6bc; border-color:#eeede8; }
+
+  /* Field note */
+  .field-note { background:#e8f4ef; border:1.5px solid #6dba9a; border-radius:12px; padding:14px 16px; animation:fadeUp 0.4s ease both; }
+  .field-note .fn-label { font-size:0.62rem; letter-spacing:0.1em; color:#2a7a58; font-weight:800; margin-bottom:6px; }
+  .field-note .fn-latin { font-size:0.8rem; font-style:italic; color:#6b6960; margin-bottom:6px; }
+  .field-note .fn-main { color:#1a5940; font-size:0.85rem; line-height:1.6; }
+  .field-note .fn-count { font-size:0.75rem; color:#6b6960; margin-top:6px; }
+  .wrong-note { background:#faf0f0; border:1.5px solid #d47a7a; border-radius:10px; padding:10px 14px; margin-top:8px; }
+  .wrong-note p { color:#8a2c2c; font-size:0.8rem; font-weight:600; }
+  .inat-credit a { color:#9b9890; font-size:0.72rem; }
+
+  /* Encouragement */
+  #encourage { position:fixed; top:30%; left:50%; transform:translateX(-50%); font-size:1.6rem; font-weight:900; color:#1a5940; text-shadow:0 2px 8px rgba(255,255,255,0.9); pointer-events:none; z-index:100; animation:floatUp 1.2s ease forwards; white-space:nowrap; }
+
+  /* Confetti */
+  .confetti-piece { position:fixed; top:-20px; border-radius:3px; animation:rainFall linear forwards; pointer-events:none; z-index:200; }
+  .star-burst { position:fixed; font-size:1.4rem; pointer-events:none; z-index:150; animation:starBurst 0.8s ease forwards; }
+
+  /* Result */
+  .result { text-align:center; animation:fadeUp 0.5s ease both; }
+  .result .trophy { font-size:5rem; margin:16px 0; animation:celebrate 0.6s ease; display:block; }
+  .result h2 { font-size:2rem; font-weight:900; color:#1a5940; margin-bottom:8px; }
+  .result .stat { color:#9b9890; font-size:0.9rem; margin-bottom:4px; font-weight:600; }
+  .result .msg { color:#2a7a58; font-size:1rem; margin:12px 0 28px; font-weight:700; line-height:1.5; }
+  .star-row { font-size:2rem; margin:12px 0; letter-spacing:4px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const params   = new URLSearchParams(window.location.search);
+const PLACE_ID = params.get('place_id');
+const PLACE_NAME = params.get('place_name') || 'Unknown Place';
+const STREAK_TARGET = 10;
+const CONFETTI_COLORS = ['#1a5940','#2a7a58','#6dba9a','#d4a84b','#2c5f8a','#7aaed4','#8a6020','#d47a7a'];
+
+const CORRECT_MSGS = ["⭐ Amazing!","🌟 Brilliant!","🎉 Yes!","🔥 On fire!","💫 Super!","🦜 Spot on!","✨ Nailed it!","🎯 Perfect!","🥳 Woohoo!","💥 Awesome!"];
+const STREAK_MSGS  = {3:"🔥 3 in a row!", 5:"⚡ 5 streak — flying!", 7:"🌟 Lucky 7!", 9:"😱 One more!!!"};
+
+// ── iNat image fetching (quality-filtered) ────────────────────────────────
+const inatPhotoCache = {};
+const colorVarianceCache = new Map();
+
+function checkColorVariance(url) {
+  if (colorVarianceCache.has(url)) return Promise.resolve(colorVarianceCache.get(url));
+  return new Promise(resolve => {
+    const img = new Image(); img.crossOrigin = 'anonymous';
+    const done = v => { colorVarianceCache.set(url, v); resolve(v); };
+    const timer = setTimeout(() => done(true), 4000);
+    img.onerror = () => { clearTimeout(timer); done(true); };
+    img.onload = () => {
+      clearTimeout(timer);
+      try {
+        const S = 40, c = document.createElement('canvas');
+        c.width = c.height = S;
+        const ctx = c.getContext('2d');
+        ctx.drawImage(img, 0, 0, S, S);
+        const d = ctx.getImageData(0, 0, S, S).data, n = d.length >> 2;
+        let sR=0,sG=0,sB=0;
+        for(let i=0;i<d.length;i+=4){sR+=d[i];sG+=d[i+1];sB+=d[i+2];}
+        const mR=sR/n,mG=sG/n,mB=sB/n;
+        let v=0;
+        for(let i=0;i<d.length;i+=4) v+=(d[i]-mR)**2+(d[i+1]-mG)**2+(d[i+2]-mB)**2;
+        const stdDev = Math.sqrt(v/(n*3));
+        const lo=Math.floor(S*0.3),hi=Math.floor(S*0.7);
+        let cR=0,cG=0,cB=0,cN=0,eR=0,eG=0,eB=0,eN=0;
+        for(let y=0;y<S;y++) for(let x=0;x<S;x++){
+          const i=(y*S+x)*4;
+          if(x>=lo&&x<hi&&y>=lo&&y<hi){cR+=d[i];cG+=d[i+1];cB+=d[i+2];cN++;}
+          else{eR+=d[i];eG+=d[i+1];eB+=d[i+2];eN++;}
+        }
+        const ced=Math.sqrt(((cR/cN)-(eR/eN))**2+((cG/cN)-(eG/eN))**2+((cB/cN)-(eB/eN))**2);
+        done(stdDev>35||(stdDev>20&&ced>8));
+      } catch { done(true); }
+    };
+    img.src = url;
+  });
+}
+
+function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+async function fetchInatImage(bird) {
+  const name = typeof bird === 'string' ? bird : bird.name;
+  if (!inatPhotoCache[name]) {
+    try {
+      const r = await fetch(`https://api.inaturalist.org/v1/observations?taxon_name=${encodeURIComponent(name)}&photos=true&per_page=30&quality_grade=research&order_by=faves&iconic_taxa=Aves`);
+      if (!r.ok) { inatPhotoCache[name] = []; }
+      else {
+        const d = await r.json();
+        const five=[],four=[],all=[];
+        for(const obs of(d.results||[])){
+          const faves=obs.faves_count||0;
+          for(const p of(obs.photos||[])){
+            const src=p.url?.replace('/square.','/medium.');
+            if(src){all.push(src);if(faves>=3)five.push(src);else if(faves>=1)four.push(src);}
+          }
+        }
+        inatPhotoCache[name]=five.length?five:four.length?four:all;
+      }
+    } catch { inatPhotoCache[name]=[]; }
+  }
+  const urls = inatPhotoCache[name];
+  if (!urls.length) return bird.defaultPhoto || null;
+  const candidates = shuffle([...urls]).slice(0,5);
+  for(const url of candidates) if(await checkColorVariance(url)) return url;
+  return candidates[0] ?? bird.defaultPhoto ?? null;
+}
+
+// ── Wikipedia summary ──────────────────────────────────────────────────────
+const wikiSummaryCache = {};
+async function fetchWikiSummary(wikiUrl) {
+  if (!wikiUrl) return null;
+  if (wikiSummaryCache[wikiUrl] !== undefined) return wikiSummaryCache[wikiUrl];
+  try {
+    const title = wikiUrl.split('/wiki/').pop();
+    const r = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${title}`);
+    if (!r.ok) { wikiSummaryCache[wikiUrl] = null; return null; }
+    const d = await r.json();
+    const text = d.extract ? d.extract.split('. ').slice(0,2).join('. ').replace(/\s+/g,' ').trim() + '.' : null;
+    wikiSummaryCache[wikiUrl] = text;
+    return text;
+  } catch { wikiSummaryCache[wikiUrl] = null; return null; }
+}
+
+// ── Species loading ────────────────────────────────────────────────────────
+let STANDARD_BIRDS = [];
+let EXPERT_BIRDS   = [];
+
+async function loadSpecies(placeId) {
+  const r = await fetch(
+    `https://api.inaturalist.org/v1/observations/species_counts?place_id=${placeId}&iconic_taxa=Aves&quality_grade=research&per_page=100&order_by=observations_count&order=desc`
+  );
+  if (!r.ok) throw new Error('iNat API error');
+  const d = await r.json();
+  const birds = (d.results || [])
+    .filter(item => item.taxon?.preferred_common_name && item.taxon?.rank === 'species')
+    .map(item => ({
+      name:         item.taxon.preferred_common_name,
+      latin:        item.taxon.name,
+      inatId:       item.taxon.id,
+      count:        item.count,
+      wikiUrl:      item.taxon.wikipedia_url || null,
+      defaultPhoto: item.taxon.default_photo?.medium_url || null,
+      note:         null, // loaded async when answer revealed
+      family:       '',
+      order:        '',
+      seabird:      false,
+    }));
+  if (birds.length < 8) throw new Error('Not enough species data for this location (need at least 8).');
+  STANDARD_BIRDS = birds.slice(0, 30);
+  EXPERT_BIRDS   = birds;
+  return birds.length;
+}
+
+// ── Quiz state ─────────────────────────────────────────────────────────────
+let state = {
+  phase: 'loading', mode: 'standard', loadError: null,
+  queue: [], wrongBin: [], current: null,
+  streak: 0, streakHistory: [],
+  totalSeen: 0, totalCorrect: 0,
+  selected: null, options: [], imgUrl: null, imgLoading: false,
+};
+function setState(p){ Object.assign(state,p); render(); }
+
+function getPool(){ return state.mode==='expert' ? EXPERT_BIRDS : STANDARD_BIRDS; }
+
+function getOptions(correct, pool) {
+  const others = shuffle(pool.filter(b => b.name !== correct.name));
+  return shuffle([correct.name, ...others.slice(0,3).map(b=>b.name)]);
+}
+
+// ── Celebrations ──────────────────────────────────────────────────────────
+function showEncouragement(text){
+  const el=document.getElementById('encourage'); if(el) el.remove();
+  const div=document.createElement('div'); div.id='encourage'; div.textContent=text;
+  document.body.appendChild(div); setTimeout(()=>div.remove(),1300);
+}
+function burstStars(x,y){
+  const emojis=['⭐','✨','💫','🌟'];
+  for(let i=0;i<8;i++){
+    const el=document.createElement('div'); el.className='star-burst';
+    el.textContent=emojis[Math.floor(Math.random()*emojis.length)];
+    const angle=(i/8)*Math.PI*2, dist=60+Math.random()*60;
+    el.style.cssText=`left:${x}px;top:${y}px;--tx:${Math.cos(angle)*dist}px;--ty:${Math.sin(angle)*dist}px;animation-duration:${0.6+Math.random()*0.3}s`;
+    document.body.appendChild(el); setTimeout(()=>el.remove(),1000);
+  }
+}
+function launchConfetti(){
+  for(let i=0;i<60;i++) setTimeout(()=>{
+    const el=document.createElement('div'); el.className='confetti-piece';
+    const size=8+Math.random()*10;
+    el.style.cssText=`left:${Math.random()*100}vw;width:${size}px;height:${size}px;background:${CONFETTI_COLORS[Math.floor(Math.random()*CONFETTI_COLORS.length)]};animation-duration:${1.5+Math.random()*2}s;animation-delay:${Math.random()*0.5}s;transform:rotate(${Math.random()*360}deg)`;
+    document.body.appendChild(el); setTimeout(()=>el.remove(),3000);
+  }, i*30);
+}
+
+function starsForScore(pct){
+  if(pct>=95) return'⭐⭐⭐⭐⭐';
+  if(pct>=85) return'⭐⭐⭐⭐';
+  if(pct>=70) return'⭐⭐⭐';
+  if(pct>=55) return'⭐⭐';
+  return'⭐';
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+function render(){
+  const app = document.getElementById('app');
+
+  const header = state.phase === 'quiz' ? '' : `
+    <div class="header fade">
+      <div class="eyebrow">${PLACE_NAME.toUpperCase()} · FIELD GUIDE</div>
+      <h1>Birds of<br>${PLACE_NAME}</h1>
+      <p>Can you get ${STREAK_TARGET} in a row?</p>
+      <div class="header-brand"><a href="https://sites.google.com/view/rutherford-ecology/home" target="_blank"><span class="by-word">by </span><span class="re-bold">Rutherford</span> <span class="re-light">ecology</span></a></div>
+    </div>`;
+
+  // Loading
+  if (state.phase === 'loading') {
+    app.innerHTML = header + `
+      <div class="loading-wrap fade">
+        <div class="spinner"></div>
+        <div class="loading-text">Loading birds for ${PLACE_NAME}…</div>
+        <div class="loading-sub">Fetching species from iNaturalist</div>
+      </div>`;
+    return;
+  }
+
+  // Error
+  if (state.phase === 'error') {
+    app.innerHTML = header + `
+      <div class="error-box fade">
+        <p>${state.loadError || 'Could not load species for this location.'}</p>
+        <button class="btn-primary" onclick="window.location.href='index.html'">← Back to Quiz List</button>
+      </div>`;
+    return;
+  }
+
+  // Intro
+  if (state.phase === 'intro') {
+    const total = EXPERT_BIRDS.length;
+    const std = STANDARD_BIRDS.length;
+    app.innerHTML = header + `
+      <div class="mode-grid">
+        <button class="mode-btn ${state.mode==='standard'?'active':''}" onclick="setMode('standard')">
+          <div class="mode-emoji">🌿</div>
+          <div class="mode-count">${std} SPECIES</div>
+          <div class="mode-title">Standard</div>
+          <div class="mode-desc">The most commonly recorded birds in this area.</div>
+        </button>
+        <button class="mode-btn ${state.mode==='expert'?'active':''}" onclick="setMode('expert')">
+          <div class="mode-emoji">🔭</div>
+          <div class="mode-count">${total} SPECIES</div>
+          <div class="mode-title">Expert</div>
+          <div class="mode-desc">All species with iNaturalist records here.</div>
+        </button>
+      </div>
+      <div class="info-box">
+        <p>🎯 Get <strong>${STREAK_TARGET} correct in a row</strong> to win! Miss one and the streak resets — tricky birds keep coming back. Photos are real iNaturalist observations. 🌟</p>
+      </div>
+      <button class="btn-primary" onclick="startQuiz()">Let's Go! 🚀</button>
+      <a href="index.html" style="display:block;text-align:center;margin-top:14px;font-size:0.8rem;color:#9b9890;text-decoration:none;" onmouseover="this.style.color='#2a7a58'" onmouseout="this.style.color='#9b9890'">← All Quizzes</a>`;
+    return;
+  }
+
+  // Result
+  if (state.phase === 'result') {
+    const acc = state.totalSeen > 0 ? Math.round((state.totalCorrect/state.totalSeen)*100) : 0;
+    const stars = starsForScore(acc);
+    const msg = [
+      acc>=95?"Absolutely flawless! Bird expert! 🏆":null,
+      acc>=85?"Brilliant work! You really know your birds! 🌟":null,
+      acc>=70?"Great job! A few tricky ones but you got there! 🎉":null,
+      acc>=55?"Well done! Keep practising! 💪":null,
+      "You did it! Those wrong ones kept coming back until you nailed them! 🦜",
+    ].find(m=>m!==null);
+    app.innerHTML = header + `
+      <div class="result">
+        <span class="trophy">🏆</span>
+        <h2>${STREAK_TARGET} in a row!</h2>
+        <div class="star-row">${stars}</div>
+        <p class="stat">${state.totalCorrect} correct from ${state.totalSeen} attempts (${acc}%)</p>
+        <p class="msg">${msg}</p>
+        <button class="btn-primary" onclick="goIntro()">Play Again 🎯</button>
+        <a href="index.html" style="display:block;text-align:center;margin-top:14px;font-size:0.8rem;color:#9b9890;text-decoration:none;" onmouseover="this.style.color='#2a7a58'" onmouseout="this.style.color='#9b9890'">← All Quizzes</a>
+      </div>`;
+    launchConfetti();
+    return;
+  }
+
+  // Quiz
+  const bird = state.current;
+  const isExpert = state.mode === 'expert';
+  const dots = Array.from({length:STREAK_TARGET},(_,i)=>{
+    const h=state.streakHistory[i];
+    return `<div class="${h===true?'dot correct':h===false?'dot wrong':'dot'}">${h===true?'⭐':h===false?'✗':''}</div>`;
+  }).join('');
+
+  let imgContent;
+  if(state.imgLoading) imgContent=`<div class="img-placeholder"><div class="icon">📷</div><span>Loading…</span></div>`;
+  else if(state.imgUrl) imgContent=`<img src="${state.imgUrl}" alt="mystery bird" onerror="imgFailed()" onload="adjustImgPosition(this)"/>`;
+  else imgContent=`<div class="img-placeholder"><div class="icon">📷</div><span>No photo available</span></div>`;
+
+  let overlay='';
+  if(state.selected){
+    const ok=state.selected===bird.name;
+    overlay=`<div class="img-overlay ${ok?'overlay-correct':'overlay-wrong'}">
+      <span>${ok?'✓':'✗'}</span>
+      <span class="overlay-msg">${ok?CORRECT_MSGS[Math.floor(Math.random()*CORRECT_MSGS.length)]:`It's the ${bird.name}`}</span>
+    </div>`;
+  }
+
+  const pool = getPool();
+  const optionsHtml = state.options.map(opt => {
+    let cls='option';
+    if(state.selected){
+      if(opt===bird.name) cls+=' correct';
+      else if(opt===state.selected) cls+=' wrong';
+      else cls+=' dimmed';
+    }
+    const safe=opt.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const matchBird=pool.find(b=>b.name===opt);
+    const latinLabel=matchBird?.latin?`<span class="opt-latin">${matchBird.latin}</span>`:'';
+    return `<button class="${cls}" ${state.selected?'disabled':''} onclick="selectAnswer('${safe}',event)"><span class="opt-english">${opt}</span>${latinLabel}</button>`;
+  }).join('');
+
+  let fieldNote='';
+  if(state.selected){
+    const ok=state.selected===bird.name;
+    const noteText=bird.note||'<em style="color:#9b9890">Loading field note…</em>';
+    const wrongMsg=ok?'':`<div class="wrong-note"><p>📌 Don't worry — this one will come back!</p></div>`;
+    fieldNote=`
+      <div class="field-note">
+        <div class="fn-label">🔭 FIELD NOTE</div>
+        <div class="fn-latin">${bird.latin}</div>
+        <p class="fn-main">${noteText}</p>
+        <p class="fn-count">${bird.count ? `📊 ${bird.count.toLocaleString()} iNat obs` : ''}</p>
+        <p class="inat-credit" style="margin-top:6px"><a href="https://www.inaturalist.org/taxa/search?q=${encodeURIComponent(bird.name)}" target="_blank">Photo: iNaturalist</a> · CC licensed</p>
+      </div>${wrongMsg}`;
+    // Fetch Wikipedia summary async if not yet loaded
+    if(!bird.note && bird.wikiUrl) {
+      fetchWikiSummary(bird.wikiUrl).then(text => {
+        if(text && state.current?.name === bird.name) {
+          bird.note = text;
+          if(state.selected) render();
+        }
+      });
+    }
+  }
+
+  app.innerHTML = `
+    <div class="fade">
+      <div class="meta-row">
+        <span class="q-label">${state.totalSeen} seen · ${state.totalCorrect} correct
+          <span class="mode-pill ${isExpert?'pill-hard':'pill-easy'}">${isExpert?'Expert':'Standard'}</span>
+        </span>
+        <div class="badges">${bird.seabird?'<span class="badge badge-blue">Seabird</span>':''}</div>
+      </div>
+      <div class="streak-row">
+        <div class="streak-dots">${dots}</div>
+        <span class="streak-label">🔥 ${state.streak}/${STREAK_TARGET}</span>
+      </div>
+      <div class="img-box" id="imgBox">${imgContent}${overlay}</div>
+      <p class="question-text">🔍 Which bird is this?</p>
+      <div class="options">${optionsHtml}</div>
+      ${fieldNote}
+    </div>`;
+}
+
+function adjustImgPosition(img){
+  const isPortrait=img.naturalWidth<img.naturalHeight;
+  if(isPortrait){
+    const fullH=img.offsetWidth/(img.naturalWidth/img.naturalHeight);
+    img.style.height=(fullH*0.7)+'px';
+    img.style.objectPosition='center center';
+  } else {
+    img.style.height='auto';
+    img.style.maxHeight='65vw';
+    img.style.objectPosition='center top';
+  }
+}
+function imgFailed(){
+  const box=document.getElementById('imgBox');
+  if(box) box.innerHTML=`<div class="img-placeholder"><div class="icon">📷</div><span>No photo available</span></div>`;
+}
+
+function setMode(m){ setState({mode:m}); }
+function goIntro(){ setState({phase:'intro'}); }
+
+function startQuiz(){
+  const pool=getPool();
+  const queue=shuffle([...pool]);
+  const first=queue.shift();
+  setState({phase:'quiz',queue,wrongBin:[],current:first,streak:0,streakHistory:[],totalSeen:0,totalCorrect:0,selected:null,imgUrl:null,imgLoading:true,options:getOptions(first,pool)});
+  fetchInatImage(first).then(url=>setState({imgUrl:url,imgLoading:false}));
+}
+
+function selectAnswer(opt,event){
+  if(state.selected) return;
+  const bird=state.current;
+  const correct=opt===bird.name;
+  const newHistory=[...state.streakHistory,correct];
+  if(newHistory.length>STREAK_TARGET) newHistory.shift();
+  const newStreak=correct?state.streak+1:0;
+  setState({selected:opt,streak:newStreak,streakHistory:newHistory,totalSeen:state.totalSeen+1,totalCorrect:state.totalCorrect+(correct?1:0),wrongBin:correct?state.wrongBin:[...state.wrongBin,bird]});
+  if(correct){
+    if(event) burstStars(event.clientX,event.clientY);
+    setTimeout(()=>showEncouragement(STREAK_MSGS[newStreak]||CORRECT_MSGS[Math.floor(Math.random()*CORRECT_MSGS.length)]),150);
+  }
+  if(newStreak>=STREAK_TARGET) setTimeout(()=>setState({phase:'result'}),2200);
+  else setTimeout(advance,2400);
+}
+
+function advance(){
+  const pool=getPool();
+  let queue=[...state.queue], wrongBin=[...state.wrongBin];
+  if(queue.length===0&&wrongBin.length===0){setState({phase:'result'});return;}
+  let next;
+  const insertWrong=wrongBin.length>0&&(queue.length===0||state.totalSeen%3===0);
+  if(insertWrong){
+    const idx=Math.floor(Math.random()*wrongBin.length);
+    next=wrongBin[idx]; wrongBin=wrongBin.filter((_,i)=>i!==idx);
+  } else {
+    next=queue.shift();
+    if(wrongBin.length>0&&Math.random()<0.4){
+      const idx=Math.floor(Math.random()*wrongBin.length);
+      wrongBin.filter((_,i)=>i!==idx);
+      queue.splice(Math.min(Math.floor(Math.random()*4)+1,queue.length),0,wrongBin[idx]);
+      wrongBin=wrongBin.filter((_,i)=>i!==idx);
+    }
+  }
+  setState({current:next,queue,wrongBin,selected:null,imgUrl:null,imgLoading:true,options:getOptions(next,pool)});
+  fetchInatImage(next).then(url=>setState({imgUrl:url,imgLoading:false}));
+}
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+if (!PLACE_ID) {
+  state.phase = 'error';
+  state.loadError = 'No place specified. Please go back and search for a location.';
+  render();
+} else {
+  render(); // show loading screen
+  loadSpecies(PLACE_ID)
+    .then(() => setState({phase:'intro'}))
+    .catch(err => setState({phase:'error', loadError: err.message}));
+}
+</script>
+</body>
+</html>
