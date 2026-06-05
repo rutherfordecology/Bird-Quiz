@@ -233,13 +233,31 @@ async function fetchWikiSummary(wikiUrl) {
   if (!wikiUrl) return null;
   if (wikiSummaryCache[wikiUrl] !== undefined) return wikiSummaryCache[wikiUrl];
   try {
-    const title = wikiUrl.split('/wiki/').pop();
-    const r = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${title}`);
-    if (!r.ok) { wikiSummaryCache[wikiUrl] = null; return null; }
+    const title = decodeURIComponent(wikiUrl.split('/wiki/').pop());
+    // Fetch full plain-text article so we can find the Description/Identification section
+    const r = await fetch(
+      `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=extracts&explaintext=true&exsectionformat=plain&format=json&origin=*`
+    );
+    if (!r.ok) throw new Error();
     const d = await r.json();
-    const text = d.extract ? d.extract.split('. ').slice(0,2).join('. ').replace(/\s+/g,' ').trim() + '.' : null;
-    wikiSummaryCache[wikiUrl] = text;
-    return text;
+    const extract = Object.values(d.query.pages)[0]?.extract || '';
+
+    // Look for a Description / Identification / Appearance section
+    const sectionMatch = extract.match(
+      /\n=+\s*(description|identification|appearance|plumage)\s*=+\s*\n([\s\S]+?)(?=\n=+\s|\s*$)/i
+    );
+    let text;
+    if (sectionMatch) {
+      // First 3 sentences of that section
+      const body = sectionMatch[2].replace(/\n+/g,' ').trim();
+      text = body.split(/(?<=[.!?])\s+/).slice(0, 3).join(' ').trim();
+    } else {
+      // Fall back to intro (first 2 sentences)
+      const intro = extract.split('\n').find(l => l.trim().length > 40) || '';
+      text = intro.split(/(?<=[.!?])\s+/).slice(0, 2).join(' ').trim();
+    }
+    wikiSummaryCache[wikiUrl] = text || null;
+    return wikiSummaryCache[wikiUrl];
   } catch { wikiSummaryCache[wikiUrl] = null; return null; }
 }
 
