@@ -178,7 +178,7 @@ async function doSearch(q) {
     const results = (d.results || []).slice(0, 7);
     if (!results.length) { drop.innerHTML = '<div class="search-msg">No places found.</div>'; return; }
     drop.innerHTML = results.map(p => `
-      <div class="search-item" onmousedown="goPlace(${p.id},${JSON.stringify(p.display_name)})">
+      <div class="search-item" onmousedown="goPlace(${p.id},'${p.display_name.replace(/'/g,&quot;\\&#39;&quot;)}')">
         <span style="font-size:1.1rem">📍</span>
         <div>
           <div class="search-item-name">${p.display_name}</div>
