@@ -179,7 +179,7 @@ function checkColorVariance(url) {
           else{eR+=d[i];eG+=d[i+1];eB+=d[i+2];eN++;}
         }
         const ced=Math.sqrt(((cR/cN)-(eR/eN))**2+((cG/cN)-(eG/eN))**2+((cB/cN)-(eB/eN))**2);
-        done(stdDev>35||(stdDev>20&&ced>8));
+        done(stdDev>42||(stdDev>26&&ced>12));
       } catch { done(true); }
     };
     img.src = url;

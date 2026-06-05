@@ -552,7 +552,7 @@ function checkColorVariance(url) {
         );
 
         // Pass if: very varied image OR (decent variance AND visible subject)
-        done(stdDev > 35 || (stdDev > 20 && centreEdgeDiff > 8));
+        done(stdDev > 42 || (stdDev > 26 && centreEdgeDiff > 12));
       } catch { done(true); }
     };
     img.src = url;
@@ -598,8 +598,11 @@ function getPool(mode) {
   return mode === 'hard' ? HARD_BIRDS : mode === 'beginner' ? BEGINNER_BIRDS : EASY_BIRDS;
 }
 
-function fetchImage(bird, mode) {
-  return mode === 'beginner' ? fetchWikiImage(bird) : fetchInatImage(bird);
+async function fetchImage(bird, mode) {
+  if (mode === 'beginner') return fetchWikiImage(bird);
+  const url = await fetchInatImage(bird);
+  if (url) return url;
+  return fetchWikiImage(bird); // fallback when iNat has no photos
 }
 
 // ── Celebrations ──────────────────────────────────────────────────────────────
