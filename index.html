@@ -618,9 +618,9 @@ function starsForScore(pct) {
 
 function render() {
   const app = document.getElementById("app");
-  const header = `
+  const isQuiz = state.phase === 'quiz';
+  const header = isQuiz ? '' : `
     <div class="header fade">
-
       <div id="manumea-header"></div>
       <div class="eyebrow">SAMOA · FIELD GUIDE</div>
       <h1>Birds of Samoa</h1>
