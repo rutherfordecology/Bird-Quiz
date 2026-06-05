@@ -280,12 +280,11 @@ async function loadSpecies(placeId) {
       name:         item.taxon.preferred_common_name,
       latin:        item.taxon.name,
       inatId:       item.taxon.id,
+      ancestorIds:  item.taxon.ancestor_ids || [],
       count:        item.count,
       wikiUrl:      item.taxon.wikipedia_url || null,
       defaultPhoto: item.taxon.default_photo?.medium_url || null,
-      note:         null, // loaded async when answer revealed
-      family:       '',
-      order:        '',
+      note:         null,
       seabird:      false,
     }));
   if (birds.length < 8) throw new Error('Not enough species data for this location (need at least 8).');
@@ -312,11 +311,25 @@ function getPool(){ return state.mode==='expert' ? EXPERT_BIRDS : STANDARD_BIRDS
 
 function getOptions(correct, pool) {
   const others = shuffle(pool.filter(b => b.name !== correct.name));
-  const correctGenus = correct.latin?.split(' ')[0] || '';
-  // Prefer same genus, then same first word of common name (e.g. "Common"), then rest
-  const sameGenus  = others.filter(b => b.latin?.split(' ')[0] === correctGenus);
-  const rest       = others.filter(b => b.latin?.split(' ')[0] !== correctGenus);
-  return shuffle([correct.name, ...[...sameGenus, ...rest].slice(0,3).map(b=>b.name)]);
+  const correctSet = new Set(correct.ancestorIds || []);
+
+  if (correctSet.size > 0) {
+    // Score each candidate by shared ancestor count (more = more closely related)
+    const scored = others.map(b => ({
+      b,
+      score: (b.ancestorIds || []).filter(id => correctSet.has(id)).length
+    }));
+    scored.sort((a, b) => b.score - a.score);
+    // Take top 6 most related, pick 3 randomly from that group for variety
+    const picks = shuffle(scored.slice(0, Math.min(6, scored.length))).slice(0, 3).map(s => s.b.name);
+    return shuffle([correct.name, ...picks]);
+  }
+
+  // Fallback: genus grouping
+  const genus = correct.latin?.split(' ')[0] || '';
+  const sameGenus = others.filter(b => b.latin?.split(' ')[0] === genus);
+  const rest      = others.filter(b => b.latin?.split(' ')[0] !== genus);
+  return shuffle([correct.name, ...[...sameGenus, ...rest].slice(0, 3).map(b => b.name)]);
 }
 
 // ── Celebrations ──────────────────────────────────────────────────────────
