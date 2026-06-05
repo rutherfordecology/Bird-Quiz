@@ -114,6 +114,16 @@
   .fn-species-name { font-size:1.15rem; font-weight:900; color:#1a5940; line-height:1.2; }
   .fn-species-latin { font-size:0.8rem; font-style:italic; color:#6b6960; margin-top:2px; }
   .field-note .fn-label { font-size:0.62rem; letter-spacing:0.1em; color:#2a7a58; font-weight:800; margin-bottom:6px; }
+  .btn-secondary { width:100%; background:transparent; border:1.5px solid #dddbd3; color:#2a7a58; border-radius:12px; padding:13px; font-size:0.95rem; font-weight:800; cursor:pointer; font-family:system-ui,-apple-system,sans-serif; transition:all 0.2s; margin-top:10px; }
+  .btn-secondary:hover { border-color:#2a7a58; background:#e8f4ef; }
+  .sp-item { background:#fff; border:1.5px solid #dddbd3; border-radius:10px; padding:12px 14px; margin-bottom:8px; transition:border-color 0.15s; }
+  .sp-item:hover { border-color:#2a7a58; }
+  .sp-name-row { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; margin-bottom:4px; }
+  .sp-name { font-size:0.92rem; font-weight:800; color:#1c1b18; text-decoration:none; }
+  .sp-name:hover { color:#2a7a58; text-decoration:underline; }
+  .sp-latin { font-size:0.75rem; color:#9b9890; font-style:italic; }
+  .sp-meta-row { display:flex; align-items:center; gap:10px; }
+  .obs-count { font-size:0.72rem; color:#9b9890; font-weight:600; }
   .btn-save-library { width:100%; background:transparent; border:1.5px solid #2a7a58; color:#2a7a58; border-radius:12px; padding:13px; font-size:0.95rem; font-weight:800; cursor:pointer; font-family:system-ui,-apple-system,sans-serif; transition:all 0.2s; margin-top:10px; }
   .btn-save-library:hover { background:#e8f4ef; }
   .btn-save-library:disabled { opacity:0.5; cursor:default; }
@@ -421,7 +431,37 @@ function render(){
         <p>🎯 Get <strong>${STREAK_TARGET} correct in a row</strong> to win! Miss one and the streak resets — tricky birds keep coming back. Photos are real iNaturalist observations. 🌟</p>
       </div>
       <button class="btn-primary" onclick="startQuiz()">Let's Go! 🚀</button>
+      <button class="btn-secondary" onclick="goSpecies()">📋 Species List</button>
       <a href="index.html" style="display:block;text-align:center;margin-top:14px;font-size:0.8rem;color:#9b9890;text-decoration:none;" onmouseover="this.style.color='#2a7a58'" onmouseout="this.style.color='#9b9890'">← WhatDatBird?</a>`;
+    return;
+  }
+
+  // Species list
+  if (state.phase === 'species') {
+    const sorted = [...EXPERT_BIRDS].sort((a, b) => (b.count || 0) - (a.count || 0));
+    const rows = sorted.map(bird => {
+      const ebirdUrl = `https://ebird.org/search?q=${encodeURIComponent(bird.name)}`;
+      const inatUrl  = `https://www.inaturalist.org/taxa/search?q=${encodeURIComponent(bird.latin)}`;
+      const countBadge = bird.count ? `<span class="obs-count">${bird.count.toLocaleString()} iNat obs</span>` : '';
+      return `<div class="sp-item">
+        <div class="sp-name-row">
+          <a class="sp-name" href="${ebirdUrl}" target="_blank">${bird.name}</a>
+          <span class="sp-latin">${bird.latin}</span>
+        </div>
+        <div class="sp-meta-row">
+          ${countBadge}
+          <a href="${inatUrl}" target="_blank" style="font-size:0.7rem;color:#9b9890;">iNat →</a>
+        </div>
+      </div>`;
+    }).join('');
+    app.innerHTML = header + `
+      <div class="fade">
+        <button class="btn-secondary" style="margin-bottom:12px" onclick="goIntro()">← Back</button>
+        <div class="info-box">
+          <p>📋 <strong>${EXPERT_BIRDS.length} species</strong> recorded in ${PLACE_NAME}. Sorted by iNaturalist observation count. Click any name to open its eBird page.</p>
+        </div>
+        ${rows}
+      </div>`;
     return;
   }
 
@@ -558,8 +598,9 @@ function imgFailed(){
   if(box) box.innerHTML=`<div class="img-placeholder"><div class="icon">📷</div><span>No photo available</span></div>`;
 }
 
-function setMode(m){ setState({mode:m}); }
-function goIntro(){ setState({phase:'intro'}); }
+function setMode(m)  { setState({mode:m}); }
+function goIntro()   { setState({phase:'intro'}); }
+function goSpecies() { setState({phase:'species'}); }
 
 function startQuiz(){
   const pool=getPool();
