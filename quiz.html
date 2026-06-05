@@ -116,6 +116,14 @@
   .field-note .fn-label { font-size:0.62rem; letter-spacing:0.1em; color:#2a7a58; font-weight:800; margin-bottom:6px; }
   .btn-next { width:100%; background:#1a5940; color:white; border:none; border-radius:12px; padding:15px; font-size:1rem; font-weight:800; cursor:pointer; margin-top:10px; font-family:system-ui,-apple-system,sans-serif; transition:all 0.2s; animation:fadeUp 0.3s ease both; box-shadow:0 4px 12px rgba(26,89,64,0.2); }
   .btn-next:hover { background:#2a7a58; transform:translateY(-2px); }
+  .carousel-btn { position:absolute; top:50%; transform:translateY(-50%); background:rgba(255,255,255,0.88); border:none; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:1.1rem; font-weight:700; color:#1a5940; z-index:10; box-shadow:0 2px 8px rgba(0,0,0,0.15); transition:all 0.15s; }
+  .carousel-btn:hover { background:white; }
+  .carousel-prev { left:8px; } .carousel-next { right:8px; }
+  .carousel-dots { position:absolute; bottom:8px; left:50%; transform:translateX(-50%); display:flex; gap:5px; z-index:10; }
+  .carousel-dot { width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,0.45); transition:all 0.2s; cursor:pointer; }
+  .carousel-dot.active { background:white; transform:scale(1.3); }
+  .fn-species-samoan { font-size:1.1rem; font-weight:800; color:#8a6020; margin-top:2px; }
+  .fn-species-latin { font-size:0.78rem; font-style:italic; color:#9b9890; margin-top:3px; }
   .field-note .fn-main { color:#1a5940; font-size:0.85rem; line-height:1.6; }
   .field-note .fn-count { font-size:0.75rem; color:#6b6960; margin-top:6px; }
   .wrong-note { background:#faf0f0; border:1.5px solid #d47a7a; border-radius:10px; padding:10px 14px; margin-top:8px; }
@@ -272,8 +280,12 @@ let state = {
   streak: 0, streakHistory: [],
   totalSeen: 0, totalCorrect: 0,
   selected: null, options: [], imgUrl: null, imgLoading: false,
+  photoUrls: [], photoIdx: 0,
 };
 function setState(p){ Object.assign(state,p); render(); }
+function prevPhoto(){ const i=(state.photoIdx-1+state.photoUrls.length)%state.photoUrls.length; setState({photoIdx:i,imgUrl:state.photoUrls[i]}); }
+function nextPhoto(){ const i=(state.photoIdx+1)%state.photoUrls.length; setState({photoIdx:i,imgUrl:state.photoUrls[i]}); }
+function goPhoto(i) { setState({photoIdx:i,imgUrl:state.photoUrls[i]}); }
 
 function getPool(){ return state.mode==='expert' ? EXPERT_BIRDS : STANDARD_BIRDS; }
 
@@ -412,6 +424,11 @@ function render(){
   if(state.imgLoading) imgContent=`<div class="img-placeholder"><div class="icon">📷</div><span>Loading…</span></div>`;
   else if(state.imgUrl) imgContent=`<img src="${state.imgUrl}" alt="mystery bird" onerror="imgFailed()" onload="adjustImgPosition(this)"/>`;
   else imgContent=`<div class="img-placeholder"><div class="icon">📷</div><span>No photo available</span></div>`;
+  const multiPhoto=state.photoUrls.length>1&&!state.imgLoading;
+  const carouselControls=multiPhoto?`
+    <button class="carousel-btn carousel-prev" onclick="prevPhoto()">‹</button>
+    <button class="carousel-btn carousel-next" onclick="nextPhoto()">›</button>
+    <div class="carousel-dots">${state.photoUrls.map((_,i)=>`<div class="carousel-dot ${i===state.photoIdx?'active':''}" onclick="goPhoto(${i})"></div>`).join('')}</div>`:'';
 
   let overlay='';
   if(state.selected){
@@ -476,7 +493,7 @@ function render(){
         <div class="streak-dots">${dots}</div>
         <span class="streak-label">🔥 ${state.streak}/${STREAK_TARGET}</span>
       </div>
-      <div class="img-box" id="imgBox">${imgContent}${overlay}</div>
+      <div class="img-box" id="imgBox">${imgContent}${overlay}${carouselControls}</div>
       <p class="question-text">🔍 Which bird is this?</p>
       <div class="options">${optionsHtml}</div>
       ${fieldNote}
@@ -508,7 +525,7 @@ function startQuiz(){
   const queue=shuffle([...pool]);
   const first=queue.shift();
   setState({phase:'quiz',queue,wrongBin:[],current:first,streak:0,streakHistory:[],totalSeen:0,totalCorrect:0,selected:null,imgUrl:null,imgLoading:true,options:getOptions(first,pool)});
-  fetchInatImage(first).then(url=>setState({imgUrl:url,imgLoading:false}));
+  fetchInatImage(first).then(url=>{const cached=inatPhotoCache[first.name]||[];const good=cached.filter(u=>colorVarianceCache.get(u)!==false).slice(0,5);const photoUrls=url?[url,...good.filter(u=>u!==url)].slice(0,5):good;setState({imgUrl:url,imgLoading:false,photoUrls,photoIdx:0});});
 }
 
 function selectAnswer(opt,event){
@@ -546,7 +563,7 @@ function advance(){
     }
   }
   setState({current:next,queue,wrongBin,selected:null,imgUrl:null,imgLoading:true,options:getOptions(next,pool)});
-  fetchInatImage(next).then(url=>setState({imgUrl:url,imgLoading:false}));
+  fetchInatImage(next).then(url=>{const cached=inatPhotoCache[next.name]||[];const good=cached.filter(u=>colorVarianceCache.get(u)!==false).slice(0,5);const photoUrls=url?[url,...good.filter(u=>u!==url)].slice(0,5):good;setState({imgUrl:url,imgLoading:false,photoUrls,photoIdx:0});});
 }
 
 // ── Boot ───────────────────────────────────────────────────────────────────

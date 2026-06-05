@@ -151,6 +151,25 @@
   .field-note .fn-label { font-size: 0.62rem; letter-spacing: 0.1em; color: #2a7a58; font-weight: 800; margin-bottom: 6px; }
   .btn-next { width: 100%; background: #1a5940; color: white; border: none; border-radius: 12px; padding: 15px; font-size: 1rem; font-weight: 800; cursor: pointer; margin-top: 10px; font-family: system-ui, -apple-system, sans-serif; transition: all 0.2s; animation: fadeUp 0.3s ease both; box-shadow: 0 4px 12px rgba(26,89,64,0.2); }
   .btn-next:hover { background: #2a7a58; transform: translateY(-2px); }
+
+  /* Carousel */
+  .carousel-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.88); border: none; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.1rem; font-weight: 700; color: #1a5940; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.15); transition: all 0.15s; }
+  .carousel-btn:hover { background: white; box-shadow: 0 3px 12px rgba(0,0,0,0.22); }
+  .carousel-prev { left: 8px; } .carousel-next { right: 8px; }
+  .carousel-dots { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; z-index: 10; }
+  .carousel-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.45); transition: all 0.2s; cursor: pointer; }
+  .carousel-dot.active { background: white; transform: scale(1.3); }
+
+  /* Name prominence on buttons */
+  .opt-english { font-size: 0.85rem; font-weight: 800; line-height: 1.3; color: inherit; }
+  .opt-indigenous { font-size: 0.85rem; font-weight: 800; color: #8a6020; line-height: 1.3; }
+  .option.correct .opt-indigenous { color: #5a3a00; }
+  .option.wrong .opt-indigenous { color: #c47a00; }
+  .opt-latin-small { font-size: 0.62rem; font-weight: 400; opacity: 0.5; font-style: italic; line-height: 1.2; }
+
+  /* Field note name */
+  .fn-species-samoan { font-size: 1.1rem; font-weight: 800; color: #8a6020; margin-top: 2px; }
+  .fn-species-latin { font-size: 0.78rem; font-style: italic; color: #9b9890; margin-top: 3px; }
   .field-note .fn-main { color: #1a5940; font-size: 0.85rem; line-height: 1.6; }
   .wrong-note { background: #faf0f0; border: 1.5px solid #d47a7a; border-radius: 10px; padding: 10px 14px; margin-top: 8px; }
   .wrong-note p { color: #8a2c2c; font-size: 0.8rem; font-weight: 600; }
@@ -662,6 +681,7 @@ let state = {
   streak: 0, streakHistory: [],
   totalSeen: 0, totalCorrect: 0,
   selected: null, options: [], imgUrl: null, imgLoading: false,
+  photoUrls: [], photoIdx: 0,
 };
 
 function setState(patch) { Object.assign(state, patch); render(); }
@@ -815,6 +835,11 @@ function render() {
   } else {
     imgContent = `<div class="img-placeholder"><div class="icon">📷</div><span>No photo available</span></div>`;
   }
+  const multiPhoto = state.photoUrls.length > 1 && !state.imgLoading;
+  const carouselControls = multiPhoto ? `
+    <button class="carousel-btn carousel-prev" onclick="prevPhoto()">‹</button>
+    <button class="carousel-btn carousel-next" onclick="nextPhoto()">›</button>
+    <div class="carousel-dots">${state.photoUrls.map((_,i) => `<div class="carousel-dot ${i===state.photoIdx?'active':''}" onclick="goPhoto(${i})"></div>`).join('')}</div>` : '';
 
   let overlay = "";
   if (state.selected) {
@@ -840,8 +865,9 @@ function render() {
     }
     const safe = opt.replace(/\\/g,"\\\\").replace(/'/g,"\\'");
     const matchBird = pool.find(b => b.name === opt);
-    const samoLabel = matchBird?.samoan ? `<span class="opt-samoan">${matchBird.samoan}</span>` : '';
-    return `<button class="${cls}" ${state.selected?"disabled":""} onclick="selectAnswer('${safe}',event)"><span class="opt-english">${opt}</span>${samoLabel}</button>`;
+    const indigenousLabel = matchBird?.samoan ? `<span class="opt-indigenous">${matchBird.samoan}</span>` : '';
+    const latinLabel = matchBird?.latin ? `<span class="opt-latin-small">${matchBird.latin}</span>` : '';
+    return `<button class="${cls}" ${state.selected?"disabled":""} onclick="selectAnswer('${safe}',event)"><span class="opt-english">${opt}</span>${indigenousLabel}${latinLabel}</button>`;
   }).join("");
 
   let fieldNote = "";
@@ -854,8 +880,8 @@ function render() {
       <div class="field-note">
         <div class="fn-head">
           <div class="fn-species-name">${bird.name}</div>
+          ${bird.samoan ? `<div class="fn-species-samoan">${bird.samoan}</div>` : ''}
           <div class="fn-species-latin">${bird.latin}</div>
-          ${samoName}
         </div>
         <div class="fn-label">🔍 HOW TO IDENTIFY</div>
         <p class="fn-main">${bird.note}</p>
@@ -875,7 +901,7 @@ function render() {
         <div class="streak-dots">${dots}</div>
         <span class="streak-label">🔥 ${state.streak}/${STREAK_TARGET}</span>
       </div>
-      <div class="img-box" id="imgBox">${imgContent}${overlay}</div>
+      <div class="img-box" id="imgBox">${imgContent}${overlay}${carouselControls}</div>
       <p class="question-text">🔍 Which bird is this?</p>
       <div class="options">${optionsHtml}</div>
       ${fieldNote}
@@ -906,6 +932,9 @@ function imgFailed() {
 function setMode(m)   { setState({ mode: m }); }
 function goIntro()    { setState({ phase: "intro" }); }
 function goSpecies()  { setState({ phase: "species" }); loadSamoaObsCounts(); }
+function prevPhoto()  { const i = (state.photoIdx - 1 + state.photoUrls.length) % state.photoUrls.length; setState({ photoIdx: i, imgUrl: state.photoUrls[i] }); }
+function nextPhoto()  { const i = (state.photoIdx + 1) % state.photoUrls.length; setState({ photoIdx: i, imgUrl: state.photoUrls[i] }); }
+function goPhoto(i)   { setState({ photoIdx: i, imgUrl: state.photoUrls[i] }); }
 
 function startQuiz() {
   const pool = getPool(state.mode);
@@ -917,7 +946,12 @@ function startQuiz() {
     selected: null, imgUrl: null, imgLoading: true,
     options: getOptions(first, pool),
   });
-  fetchImage(first, state.mode).then(url => setState({ imgUrl: url, imgLoading: false }));
+  fetchImage(first, state.mode).then(url => {
+    const cached = state.mode !== 'beginner' ? (inatPhotoCache[first.name] || []) : [];
+    const good = cached.filter(u => colorVarianceCache.get(u) !== false).slice(0, 5);
+    const photoUrls = url ? [url, ...good.filter(u => u !== url)].slice(0, 5) : good;
+    setState({ imgUrl: url, imgLoading: false, photoUrls, photoIdx: 0 });
+  });
 }
 
 function selectAnswer(opt, event) {
@@ -989,7 +1023,12 @@ function advance() {
     selected: null, imgUrl: null, imgLoading: true,
     options: getOptions(next, pool),
   });
-  fetchImage(next, state.mode).then(url => setState({ imgUrl: url, imgLoading: false }));
+  fetchImage(next, state.mode).then(url => {
+    const cached = state.mode !== 'beginner' ? (inatPhotoCache[next.name] || []) : [];
+    const good = cached.filter(u => colorVarianceCache.get(u) !== false).slice(0, 5);
+    const photoUrls = url ? [url, ...good.filter(u => u !== url)].slice(0, 5) : good;
+    setState({ imgUrl: url, imgLoading: false, photoUrls, photoIdx: 0 });
+  });
 }
 
 // Fetch Manumea header photo
