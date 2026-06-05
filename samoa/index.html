@@ -600,8 +600,8 @@ async function fetchInatImage(bird) {
             const src = photo.url?.replace('/square.', '/medium.');
             if (src) {
               allUrls.push(src);
-              if (faves >= 3) fiveStar.push(src);
-              else if (faves >= 1) fourStar.push(src);
+              if (faves >= 5) fiveStar.push(src);
+              else if (faves >= 2) fourStar.push(src);
             }
           }
         }
@@ -949,7 +949,7 @@ function startQuiz() {
     options: getOptions(first, pool),
   });
   fetchImage(first, state.mode).then(url => {
-    const cached = state.mode !== 'beginner' ? (inatPhotoCache[first.name] || []) : [];
+    const cached = state.mode !== 'beginner' ? (inatPhotoCache[first.latin || first.name] || []) : [];
     const good = cached.filter(u => colorVarianceCache.get(u) !== false).slice(0, 5);
     const photoUrls = url ? [url, ...good.filter(u => u !== url)].slice(0, 5) : good;
     setState({ imgUrl: url, imgLoading: false, photoUrls, photoIdx: 0 });
@@ -1026,7 +1026,7 @@ function advance() {
     options: getOptions(next, pool),
   });
   fetchImage(next, state.mode).then(url => {
-    const cached = state.mode !== 'beginner' ? (inatPhotoCache[next.name] || []) : [];
+    const cached = state.mode !== 'beginner' ? (inatPhotoCache[next.latin || next.name] || []) : [];
     const good = cached.filter(u => colorVarianceCache.get(u) !== false).slice(0, 5);
     const photoUrls = url ? [url, ...good.filter(u => u !== url)].slice(0, 5) : good;
     setState({ imgUrl: url, imgLoading: false, photoUrls, photoIdx: 0 });
