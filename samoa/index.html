@@ -949,9 +949,8 @@ function startQuiz() {
     options: getOptions(first, pool),
   });
   fetchImage(first, state.mode).then(url => {
-    const cached = state.mode !== 'beginner' ? (inatPhotoCache[first.latin || first.name] || []) : [];
-    const good = cached.filter(u => colorVarianceCache.get(u) !== false).slice(0, 5);
-    const photoUrls = url ? [url, ...good.filter(u => u !== url)].slice(0, 5) : good;
+    const all = state.mode !== 'beginner' ? (inatPhotoCache[first.latin || first.name] || []).slice(0, 5) : [];
+    const photoUrls = url ? [url, ...all.filter(u => u !== url)].slice(0, 5) : all;
     setState({ imgUrl: url, imgLoading: false, photoUrls, photoIdx: 0 });
   });
 }
@@ -1026,9 +1025,8 @@ function advance() {
     options: getOptions(next, pool),
   });
   fetchImage(next, state.mode).then(url => {
-    const cached = state.mode !== 'beginner' ? (inatPhotoCache[next.latin || next.name] || []) : [];
-    const good = cached.filter(u => colorVarianceCache.get(u) !== false).slice(0, 5);
-    const photoUrls = url ? [url, ...good.filter(u => u !== url)].slice(0, 5) : good;
+    const all = state.mode !== 'beginner' ? (inatPhotoCache[next.latin || next.name] || []).slice(0, 5) : [];
+    const photoUrls = url ? [url, ...all.filter(u => u !== url)].slice(0, 5) : all;
     setState({ imgUrl: url, imgLoading: false, photoUrls, photoIdx: 0 });
   });
 }

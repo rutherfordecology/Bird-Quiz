@@ -530,7 +530,7 @@ function startQuiz(){
   const queue=shuffle([...pool]);
   const first=queue.shift();
   setState({phase:'quiz',queue,wrongBin:[],current:first,streak:0,streakHistory:[],totalSeen:0,totalCorrect:0,selected:null,imgUrl:null,imgLoading:true,options:getOptions(first,pool)});
-  fetchInatImage(first).then(url=>{const cached=inatPhotoCache[first.latin||first.name]||[];const good=cached.filter(u=>colorVarianceCache.get(u)!==false).slice(0,5);const photoUrls=url?[url,...good.filter(u=>u!==url)].slice(0,5):good;setState({imgUrl:url,imgLoading:false,photoUrls,photoIdx:0});});
+  fetchInatImage(first).then(url=>{const all=(inatPhotoCache[first.latin||first.name]||[]).slice(0,5);const photoUrls=url?[url,...all.filter(u=>u!==url)].slice(0,5):all;setState({imgUrl:url,imgLoading:false,photoUrls,photoIdx:0});});
 }
 
 function selectAnswer(opt,event){
@@ -568,7 +568,7 @@ function advance(){
     }
   }
   setState({current:next,queue,wrongBin,selected:null,imgUrl:null,imgLoading:true,options:getOptions(next,pool)});
-  fetchInatImage(next).then(url=>{const cached=inatPhotoCache[next.latin||next.name]||[];const good=cached.filter(u=>colorVarianceCache.get(u)!==false).slice(0,5);const photoUrls=url?[url,...good.filter(u=>u!==url)].slice(0,5):good;setState({imgUrl:url,imgLoading:false,photoUrls,photoIdx:0});});
+  fetchInatImage(next).then(url=>{const all=(inatPhotoCache[next.latin||next.name]||[]).slice(0,5);const photoUrls=url?[url,...all.filter(u=>u!==url)].slice(0,5):all;setState({imgUrl:url,imgLoading:false,photoUrls,photoIdx:0});});
 }
 
 // ── Boot ───────────────────────────────────────────────────────────────────
