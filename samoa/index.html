@@ -149,8 +149,8 @@
   .fn-species-name { font-size: 1.15rem; font-weight: 900; color: #1a5940; line-height: 1.2; }
   .fn-species-latin { font-size: 0.8rem; font-style: italic; color: #6b6960; margin-top: 2px; margin-bottom: 4px; }
   .field-note .fn-label { font-size: 0.62rem; letter-spacing: 0.1em; color: #2a7a58; font-weight: 800; margin-bottom: 6px; }
-  .btn-next { width: 100%; background: #1a5940; color: white; border: none; border-radius: 12px; padding: 15px; font-size: 1rem; font-weight: 800; cursor: pointer; margin-top: 10px; font-family: system-ui, -apple-system, sans-serif; transition: all 0.2s; animation: fadeUp 0.3s ease both; box-shadow: 0 4px 12px rgba(26,89,64,0.2); }
-  .btn-next:hover { background: #2a7a58; transform: translateY(-2px); }
+  .btn-next-overlay { margin-top: 14px; background: rgba(255,255,255,0.92); border: none; border-radius: 20px; padding: 9px 24px; font-size: 0.9rem; font-weight: 800; cursor: pointer; color: #1a5940; font-family: system-ui, -apple-system, sans-serif; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+  .btn-next-overlay:hover { background: white; transform: scale(1.05); }
 
   /* Carousel */
   .carousel-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.88); border: none; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.1rem; font-weight: 700; color: #1a5940; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.15); transition: all 0.15s; }
@@ -584,7 +584,8 @@ function checkColorVariance(url) {
 }
 
 async function fetchInatImage(bird) {
-  const taxonName = typeof bird === 'string' ? bird : bird.name;
+  // Use Latin name for unambiguous iNat search; fall back to common name for string calls
+  const taxonName = typeof bird === 'string' ? bird : (bird.latin || bird.name);
   if (!inatPhotoCache[taxonName]) {
     try {
       const url = `https://api.inaturalist.org/v1/observations?taxon_name=${encodeURIComponent(taxonName)}&photos=true&per_page=30&quality_grade=research&order_by=faves&iconic_taxa=Aves`;
@@ -852,6 +853,7 @@ function render() {
       <span>${ok ? "✓" : "✗"}</span>
       <span class="overlay-msg">${overlayMsg}</span>
       ${samoLabel}
+      <button class="btn-next-overlay" onclick="advance()">Next →</button>
     </div>`;
   }
 
@@ -875,7 +877,7 @@ function render() {
     const ok = state.selected === bird.name;
     const samoName = bird.samoan ? `<div class="fn-samoan">🌺 <strong>${bird.samoan}</strong></div>` : '';
     const wrongMsg = ok ? "" : `<div class="wrong-note"><p>📌 This one will come back — you'll get it next time.</p></div>`;
-    const nextBtn = `<button class="btn-next" onclick="advance()">Next →</button>`;
+    const nextBtn = ``; // Next button is on the photo overlay
     fieldNote = `
       <div class="field-note">
         <div class="fn-head">

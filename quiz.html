@@ -114,8 +114,8 @@
   .fn-species-name { font-size:1.15rem; font-weight:900; color:#1a5940; line-height:1.2; }
   .fn-species-latin { font-size:0.8rem; font-style:italic; color:#6b6960; margin-top:2px; }
   .field-note .fn-label { font-size:0.62rem; letter-spacing:0.1em; color:#2a7a58; font-weight:800; margin-bottom:6px; }
-  .btn-next { width:100%; background:#1a5940; color:white; border:none; border-radius:12px; padding:15px; font-size:1rem; font-weight:800; cursor:pointer; margin-top:10px; font-family:system-ui,-apple-system,sans-serif; transition:all 0.2s; animation:fadeUp 0.3s ease both; box-shadow:0 4px 12px rgba(26,89,64,0.2); }
-  .btn-next:hover { background:#2a7a58; transform:translateY(-2px); }
+  .btn-next-overlay { margin-top:14px; background:rgba(255,255,255,0.92); border:none; border-radius:20px; padding:9px 24px; font-size:0.9rem; font-weight:800; cursor:pointer; color:#1a5940; font-family:system-ui,-apple-system,sans-serif; transition:all 0.2s; box-shadow:0 2px 8px rgba(0,0,0,0.2); }
+  .btn-next-overlay:hover { background:white; transform:scale(1.05); }
   .carousel-btn { position:absolute; top:50%; transform:translateY(-50%); background:rgba(255,255,255,0.88); border:none; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:1.1rem; font-weight:700; color:#1a5940; z-index:10; box-shadow:0 2px 8px rgba(0,0,0,0.15); transition:all 0.15s; }
   .carousel-btn:hover { background:white; }
   .carousel-prev { left:8px; } .carousel-next { right:8px; }
@@ -201,7 +201,7 @@ function checkColorVariance(url) {
 function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 
 async function fetchInatImage(bird) {
-  const name = typeof bird === 'string' ? bird : bird.name;
+  const name = typeof bird === 'string' ? bird : (bird.latin || bird.name);
   if (!inatPhotoCache[name]) {
     try {
       const r = await fetch(`https://api.inaturalist.org/v1/observations?taxon_name=${encodeURIComponent(name)}&photos=true&per_page=30&quality_grade=research&order_by=faves&iconic_taxa=Aves`);
@@ -291,7 +291,11 @@ function getPool(){ return state.mode==='expert' ? EXPERT_BIRDS : STANDARD_BIRDS
 
 function getOptions(correct, pool) {
   const others = shuffle(pool.filter(b => b.name !== correct.name));
-  return shuffle([correct.name, ...others.slice(0,3).map(b=>b.name)]);
+  const correctGenus = correct.latin?.split(' ')[0] || '';
+  // Prefer same genus, then same first word of common name (e.g. "Common"), then rest
+  const sameGenus  = others.filter(b => b.latin?.split(' ')[0] === correctGenus);
+  const rest       = others.filter(b => b.latin?.split(' ')[0] !== correctGenus);
+  return shuffle([correct.name, ...[...sameGenus, ...rest].slice(0,3).map(b=>b.name)]);
 }
 
 // ── Celebrations ──────────────────────────────────────────────────────────
@@ -436,6 +440,7 @@ function render(){
     overlay=`<div class="img-overlay ${ok?'overlay-correct':'overlay-wrong'}">
       <span>${ok?'✓':'✗'}</span>
       <span class="overlay-msg">${ok?CORRECT_MSGS[Math.floor(Math.random()*CORRECT_MSGS.length)]:`It's the ${bird.name}`}</span>
+      <button class="btn-next-overlay" onclick="advance()">Next →</button>
     </div>`;
   }
 
@@ -458,7 +463,7 @@ function render(){
     const ok=state.selected===bird.name;
     const noteText=bird.note||'<em style="color:#9b9890">Loading field note…</em>';
     const wrongMsg=ok?'':`<div class="wrong-note"><p>📌 This one will come back — you'll get it next time.</p></div>`;
-    const nextBtn=`<button class="btn-next" onclick="advance()">Next →</button>`;
+    const nextBtn=``; // Next button is on the photo overlay
     fieldNote=`
       <div class="field-note">
         <div class="fn-head">
