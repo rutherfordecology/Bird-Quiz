@@ -110,8 +110,12 @@
 
   /* Field note */
   .field-note { background:#e8f4ef; border:1.5px solid #6dba9a; border-radius:12px; padding:14px 16px; animation:fadeUp 0.4s ease both; }
+  .fn-head { margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid #6dba9a55; }
+  .fn-species-name { font-size:1.15rem; font-weight:900; color:#1a5940; line-height:1.2; }
+  .fn-species-latin { font-size:0.8rem; font-style:italic; color:#6b6960; margin-top:2px; }
   .field-note .fn-label { font-size:0.62rem; letter-spacing:0.1em; color:#2a7a58; font-weight:800; margin-bottom:6px; }
-  .field-note .fn-latin { font-size:0.8rem; font-style:italic; color:#6b6960; margin-bottom:6px; }
+  .btn-next { width:100%; background:#1a5940; color:white; border:none; border-radius:12px; padding:15px; font-size:1rem; font-weight:800; cursor:pointer; margin-top:10px; font-family:system-ui,-apple-system,sans-serif; transition:all 0.2s; animation:fadeUp 0.3s ease both; box-shadow:0 4px 12px rgba(26,89,64,0.2); }
+  .btn-next:hover { background:#2a7a58; transform:translateY(-2px); }
   .field-note .fn-main { color:#1a5940; font-size:0.85rem; line-height:1.6; }
   .field-note .fn-count { font-size:0.75rem; color:#6b6960; margin-top:6px; }
   .wrong-note { background:#faf0f0; border:1.5px solid #d47a7a; border-radius:10px; padding:10px 14px; margin-top:8px; }
@@ -436,15 +440,19 @@ function render(){
   if(state.selected){
     const ok=state.selected===bird.name;
     const noteText=bird.note||'<em style="color:#9b9890">Loading field note…</em>';
-    const wrongMsg=ok?'':`<div class="wrong-note"><p>📌 Don't worry — this one will come back!</p></div>`;
+    const wrongMsg=ok?'':`<div class="wrong-note"><p>📌 This one will come back — you'll get it next time.</p></div>`;
+    const nextBtn=`<button class="btn-next" onclick="advance()">Next →</button>`;
     fieldNote=`
       <div class="field-note">
-        <div class="fn-label">🔭 FIELD NOTE</div>
-        <div class="fn-latin">${bird.latin}</div>
+        <div class="fn-head">
+          <div class="fn-species-name">${bird.name}</div>
+          <div class="fn-species-latin">${bird.latin}</div>
+        </div>
+        <div class="fn-label">🔍 HOW TO IDENTIFY</div>
         <p class="fn-main">${noteText}</p>
-        <p class="fn-count">${bird.count ? `📊 ${bird.count.toLocaleString()} iNat obs` : ''}</p>
+        <p class="fn-count" style="margin-top:6px">${bird.count ? `📊 ${bird.count.toLocaleString()} iNat obs` : ''}</p>
         <p class="inat-credit" style="margin-top:6px"><a href="https://www.inaturalist.org/taxa/search?q=${encodeURIComponent(bird.name)}" target="_blank">Photo: iNaturalist</a> · CC licensed</p>
-      </div>${wrongMsg}`;
+      </div>${wrongMsg}${nextBtn}`;
     // Fetch Wikipedia summary async if not yet loaded
     if(!bird.note && bird.wikiUrl) {
       fetchWikiSummary(bird.wikiUrl).then(text => {
@@ -515,8 +523,8 @@ function selectAnswer(opt,event){
     if(event) burstStars(event.clientX,event.clientY);
     setTimeout(()=>showEncouragement(STREAK_MSGS[newStreak]||CORRECT_MSGS[Math.floor(Math.random()*CORRECT_MSGS.length)]),150);
   }
-  if(newStreak>=STREAK_TARGET) setTimeout(()=>setState({phase:'result'}),2200);
-  else setTimeout(advance,2400);
+  if(newStreak>=STREAK_TARGET) setTimeout(()=>setState({phase:'result'}),2000);
+  // No auto-advance — user clicks Next
 }
 
 function advance(){

@@ -145,7 +145,12 @@
 
   /* Field note */
   .field-note { background: #e8f4ef; border: 1.5px solid #6dba9a; border-radius: 12px; padding: 14px 16px; animation: fadeUp 0.4s ease both; }
+  .fn-head { margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #6dba9a55; }
+  .fn-species-name { font-size: 1.15rem; font-weight: 900; color: #1a5940; line-height: 1.2; }
+  .fn-species-latin { font-size: 0.8rem; font-style: italic; color: #6b6960; margin-top: 2px; margin-bottom: 4px; }
   .field-note .fn-label { font-size: 0.62rem; letter-spacing: 0.1em; color: #2a7a58; font-weight: 800; margin-bottom: 6px; }
+  .btn-next { width: 100%; background: #1a5940; color: white; border: none; border-radius: 12px; padding: 15px; font-size: 1rem; font-weight: 800; cursor: pointer; margin-top: 10px; font-family: system-ui, -apple-system, sans-serif; transition: all 0.2s; animation: fadeUp 0.3s ease both; box-shadow: 0 4px 12px rgba(26,89,64,0.2); }
+  .btn-next:hover { background: #2a7a58; transform: translateY(-2px); }
   .field-note .fn-main { color: #1a5940; font-size: 0.85rem; line-height: 1.6; }
   .wrong-note { background: #faf0f0; border: 1.5px solid #d47a7a; border-radius: 10px; padding: 10px 14px; margin-top: 8px; }
   .wrong-note p { color: #8a2c2c; font-size: 0.8rem; font-weight: 600; }
@@ -842,15 +847,20 @@ function render() {
   let fieldNote = "";
   if (state.selected) {
     const ok = state.selected === bird.name;
-    const samoName = bird.samoan ? `<p class="fn-samoan">🌺 Samoan name: <strong>${bird.samoan}</strong></p>` : '';
-    const wrongMsg = ok ? "" : `<div class="wrong-note"><p>📌 Don't worry — this one will come back! You'll get it next time.</p></div>`;
+    const samoName = bird.samoan ? `<div class="fn-samoan">🌺 <strong>${bird.samoan}</strong></div>` : '';
+    const wrongMsg = ok ? "" : `<div class="wrong-note"><p>📌 This one will come back — you'll get it next time.</p></div>`;
+    const nextBtn = `<button class="btn-next" onclick="advance()">Next →</button>`;
     fieldNote = `
       <div class="field-note">
-        <div class="fn-label">🔭 FIELD NOTE</div>
-        ${samoName}
+        <div class="fn-head">
+          <div class="fn-species-name">${bird.name}</div>
+          <div class="fn-species-latin">${bird.latin}</div>
+          ${samoName}
+        </div>
+        <div class="fn-label">🔍 HOW TO IDENTIFY</div>
         <p class="fn-main">${bird.note}</p>
-        <p class="wiki-credit">Photo: <a href="https://www.inaturalist.org/taxa/search?q=${encodeURIComponent(bird.name)}" target="_blank">iNaturalist</a> · CC licensed</p>
-      </div>${wrongMsg}`;
+        <p class="wiki-credit" style="margin-top:8px">Photo: <a href="https://www.inaturalist.org/taxa/search?q=${encodeURIComponent(bird.name)}" target="_blank">iNaturalist</a> · CC licensed</p>
+      </div>${wrongMsg}${nextBtn}`;
   }
 
   app.innerHTML = header + `
@@ -938,10 +948,9 @@ function selectAnswer(opt, event) {
   }
 
   if (newStreak >= STREAK_TARGET) {
-    setTimeout(() => setState({ phase: "result" }), 2200);
-  } else {
-    setTimeout(advance, 2400);
+    setTimeout(() => setState({ phase: "result" }), 2000);
   }
+  // No auto-advance — user clicks Next
 }
 
 function advance() {
