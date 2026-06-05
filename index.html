@@ -517,20 +517,43 @@ function checkColorVariance(url) {
     img.onload = () => {
       clearTimeout(timer);
       try {
+        const S = 40;
         const c = document.createElement('canvas');
-        c.width = c.height = 40;
+        c.width = c.height = S;
         const ctx = c.getContext('2d');
-        ctx.drawImage(img, 0, 0, 40, 40);
-        const d = ctx.getImageData(0, 0, 40, 40).data;
+        ctx.drawImage(img, 0, 0, S, S);
+        const d = ctx.getImageData(0, 0, S, S).data;
         const n = d.length >> 2;
+
+        // 1. Overall colour variance (catches blank/washed-out images)
         let sR = 0, sG = 0, sB = 0;
         for (let i = 0; i < d.length; i += 4) { sR += d[i]; sG += d[i+1]; sB += d[i+2]; }
         const mR = sR/n, mG = sG/n, mB = sB/n;
         let v = 0;
         for (let i = 0; i < d.length; i += 4)
           v += (d[i]-mR)**2 + (d[i+1]-mG)**2 + (d[i+2]-mB)**2;
-        done(Math.sqrt(v / (n * 3)) > 22); // stdDev > 22 = enough colour variation
-      } catch { done(true); } // CORS blocked — assume ok
+        const stdDev = Math.sqrt(v / (n * 3));
+
+        // 2. Centre vs edge difference (catches tiny-bird-in-distance shots)
+        const lo = Math.floor(S * 0.3), hi = Math.floor(S * 0.7);
+        let cR = 0, cG = 0, cB = 0, cN = 0, eR = 0, eG = 0, eB = 0, eN = 0;
+        for (let y = 0; y < S; y++) {
+          for (let x = 0; x < S; x++) {
+            const i = (y * S + x) * 4;
+            if (x >= lo && x < hi && y >= lo && y < hi) {
+              cR += d[i]; cG += d[i+1]; cB += d[i+2]; cN++;
+            } else {
+              eR += d[i]; eG += d[i+1]; eB += d[i+2]; eN++;
+            }
+          }
+        }
+        const centreEdgeDiff = Math.sqrt(
+          ((cR/cN)-(eR/eN))**2 + ((cG/cN)-(eG/eN))**2 + ((cB/cN)-(eB/eN))**2
+        );
+
+        // Pass if: very varied image OR (decent variance AND visible subject)
+        done(stdDev > 35 || (stdDev > 20 && centreEdgeDiff > 8));
+      } catch { done(true); }
     };
     img.src = url;
   });
