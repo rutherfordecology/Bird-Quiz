@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bird Quiz</title>
+<title>WhatDatBird?</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -339,7 +339,7 @@ function render(){
     app.innerHTML = header + `
       <div class="error-box fade">
         <p>${state.loadError || 'Could not load species for this location.'}</p>
-        <button class="btn-primary" onclick="window.location.href='index.html'">← Back to Quiz List</button>
+        <button class="btn-primary" onclick="window.location.href='index.html'">← WhatDatBird?</button>
       </div>`;
     return;
   }
@@ -367,7 +367,7 @@ function render(){
         <p>🎯 Get <strong>${STREAK_TARGET} correct in a row</strong> to win! Miss one and the streak resets — tricky birds keep coming back. Photos are real iNaturalist observations. 🌟</p>
       </div>
       <button class="btn-primary" onclick="startQuiz()">Let's Go! 🚀</button>
-      <a href="index.html" style="display:block;text-align:center;margin-top:14px;font-size:0.8rem;color:#9b9890;text-decoration:none;" onmouseover="this.style.color='#2a7a58'" onmouseout="this.style.color='#9b9890'">← All Quizzes</a>`;
+      <a href="index.html" style="display:block;text-align:center;margin-top:14px;font-size:0.8rem;color:#9b9890;text-decoration:none;" onmouseover="this.style.color='#2a7a58'" onmouseout="this.style.color='#9b9890'">← WhatDatBird?</a>`;
     return;
   }
 
@@ -390,7 +390,7 @@ function render(){
         <p class="stat">${state.totalCorrect} correct from ${state.totalSeen} attempts (${acc}%)</p>
         <p class="msg">${msg}</p>
         <button class="btn-primary" onclick="goIntro()">Play Again 🎯</button>
-        <a href="index.html" style="display:block;text-align:center;margin-top:14px;font-size:0.8rem;color:#9b9890;text-decoration:none;" onmouseover="this.style.color='#2a7a58'" onmouseout="this.style.color='#9b9890'">← All Quizzes</a>
+        <a href="index.html" style="display:block;text-align:center;margin-top:14px;font-size:0.8rem;color:#9b9890;text-decoration:none;" onmouseover="this.style.color='#2a7a58'" onmouseout="this.style.color='#9b9890'">← WhatDatBird?</a>
       </div>`;
     launchConfetti();
     return;
