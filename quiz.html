@@ -64,6 +64,11 @@
   .btn-primary:hover { background:#2a7a58; transform:translateY(-2px); }
   .btn-secondary { width:100%; background:transparent; border:1.5px solid #dddbd3; color:#2a7a58; border-radius:12px; padding:13px; font-size:0.95rem; font-weight:800; cursor:pointer; font-family:system-ui,-apple-system,sans-serif; transition:all 0.2s; margin-top:10px; }
   .btn-secondary:hover { border-color:#2a7a58; background:#e8f4ef; }
+  .buffer-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:14px 0 4px; }
+  .buffer-label { font-size:0.78rem; font-weight:700; color:#6b6960; }
+  .buffer-btn { background:#fff; border:1.5px solid #dddbd3; border-radius:20px; padding:5px 13px; font-size:0.75rem; font-weight:700; color:#6b6960; cursor:pointer; font-family:system-ui,-apple-system,sans-serif; transition:all 0.15s; }
+  .buffer-btn:hover { border-color:#2a7a58; color:#2a7a58; }
+  .buffer-btn.active { background:#e8f4ef; border-color:#2a7a58; color:#1a5940; }
 
   /* Badges */
   .badges { display:flex; gap:6px; flex-wrap:wrap; }
@@ -277,11 +282,24 @@ async function fetchWikiSummary(wikiUrl) {
 // ── Species loading ────────────────────────────────────────────────────────
 let STANDARD_BIRDS = [];
 let EXPERT_BIRDS   = [];
+let PLACE_LAT = null, PLACE_LNG = null;
 
-async function loadSpecies(placeId) {
-  const r = await fetch(
-    `https://api.inaturalist.org/v1/observations/species_counts?place_id=${placeId}&iconic_taxa=Aves&quality_grade=research&per_page=100&order_by=observations_count&order=desc`
-  );
+async function loadSpecies(placeId, bufferKm = 0) {
+  // Fetch place centroid if we need it for a buffered search
+  if (bufferKm > 0 && PLACE_LAT === null) {
+    try {
+      const pr = await fetch(`https://api.inaturalist.org/v1/places/${placeId}`);
+      const pd = await pr.json();
+      const coords = pd.results?.[0]?.point_geojson?.coordinates;
+      if (coords) { PLACE_LNG = coords[0]; PLACE_LAT = coords[1]; }
+    } catch {}
+  }
+
+  const url = (bufferKm > 0 && PLACE_LAT !== null)
+    ? `https://api.inaturalist.org/v1/observations/species_counts?lat=${PLACE_LAT}&lng=${PLACE_LNG}&radius=${bufferKm}&iconic_taxa=Aves&quality_grade=research&per_page=100&order_by=observations_count&order=desc`
+    : `https://api.inaturalist.org/v1/observations/species_counts?place_id=${placeId}&iconic_taxa=Aves&quality_grade=research&per_page=100&order_by=observations_count&order=desc`;
+
+  const r = await fetch(url);
   if (!r.ok) throw new Error('iNat API error');
   const d = await r.json();
   const birds = (d.results || [])
@@ -305,7 +323,7 @@ async function loadSpecies(placeId) {
 
 // ── Quiz state ─────────────────────────────────────────────────────────────
 let state = {
-  phase: 'loading', mode: 'standard', loadError: null,
+  phase: 'loading', mode: 'standard', loadError: null, buffer: 0,
   queue: [], wrongBin: [], current: null,
   streak: 0, streakHistory: [],
   totalSeen: 0, totalCorrect: 0,
@@ -393,7 +411,7 @@ function render(){
       <div class="loading-wrap fade">
         <div class="spinner"></div>
         <div class="loading-text">Loading birds for ${PLACE_NAME}…</div>
-        <div class="loading-sub">Fetching species from iNaturalist</div>
+        <div class="loading-sub">${state.buffer > 0 ? `Searching within ${state.buffer}km radius` : 'Fetching species from iNaturalist'}</div>
       </div>`;
     return;
   }
@@ -434,6 +452,10 @@ function render(){
     app.innerHTML = header + modeGrid + `
       <div class="info-box">
         <p>🎯 Get <strong>${STREAK_TARGET} correct in a row</strong> to win! Miss one and the streak resets — tricky birds keep coming back. Photos are real iNaturalist observations. 🌟</p>
+      </div>
+      <div class="buffer-row">
+        <span class="buffer-label">📍 Area buffer:</span>
+        ${[0,5,10,25,50].map(km=>`<button class="buffer-btn${state.buffer===km?' active':''}" onclick="setBuffer(${km})">${km===0?'None':km+'km'}</button>`).join('')}
       </div>
       <button class="btn-primary" onclick="startQuiz()">Let's Go! 🚀</button>
       <button class="btn-secondary" onclick="goSpecies()">📋 Species List</button>
@@ -603,9 +625,16 @@ function imgFailed(){
   if(box) box.innerHTML=`<div class="img-placeholder"><div class="icon">📷</div><span>No photo available</span></div>`;
 }
 
-function setMode(m)  { setState({mode:m}); }
-function goIntro()   { setState({phase:'intro'}); }
-function goSpecies() { setState({phase:'species'}); }
+function setMode(m)   { setState({mode:m}); }
+function goIntro()    { setState({phase:'intro'}); }
+function goSpecies()  { setState({phase:'species'}); }
+function setBuffer(km) {
+  if (km === state.buffer) return;
+  setState({ buffer: km, phase: 'loading' });
+  loadSpecies(PLACE_ID, km)
+    .then(() => setState({ phase: 'intro' }))
+    .catch(err => setState({ phase: 'error', loadError: err.message }));
+}
 
 function startQuiz(){
   const pool=getPool();
