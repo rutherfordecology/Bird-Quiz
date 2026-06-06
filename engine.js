@@ -1,7 +1,7 @@
-// WhatDatBird? Quiz Engine v5.14
+// WhatDatBird? Quiz Engine v5.15
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.14';
+const APP_VERSION = 'v5.15';
 
 // ── Config ────────────────────────────────────────────────────────────────
 let CFG = {};
@@ -840,10 +840,44 @@ async function saveToLibrary() {
       const ancR = await fetch(`https://api.inaturalist.org/v1/places?id=${ancestorIds}&per_page=100`);
       const ancD = await ancR.json();
       const ancs = ancD.results || [];
-      continent = ancs.find(a => a.place_type === 29)?.display_name || 'Other';
+      continent = ancs.find(a => a.place_type === 29)?.display_name || '';
       country   = ancs.find(a => a.place_type === 12)?.display_name
                || ancs.find(a => a.place_type === 2)?.display_name
                || CFG.placeName;
+      // Fallback: derive continent from country if iNat ancestor missing
+      if (!continent) {
+        const COUNTRY_CONTINENT = {
+          'United States':'North America','Canada':'North America','Mexico':'North America',
+          'Guatemala':'North America','Cuba':'North America','Jamaica':'North America',
+          'Costa Rica':'North America','Panama':'North America','Honduras':'North America',
+          'Nicaragua':'North America','El Salvador':'North America','Belize':'North America',
+          'Dominican Republic':'North America','Haiti':'North America','Puerto Rico':'North America',
+          'Trinidad and Tobago':'North America','Barbados':'North America','Bahamas':'North America',
+          'Brazil':'South America','Argentina':'South America','Colombia':'South America',
+          'Peru':'South America','Venezuela':'South America','Chile':'South America',
+          'Ecuador':'South America','Bolivia':'South America','Paraguay':'South America',
+          'Uruguay':'South America','Guyana':'South America','Suriname':'South America',
+          'United Kingdom':'Europe','France':'Europe','Germany':'Europe','Spain':'Europe',
+          'Italy':'Europe','Portugal':'Europe','Netherlands':'Europe','Belgium':'Europe',
+          'Switzerland':'Europe','Austria':'Europe','Sweden':'Europe','Norway':'Europe',
+          'Denmark':'Europe','Finland':'Europe','Poland':'Europe','Czech Republic':'Europe',
+          'Hungary':'Europe','Romania':'Europe','Greece':'Europe','Ireland':'Europe',
+          'Croatia':'Europe','Slovakia':'Europe','Bulgaria':'Europe','Serbia':'Europe',
+          'Russia':'Europe','Ukraine':'Europe','Iceland':'Europe',
+          'Australia':'Oceania','New Zealand':'Oceania','Papua New Guinea':'Oceania',
+          'Fiji':'Oceania','Samoa':'Oceania','Tonga':'Oceania','Vanuatu':'Oceania',
+          'Solomon Islands':'Oceania','Palau':'Oceania',
+          'China':'Asia','Japan':'Asia','India':'Asia','Indonesia':'Asia','Philippines':'Asia',
+          'Vietnam':'Asia','Thailand':'Asia','Malaysia':'Asia','South Korea':'Asia',
+          'Taiwan':'Asia','Myanmar':'Asia','Cambodia':'Asia','Nepal':'Asia','Sri Lanka':'Asia',
+          'Singapore':'Asia','Bangladesh':'Asia','Pakistan':'Asia','Mongolia':'Asia',
+          'South Africa':'Africa','Kenya':'Africa','Tanzania':'Africa','Ethiopia':'Africa',
+          'Uganda':'Africa','Ghana':'Africa','Nigeria':'Africa','Cameroon':'Africa',
+          'Senegal':'Africa','Madagascar':'Africa','Zambia':'Africa','Zimbabwe':'Africa',
+          'Botswana':'Africa','Mozambique':'Africa','Morocco':'Africa','Egypt':'Africa',
+        };
+        continent = COUNTRY_CONTINENT[country] || 'Other';
+      }
     }
     const spR = await fetch(`https://api.inaturalist.org/v1/observations/species_counts?place_id=${CFG.placeId}&iconic_taxa=Aves&quality_grade=research&per_page=1&order_by=observations_count&order=desc`);
     const spD = await spR.json();
