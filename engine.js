@@ -1,7 +1,7 @@
-// WhatDatBird? Quiz Engine v5.27
+// WhatDatBird? Quiz Engine v5.28
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.27';
+const APP_VERSION = 'v5.28';
 
 // ── Config ────────────────────────────────────────────────────────────────
 let CFG = {};
@@ -631,8 +631,8 @@ function renderAbout(app, header) {
 
       <div class="field-note" style="margin-bottom:12px">
         <div class="fn-label">WHAT ABOUT INDIGENOUS NAMES?</div>
-        <p class="fn-main">Apologies — I can't get te reo Māori names in there at the moment. I'm working on it, but species names are pulled from global databases (GBIF) which use latin names and the most widely-used common names. So Tui is Tui, but Pūkeko comes up as Australasian Swamphen — there's no option for dual names in the current data pipeline.</p>
-        <p class="fn-main" style="margin-top:8px">Ideally, common and indigenous names would be linked to where the records are from — that way regional languages and dialects could be tied to species locations. There are over 7,000 languages in the world. That's the dream.</p>
+        <p class="fn-main">Species names come from GBIF, which uses latin names and the most widely-used common name for each species globally. Tui is Tui — but Pūkeko comes up as Australasian Swamphen. The pipeline doesn't currently support dual names or regional overrides.</p>
+        <p class="fn-main" style="margin-top:8px">The right solution would link indigenous and common names to the geographic origin of each record — so the name you see reflects where the bird actually is. There are over 7,000 languages in the world. That's a problem worth solving.</p>
       </div>
 
       <div class="field-note" style="margin-bottom:12px">
