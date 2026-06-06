@@ -63,25 +63,30 @@ async function fetchInatImage(bird) {
 
   if (!inatPhotoCache[cacheKey]) {
     try {
-      const photos = [];
       const preloaded = typeof bird === 'object' ? bird.defaultPhoto : null;
-      if (preloaded) photos.push(preloaded);
 
-      // Fetch carousel photos from observations (single API call)
+      // Collect observations sorted by faves (API already returns faves-desc)
+      const obsPhotos = []; // [{src, faves}]
       const or = await fetch(`https://api.inaturalist.org/v1/observations?taxon_name=${encodeURIComponent(latin)}&photos=true&per_page=20&quality_grade=research&order_by=faves&iconic_taxa=Aves`);
       if (or.ok) {
         const od = await or.json();
         for (const o of (od.results || [])) {
-          if ((o.faves_count || 0) >= 0) {
-            for (const p of (o.photos || [])) {
-              const src = p.url?.replace('/square.', '/medium.');
-              if (src && !photos.includes(src)) photos.push(src);
-            }
+          for (const p of (o.photos || [])) {
+            const src = p.url?.replace('/square.', '/medium.');
+            if (src) obsPhotos.push({ src, faves: o.faves_count || 0 });
           }
         }
       }
 
-      // If no defaultPhoto, fall back to taxa endpoint
+      // Sort by faves desc, dedupe
+      obsPhotos.sort((a, b) => b.faves - a.faves);
+      const seen = new Set(preloaded ? [preloaded] : []);
+      const sorted = obsPhotos.map(p => p.src).filter(src => { if (seen.has(src)) return false; seen.add(src); return true; });
+
+      // taxa photo first, then faves-sorted observations
+      const photos = [...(preloaded ? [preloaded] : []), ...sorted];
+
+      // If still nothing, try taxa endpoint directly
       if (!photos.length) {
         const taxaUrl = inatId
           ? `https://api.inaturalist.org/v1/taxa/${inatId}`
