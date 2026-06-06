@@ -1,7 +1,7 @@
-// WhatDatBird? Quiz Engine v5.31
+// WhatDatBird? Quiz Engine v5.32
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.31';
+const APP_VERSION = 'v5.32';
 
 // ── Config ────────────────────────────────────────────────────────────────
 let CFG = {};
@@ -74,9 +74,12 @@ async function fetchInatImage(bird) {
         for (const o of (od.results || [])) {
           // For taxon_name fallback, skip cross-genus results (handles reclassifications like Bubulcus→Ardea while blocking obvious bleed)
           if (!inatId && o.taxon?.name) {
-            const obsGenus = o.taxon.name.split(' ')[0].toLowerCase();
-            const expGenus = latin.split(' ')[0].toLowerCase();
-            if (obsGenus !== expGenus && o.taxon.name.split(' ')[1]?.toLowerCase() !== latin.split(' ')[1]?.toLowerCase()) continue;
+            const obsGenus  = o.taxon.name.split(' ')[0].toLowerCase();
+            const expGenus  = latin.split(' ')[0].toLowerCase();
+            const obsEpi    = o.taxon.name.split(' ')[1]?.toLowerCase();
+            const expEpi    = latin.split(' ')[1]?.toLowerCase();
+            const epiClose  = obsEpi && expEpi && (obsEpi === expEpi || obsEpi.startsWith(expEpi.slice(0,6)) || expEpi.startsWith(obsEpi.slice(0,6)));
+            if (obsGenus !== expGenus && !epiClose) continue;
           }
           const src = o.photos?.[0]?.url?.replace('/square.', '/medium.');
           if (src) obsPhotos.push({ src, faves: o.faves_count || 0 });
@@ -100,9 +103,10 @@ async function fetchInatImage(bird) {
         if (tr.ok) {
           const td = await tr.json();
           const epithet = latin.split(' ')[1]?.toLowerCase();
+          const epithetMatch = (a, b) => a && b && (a === b || a.startsWith(b.slice(0,6)) || b.startsWith(a.slice(0,6)));
           const taxon = inatId ? td.results?.[0] : td.results?.find(t => {
             if (t.name.toLowerCase() === latin.toLowerCase()) return true;
-            return epithet && t.name.split(' ')[1]?.toLowerCase() === epithet;
+            return epithetMatch(epithet, t.name.split(' ')[1]?.toLowerCase());
           });
           if (taxon) {
             const dp = taxon.default_photo?.url?.replace('/square.', '/medium.');
