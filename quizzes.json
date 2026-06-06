@@ -59,6 +59,18 @@
       "place_id": 144315,
       "photo_taxon": "Alectura lathami",
       "added": "2026-06-06"
+    },
+    {
+      "name": "WhatDatBird? - Sackville Waterfowl Park, CA, NB",
+      "continent": "Other",
+      "country": "Sackville Waterfowl Park, CA, NB",
+      "description": "Sackville Waterfowl Park, CA, NB",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?place_id=121402&place_name=Sackville%20Waterfowl%20Park%2C%20CA%2C%20NB",
+      "place_id": 121402,
+      "photo_taxon": null,
+      "added": "2026-06-06"
     }
   ]
 }
