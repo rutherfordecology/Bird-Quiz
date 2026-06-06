@@ -14,6 +14,7 @@ const STREAK_MSGS  = {3:'3 in a row!', 5:'5 streak - flying!', 7:'Lucky 7!', 9:'
 const GH_TOKEN = ['github','pat','11CD5YDQQ0BqwCXNYdVbgz_5iHfac6fd0MNVZZLhiPrnFnFTzcTj8N7l1MQ7ro9gn6CNE4N7VHlt7DOCis'].join('_');
 const GH_REPO  = 'rutherfordecology/WhatDatBird';
 const GH_FILE  = 'quizzes.json';
+const LB_FILE  = 'leaderboard.json';
 
 // ── Image fetching ────────────────────────────────────────────────────────
 const inatPhotoCache    = {};
@@ -341,7 +342,7 @@ function renderIntro(app, header) {
 
   app.innerHTML = header + modeGrid + `
     <div class="info-box">
-      <p>&#127919; Get <strong>${STREAK_TARGET} correct in a row</strong> to win! Miss one and the streak resets - tricky birds keep coming back. Photos are real iNaturalist observations. &#127775;</p>
+      <p>&#127919; Get your score to <strong>${STREAK_TARGET} to win!</strong> Each correct answer scores +1, wrong answers cost -2. Tricky birds keep coming back. Photos are real iNaturalist observations. &#127775;</p>
     </div>
     ${bufferNote}
     <button class="btn-primary" onclick="startQuiz()">Let's Go! &#128640;</button>
@@ -365,18 +366,31 @@ function renderResult(app, header) {
     <button class="btn-save-library" id="saveLibBtn" onclick="saveToLibrary()">&#127757; Add to Quiz Library</button>
     <div id="saveLibMsg" style="font-size:0.8rem;color:#2a7a58;margin-top:8px;min-height:1.2em;text-align:center;font-weight:700;"></div>` : '';
 
+  const lbSection = CFG.placeId ? `
+    <div class="lb-entry" id="lbEntry">
+      <div class="lb-label">&#127942; Add your score to the leaderboard</div>
+      <div class="lb-row">
+        <input class="lb-input" id="lbName" type="text" maxlength="24" placeholder="Your name" autocomplete="off">
+        <button class="lb-submit" onclick="submitScore(${state.totalSeen})">Submit</button>
+      </div>
+      <div id="lbMsg" style="font-size:0.78rem;color:#2a7a58;margin-top:6px;min-height:1em;text-align:center;font-weight:700;"></div>
+    </div>
+    <div class="lb-board" id="lbBoard"></div>` : '';
+
   app.innerHTML = header + `
     <div class="result">
       <span class="trophy">&#127942;</span>
-      <h2>${STREAK_TARGET} in a row!</h2>
+      <h2>${STREAK_TARGET} points!</h2>
       <div class="star-row">${stars}</div>
       <p class="stat">${state.totalCorrect} correct from ${state.totalSeen} attempts (${acc}%)</p>
       <p class="msg">${msg}</p>
       <button class="btn-primary" onclick="goIntro()">Play Again &#127919;</button>
       ${saveBtn}
+      ${lbSection}
       <button class="btn-back" onclick="window.location.href='${CFG.backUrl}'">&#8592; All Quizzes</button>
     </div>`;
   launchConfetti();
+  if (CFG.placeId) loadLeaderboard();
 }
 
 function renderQuiz(app) {
@@ -599,7 +613,7 @@ function selectAnswer(opt, event) {
   const correct=opt===bird.name;
   const newHistory=[...state.streakHistory,correct];
   if(newHistory.length>STREAK_TARGET) newHistory.shift();
-  const newStreak=correct?state.streak+1:0;
+  const newStreak=correct?state.streak+1:Math.max(0,state.streak-2);
   setState({selected:opt,streak:newStreak,streakHistory:newHistory,
     totalSeen:state.totalSeen+1,totalCorrect:state.totalCorrect+(correct?1:0),
     wrongBin:correct?state.wrongBin:[...state.wrongBin,bird]});
@@ -639,6 +653,73 @@ function _advance() {
     const photoUrls=url?[url,...all.filter(u=>u!==url)].slice(0,5):all;
     setState({imgUrl:url,imgLoading:false,photoUrls,photoIdx:0});
   });
+}
+
+// ── Leaderboard ───────────────────────────────────────────────────────────
+async function readLB() {
+  const r = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${LB_FILE}`, {
+    headers: { Authorization: `token ${GH_TOKEN}`, Accept: 'application/vnd.github.v3+json' }
+  });
+  if (!r.ok) return { sha: null, data: { boards: {} } };
+  const d = await r.json();
+  const data = JSON.parse(decodeURIComponent(escape(atob(d.content.replace(/\n/g, '')))).replace(/^﻿/, ''));
+  return { sha: d.sha, data };
+}
+
+async function loadLeaderboard() {
+  const board = document.getElementById('lbBoard');
+  if (!board) return;
+  try {
+    const { data } = await readLB();
+    const entries = (data.boards?.[String(CFG.placeId)] || []).slice(0, 10);
+    if (!entries.length) { board.innerHTML = ''; return; }
+    board.innerHTML = `<div class="lb-title">&#127942; Leaderboard — ${CFG.placeName}</div>` +
+      entries.map((e, i) => `<div class="lb-row-item">
+        <span class="lb-rank">${i + 1}</span>
+        <span class="lb-name">${e.name}</span>
+        <span class="lb-score">${e.score} birds</span>
+        <span class="lb-date">${e.date}</span>
+      </div>`).join('');
+  } catch { board.innerHTML = ''; }
+}
+
+async function submitScore(totalSeen) {
+  const nameEl = document.getElementById('lbName');
+  const msgEl  = document.getElementById('lbMsg');
+  const entry  = document.getElementById('lbEntry');
+  const name   = nameEl?.value?.trim();
+  if (!name) { if (msgEl) { msgEl.style.color='#8a2c2c'; msgEl.textContent='Please enter your name.'; } return; }
+  if (msgEl) { msgEl.style.color='#2a7a58'; msgEl.textContent='Saving...'; }
+
+  try {
+    const { sha, data } = await readLB();
+    if (!data.boards) data.boards = {};
+    const key = String(CFG.placeId);
+    if (!data.boards[key]) data.boards[key] = [];
+    data.boards[key].push({ name, score: totalSeen, date: new Date().toISOString().split('T')[0] });
+    data.boards[key].sort((a, b) => a.score - b.score);
+    data.boards[key] = data.boards[key].slice(0, 20);
+
+    const body = JSON.stringify({
+      message: `Leaderboard: ${name} scored ${totalSeen} at ${CFG.placeName}`,
+      sha: sha || undefined,
+      content: btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2)))),
+    });
+    const putR = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${LB_FILE}`, {
+      method: 'PUT',
+      headers: { Authorization: `token ${GH_TOKEN}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+      body,
+    });
+    if (putR.status === 409) {
+      if (msgEl) { msgEl.style.color='#8a6020'; msgEl.textContent='Someone else is recording a score — please try again in a moment.'; }
+      return;
+    }
+    if (!putR.ok) throw new Error(`GitHub write ${putR.status}`);
+    if (entry) entry.style.display = 'none';
+    loadLeaderboard();
+  } catch (e) {
+    if (msgEl) { msgEl.style.color='#8a2c2c'; msgEl.textContent=`Could not save: ${e.message}`; }
+  }
 }
 
 // ── Quiz Library ──────────────────────────────────────────────────────────

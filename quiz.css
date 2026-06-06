@@ -67,6 +67,20 @@ body {
 .btn-save-library { width:100%; background:transparent; border:1.5px solid #2a7a58; color:#2a7a58; border-radius:12px; padding:13px; font-size:0.95rem; font-weight:800; cursor:pointer; font-family:system-ui,-apple-system,sans-serif; transition:all 0.2s; margin-top:10px; }
 .btn-save-library:hover { background:#e8f4ef; }
 .btn-save-library:disabled { opacity:0.5; cursor:default; }
+.lb-entry { background:#f3f2ee; border:1.5px solid #dddbd3; border-radius:12px; padding:14px 16px; margin-top:14px; text-align:left; }
+.lb-label { font-size:0.78rem; font-weight:800; color:#6b6960; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:10px; text-align:center; }
+.lb-row { display:flex; gap:8px; }
+.lb-input { flex:1; border:1.5px solid #dddbd3; border-radius:8px; padding:8px 12px; font-size:0.9rem; font-family:system-ui,-apple-system,sans-serif; background:#fff; color:#1c1b18; }
+.lb-input:focus { outline:none; border-color:#2a7a58; }
+.lb-submit { background:#1a5940; color:#fff; border:none; border-radius:8px; padding:8px 16px; font-size:0.9rem; font-weight:800; cursor:pointer; font-family:system-ui,-apple-system,sans-serif; transition:opacity 0.15s; }
+.lb-submit:hover { opacity:0.85; }
+.lb-board { margin-top:14px; }
+.lb-title { font-size:0.75rem; font-weight:800; color:#6b6960; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px; text-align:center; }
+.lb-row-item { display:flex; align-items:center; gap:10px; padding:8px 12px; background:#fff; border:1.5px solid #dddbd3; border-radius:8px; margin-bottom:6px; font-size:0.85rem; }
+.lb-rank { font-weight:900; color:#1a5940; width:20px; flex-shrink:0; }
+.lb-name { flex:1; font-weight:700; color:#1c1b18; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.lb-score { font-weight:800; color:#2a7a58; flex-shrink:0; }
+.lb-date { font-size:0.72rem; color:#9b9890; flex-shrink:0; }
 .btn-back { display:block; text-align:center; margin-top:14px; font-size:0.8rem; color:#9b9890; text-decoration:none; cursor:pointer; background:none; border:none; font-family:system-ui,-apple-system,sans-serif; width:100%; }
 .btn-back:hover { color:#2a7a58; }
 
