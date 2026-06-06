@@ -64,11 +64,6 @@
   .btn-primary:hover { background:#2a7a58; transform:translateY(-2px); }
   .btn-secondary { width:100%; background:transparent; border:1.5px solid #dddbd3; color:#2a7a58; border-radius:12px; padding:13px; font-size:0.95rem; font-weight:800; cursor:pointer; font-family:system-ui,-apple-system,sans-serif; transition:all 0.2s; margin-top:10px; }
   .btn-secondary:hover { border-color:#2a7a58; background:#e8f4ef; }
-  .buffer-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:14px 0 4px; }
-  .buffer-label { font-size:0.78rem; font-weight:700; color:#6b6960; }
-  .buffer-btn { background:#fff; border:1.5px solid #dddbd3; border-radius:20px; padding:5px 13px; font-size:0.75rem; font-weight:700; color:#6b6960; cursor:pointer; font-family:system-ui,-apple-system,sans-serif; transition:all 0.15s; }
-  .buffer-btn:hover { border-color:#2a7a58; color:#2a7a58; }
-  .buffer-btn.active { background:#e8f4ef; border-color:#2a7a58; color:#1a5940; }
 
   /* Badges */
   .badges { display:flex; gap:6px; flex-wrap:wrap; }
@@ -453,11 +448,7 @@ function render(){
       <div class="info-box">
         <p>ðŸŽ¯ Get <strong>${STREAK_TARGET} correct in a row</strong> to win! Miss one and the streak resets â€” tricky birds keep coming back. Photos are real iNaturalist observations. ðŸŒŸ</p>
       </div>
-      <div class="buffer-row">
-        <span class="buffer-label">ðŸ“ Area buffer:</span>
-        ${[0,5,10,25,50].map(km=>`<button class="buffer-btn${state.buffer===km?' active':''}" onclick="setBuffer(${km})">${km===0?'None':km+'km'}</button>`).join('')}
-      </div>
-      ${state.buffer > 0 && EXPERT_BIRDS.length < 15 + state.buffer ? `<p style="font-size:0.75rem;color:#2a7a58;margin:4px 0 8px;text-align:center;">ðŸ“¡ Auto-expanded to ${state.buffer}km â€” only ${total} species recorded nearby</p>` : state.buffer > 0 ? `<p style="font-size:0.75rem;color:#2a7a58;margin:4px 0 8px;text-align:center;">ðŸ“¡ Showing species within ${state.buffer}km</p>` : ''}
+      ${state.buffer > 0 ? `<p style="font-size:0.75rem;color:#2a7a58;margin:0 0 10px;text-align:center;">&#x1F4E1; Area expanded to ${state.buffer}km radius to find enough species</p>` : ``}
       <button class="btn-primary" onclick="startQuiz()">Let's Go! ðŸš€</button>
       <button class="btn-secondary" onclick="goSpecies()">ðŸ“‹ Species List</button>
       <a href="index.html" style="display:block;text-align:center;margin-top:14px;font-size:0.8rem;color:#9b9890;text-decoration:none;" onmouseover="this.style.color='#2a7a58'" onmouseout="this.style.color='#9b9890'">â† WhatDatBird?</a>`;
@@ -629,7 +620,6 @@ function imgFailed(){
 function setMode(m)   { setState({mode:m}); }
 function goIntro()    { setState({phase:'intro'}); }
 function goSpecies()  { setState({phase:'species'}); }
-function setBuffer(km) {
   if (km === state.buffer) return;
   setState({ buffer: km, phase: 'loading' });
   loadSpecies(PLACE_ID, km)
