@@ -1,18 +1,6 @@
 ﻿{
   "quizzes": [
     {
-      "name": "WhatDatBird? - Samoa",
-      "continent": "Oceania",
-      "country": "Samoa",
-      "description": "Polynesia - South Pacific Ocean",
-      "species": 88,
-      "type": "preset",
-      "url": "samoa/",
-      "place_id": null,
-      "photo_taxon": "Didunculus strigirostris",
-      "added": "2026-06-06"
-    },
-    {
       "name": "WhatDatBird? - Gisborne, NZ",
       "continent": "Oceania",
       "country": "New Zealand",
