@@ -413,7 +413,10 @@ function renderQuiz(app) {
         <div class="fn-label">&#128269; HOW TO IDENTIFY</div>
         <p class="fn-main">${noteText}</p>
         ${bird.count?`<p class="fn-count">&#128202; ${bird.count.toLocaleString()} iNat obs in area</p>`:''}
-        <p class="inat-credit" style="margin-top:6px"><a href="https://www.inaturalist.org/taxa/search?q=${encodeURIComponent(bird.name)}" target="_blank">Photo: iNaturalist</a> - CC licensed</p>
+        <p class="inat-credit" style="margin-top:6px">
+          <a href="https://www.inaturalist.org/taxa/search?q=${encodeURIComponent(bird.name)}" target="_blank">Photo: iNaturalist</a> - CC licensed &nbsp;|&nbsp;
+          <a href="https://www.gbif.org/species/search?q=${encodeURIComponent(bird.latin||bird.name)}" target="_blank">Location data: GBIF</a>
+        </p>
       </div>${wrongMsg}`;
     if(!bird.note && bird.wikiUrl) {
       fetchIDNote(bird.wikiUrl).then(text => {
@@ -515,7 +518,8 @@ function renderAbout(app, header) {
       <div class="field-note" style="margin-bottom:12px">
         <div class="fn-label">BUILT WITH</div>
         <p class="fn-main">
-          <a href="https://www.inaturalist.org" target="_blank" style="color:#2a7a58">iNaturalist</a> - species lists and photos (CC licensed)<br>
+          <a href="https://www.gbif.org" target="_blank" style="color:#2a7a58">GBIF</a> - species lists and occurrence data (includes eBird)<br>
+          <a href="https://www.inaturalist.org" target="_blank" style="color:#2a7a58">iNaturalist</a> - photos and common names (CC licensed)<br>
           <a href="https://en.wikipedia.org" target="_blank" style="color:#2a7a58">Wikipedia</a> - field notes<br>
           <a href="https://ebird.org" target="_blank" style="color:#2a7a58">eBird</a> - species page links<br>
           GitHub Pages - free static hosting<br>
