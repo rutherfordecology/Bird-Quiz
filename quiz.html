@@ -220,17 +220,24 @@ async function loadFromGBIF() {
       setState({ phase: 'intro' });
       // Loop continues in background, updating counts in place
     } else if (introShown) {
+      const hadRarity = !!CFG.rarityBirds;
       setTiers(birds);
       if (state.phase === 'intro') {
-        const easy = CFG.easyBirds, hard = CFG.hardBirds, complete = CFG.completeBirds, rarity = CFG.rarityBirds;
-        const ec = document.getElementById('mc-easy');
-        const hc = document.getElementById('mc-hard');
-        const cc = document.getElementById('mc-complete');
-        const rc = document.getElementById('mc-rarity');
-        if (ec) ec.textContent = (easy?.length || 0) + ' SPECIES';
-        if (hc && hard) hc.textContent = hard.length + ' SPECIES';
-        if (cc && complete) cc.textContent = complete.length + ' SPECIES';
-        if (rc && rarity) rc.textContent = rarity.length + ' SPECIES';
+        const rarityJustAppeared = !hadRarity && !!CFG.rarityBirds;
+        if (rarityJustAppeared) {
+          // Rarity tier newly available — re-render to add the button
+          render();
+        } else {
+          const easy = CFG.easyBirds, hard = CFG.hardBirds, complete = CFG.completeBirds, rarity = CFG.rarityBirds;
+          const ec = document.getElementById('mc-easy');
+          const hc = document.getElementById('mc-hard');
+          const cc = document.getElementById('mc-complete');
+          const rc = document.getElementById('mc-rarity');
+          if (ec) ec.textContent = (easy?.length || 0) + ' SPECIES';
+          if (hc && hard) hc.textContent = hard.length + ' SPECIES';
+          if (cc && complete) cc.textContent = complete.length + ' SPECIES';
+          if (rc && rarity) rc.textContent = rarity.length + ' SPECIES';
+        }
       }
     }
   }
