@@ -57,26 +57,45 @@ function checkColorVariance(url) {
 }
 
 async function fetchInatImage(bird) {
-  const name = typeof bird === 'string' ? bird : (bird.latin || bird.name);
-  if (!inatPhotoCache[name]) {
+  const latin = typeof bird === 'string' ? bird : (bird.latin || bird.name);
+  const inatId = typeof bird === 'object' ? bird.inatId : null;
+  const cacheKey = latin;
+
+  if (!inatPhotoCache[cacheKey]) {
     try {
-      const r = await fetch(`https://api.inaturalist.org/v1/observations?taxon_name=${encodeURIComponent(name)}&photos=true&per_page=30&quality_grade=research&order_by=faves&iconic_taxa=Aves`);
-      if (!r.ok) { inatPhotoCache[name] = []; }
-      else {
-        const d = await r.json();
-        const five=[],four=[],all=[];
-        for(const obs of(d.results||[])){
-          const faves=obs.faves_count||0;
-          for(const p of(obs.photos||[])){
-            const src=p.url?.replace('/square.','/medium.');
-            if(src){all.push(src);if(faves>=5)five.push(src);else if(faves>=2)four.push(src);}
+      // Prefer taxa endpoint (curated photos) when we have inatId
+      const url = inatId
+        ? `https://api.inaturalist.org/v1/taxa/${inatId}?photos=true`
+        : `https://api.inaturalist.org/v1/taxa?q=${encodeURIComponent(latin)}&rank=species&per_page=1&photos=true`;
+      const r = await fetch(url);
+      if (!r.ok) throw new Error();
+      const d = await r.json();
+      const taxon = inatId ? d.results?.[0] : d.results?.find(t => t.name.toLowerCase() === latin.toLowerCase());
+      const photos = (taxon?.taxon_photos || [])
+        .map(tp => tp.photo?.url?.replace('/square.', '/medium.'))
+        .filter(Boolean);
+
+      if (photos.length >= 3) {
+        inatPhotoCache[cacheKey] = photos;
+      } else {
+        // Fall back to observations sorted by faves
+        const or = await fetch(`https://api.inaturalist.org/v1/observations?taxon_name=${encodeURIComponent(latin)}&photos=true&per_page=20&quality_grade=research&order_by=faves&iconic_taxa=Aves`);
+        const od = or.ok ? await or.json() : { results: [] };
+        const obs = [];
+        for (const o of (od.results || [])) {
+          if ((o.faves_count || 0) >= 2) {
+            for (const p of (o.photos || [])) {
+              const src = p.url?.replace('/square.', '/medium.');
+              if (src) obs.push(src);
+            }
           }
         }
-        inatPhotoCache[name]=five.length?five:four.length?four:all;
+        inatPhotoCache[cacheKey] = photos.length ? [...photos, ...obs] : obs;
       }
-    } catch { inatPhotoCache[name]=[]; }
+    } catch { inatPhotoCache[cacheKey] = []; }
   }
-  const urls = inatPhotoCache[name];
+
+  const urls = inatPhotoCache[cacheKey];
   if (!urls.length) return null;
   return shuffle([...urls])[0];
 }
