@@ -1,7 +1,7 @@
-// WhatDatBird? Quiz Engine v5.19
+// WhatDatBird? Quiz Engine v5.20
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.19';
+const APP_VERSION = 'v5.20';
 
 // ── Config ────────────────────────────────────────────────────────────────
 let CFG = {};
@@ -496,13 +496,16 @@ function renderQuiz(app) {
     </div>`;
   }
 
-  const optionsHtml = state.options.map(opt => {
+  const fullPool = CFG.completeBirds?.length ? CFG.completeBirds : pool;
+  const optBirds = state.options.map(opt => fullPool.find(b=>b.name===opt) || pool.find(b=>b.name===opt));
+  const showLatin = optBirds.every(b => b?.latin);
+  const optionsHtml = state.options.map((opt, i) => {
     let cls='option';
     if(state.selected){if(opt===bird.name)cls+=' correct';else if(opt===state.selected)cls+=' wrong';else cls+=' dimmed';}
     const safe=opt.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    const matchBird=pool.find(b=>b.name===opt);
+    const matchBird=optBirds[i];
     const indLabel = matchBird?.[CFG.indigenousField] ? `<span class="opt-indigenous">${matchBird[CFG.indigenousField]}</span>` : '';
-    const latinLabel = matchBird?.latin ? `<span class="opt-latin-small">${matchBird.latin}</span>` : '';
+    const latinLabel = showLatin && matchBird?.latin ? `<span class="opt-latin-small">${matchBird.latin}</span>` : '';
     return `<button class="${cls}" ${state.selected?'disabled':''} onclick="selectAnswer('${safe}',event)"><span class="opt-english">${opt}</span>${indLabel}${latinLabel}</button>`;
   }).join('');
 
@@ -556,7 +559,6 @@ function renderSpeciesList(app, header) {
   const birds = CFG.completeBirds || CFG.hardBirds || CFG.easyBirds;
   const sorted = [...birds].sort((a,b) => (b.count||0)-(a.count||0));
   const rows = sorted.map(bird => {
-    const ebirdUrl=`https://ebird.org/search?q=${encodeURIComponent(bird.name)}`;
     const inatUrl=`https://www.inaturalist.org/taxa/search?q=${encodeURIComponent(bird.latin||bird.name)}`;
     const rarity = CFG.rarity?.[bird.name];
     const rarityPill = rarity ? `<span class="rarity-pill rarity-${rarity}">${rarity.charAt(0).toUpperCase()+rarity.slice(1)}</span>` : '';
@@ -566,7 +568,7 @@ function renderSpeciesList(app, header) {
     const badges = birdBadges(bird);
     return `<div class="sp-item">
       <div class="sp-name-row">
-        <a class="sp-name" href="${ebirdUrl}" target="_blank">${bird.name}</a>
+        <span class="sp-name">${bird.name}</span>
         <span class="sp-latin">${bird.latin||''}</span>
       </div>
       ${samoanRow}
@@ -579,7 +581,7 @@ function renderSpeciesList(app, header) {
   app.innerHTML = header + `
     <div class="fade">
       <button class="btn-secondary" style="margin-bottom:12px" onclick="goIntro()">&#8592; Back</button>
-      <div class="info-box"><p>&#128203; <strong>${birds.length} species</strong> - sorted by iNaturalist observation count. Click any name to open its eBird page.</p></div>
+      <div class="info-box"><p>&#128203; <strong>${birds.length} species</strong> - sorted by iNaturalist observation count.</p></div>
       ${rows}
     </div>`;
 }
@@ -629,7 +631,6 @@ function renderAbout(app, header) {
           <a href="https://www.gbif.org" target="_blank" style="color:#2a7a58">GBIF</a> - species lists and occurrence data (includes eBird)<br>
           <a href="https://www.inaturalist.org" target="_blank" style="color:#2a7a58">iNaturalist</a> - photos and common names (CC licensed)<br>
           <a href="https://en.wikipedia.org" target="_blank" style="color:#2a7a58">Wikipedia</a> - field notes<br>
-          <a href="https://ebird.org" target="_blank" style="color:#2a7a58">eBird</a> - species page links<br>
           GitHub Pages - free static hosting<br>
           No backend, no database, no login.
         </p>
