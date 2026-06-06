@@ -371,13 +371,22 @@ async function onMapClick(e) {
     const PRIORITY = { 6:0, 100:1, 5:2, 4:3, 10:4, 3:5, 9:6, 13:7, 2:8, 12:9, 1:10 };
 
     const nearby = [...(nearbyD.results?.standard || []), ...(nearbyD.results?.community || [])];
-    const auto   = autoR?.ok ? (await autoR.json()).results || [] : [];
+    const autoRaw = autoR?.ok ? (await autoR.json()).results || [] : [];
+    const auto = autoRaw.filter(p => { if (!p.location) return true; const [a,b] = p.location.split(',').map(Number); return Math.abs(a-lat) <= 2 && Math.abs(b-lng) <= 2; });
 
-    // Merge, dedupe by id, drop continents, sort specific → broad
+    // Merge, dedupe by id, drop continents
+    // Cities/towns (type 6) within 0.1 deg of click float to top, rest sorted specific → broad
+    const CITY_TYPES = new Set([5]);
+    const dist = p => { if (!p.location) return 999; const [a,b] = p.location.split(',').map(Number); return Math.max(Math.abs(a-lat), Math.abs(b-lng)); };
     const seen = new Set();
     const all = [...auto, ...nearby]
       .filter(p => { if (seen.has(p.id) || p.place_type === 1) return false; seen.add(p.id); return true; })
-      .sort((a, b) => (PRIORITY[a.place_type] ?? 99) - (PRIORITY[b.place_type] ?? 99))
+      .sort((a, b) => {
+        const aNear = CITY_TYPES.has(a.place_type) && dist(a) <= 0.1;
+        const bNear = CITY_TYPES.has(b.place_type) && dist(b) <= 0.1;
+        if (aNear !== bNear) return aNear ? -1 : 1;
+        return (PRIORITY[a.place_type] ?? 99) - (PRIORITY[b.place_type] ?? 99);
+      })
       .slice(0, 8);
 
     if (!all.length) {
