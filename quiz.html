@@ -62,7 +62,8 @@ async function fetchPlaceMeta(placeId) {
     if (ancestorIds) {
       const ar = await fetch(`https://api.inaturalist.org/v1/places?id=${ancestorIds}&per_page=100`);
       const ad = await ar.json();
-      const country = (ad.results || []).find(p => p.place_type === 12 || p.place_type === 2);
+      // Match by ISO code lookup rather than place_type (iNat place_types are inconsistent)
+      const country = (ad.results || []).find(p => toISO(p.display_name));
       if (country) COUNTRY_CODE = toISO(country.display_name);
     }
   } catch {}
