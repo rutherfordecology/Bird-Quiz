@@ -594,9 +594,9 @@ function adjustImgPosition(img) {
   const isPortrait = img.naturalWidth < img.naturalHeight;
   if(isPortrait) {
     const fullH = img.offsetWidth/(img.naturalWidth/img.naturalHeight);
-    img.style.height=(fullH*0.7)+'px'; img.style.objectPosition='center center';
+    img.style.height=(fullH*0.7)+'px'; img.style.objectPosition='center 15%';
   } else {
-    img.style.height='auto'; img.style.maxHeight='65vw'; img.style.objectPosition='center top';
+    img.style.height='auto'; img.style.maxHeight='65vw'; img.style.objectPosition='center center';
   }
 }
 function imgFailed() {
