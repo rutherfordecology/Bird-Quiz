@@ -110,9 +110,16 @@ async function processBatch(speciesItems) {
       ).then(r => r.json()).then(d => {
         const t = d.results?.[0];
         if (!t) return null;
+        if (t.name.toLowerCase() === latin.toLowerCase()) return t;
+        // Epithet match is only accepted if common names also share a word (guards against e.g. multiple novaeseelandiae species)
         const epithet = latin.split(' ')[1]?.toLowerCase();
         const tEpithet = t.name.split(' ')[1]?.toLowerCase();
-        return (t.name.toLowerCase() === latin.toLowerCase() || (epithet && epithet === tEpithet)) ? t : null;
+        if (epithet && epithet === tEpithet && gd.vernacularName && t.preferred_common_name) {
+          const aWords = new Set(gd.vernacularName.toLowerCase().split(/\s+/));
+          const bWords = t.preferred_common_name.toLowerCase().split(/\s+/);
+          if (bWords.some(w => aWords.has(w))) return t;
+        }
+        return null;
       }).catch(() => null);
 
       const name = gd.vernacularName || inat?.preferred_common_name || null;
