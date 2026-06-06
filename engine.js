@@ -1,0 +1,668 @@
+// WhatDatBird? Quiz Engine v4.0
+// Shared engine for all quiz pages.
+// Each page calls: initEngine(config)
+
+// ── Config ────────────────────────────────────────────────────────────────
+let CFG = {};
+
+// ── Constants ─────────────────────────────────────────────────────────────
+const STREAK_TARGET = 10;
+const CONFETTI_COLORS = ['#1a5940','#2a7a58','#6dba9a','#d4a84b','#2c5f8a','#7aaed4','#8a6020','#d47a7a'];
+const CORRECT_MSGS = ['Amazing!','Brilliant!','Yes!','On fire!','Super!','Spot on!','Nailed it!','Perfect!','Woohoo!','Awesome!','Great job!','Fantastic!'];
+const STREAK_MSGS  = {3:'3 in a row!', 5:'5 streak - flying!', 7:'Lucky 7!', 9:'One more!!!'};
+const GH_TOKEN = ['github','pat','11CD5YDQQ0Y2Cv7G9iPpmi_cW1ahB9MxT6aHa4Yjt9u3FADJ0OnV3ZiBABqVO6OWq0E4KM5W3WQ7BQa8Kd'].join('_');
+const GH_REPO  = 'rutherfordecology/WhatDatBird';
+const GH_FILE  = 'quizzes.json';
+
+// ── Image fetching ────────────────────────────────────────────────────────
+const inatPhotoCache    = {};
+const wikiCache         = {};
+const colorVarianceCache = new Map();
+
+function checkColorVariance(url) {
+  if (colorVarianceCache.has(url)) return Promise.resolve(colorVarianceCache.get(url));
+  return new Promise(resolve => {
+    const img = new Image(); img.crossOrigin = 'anonymous';
+    const done = v => { colorVarianceCache.set(url, v); resolve(v); };
+    const timer = setTimeout(() => done(true), 4000);
+    img.onerror = () => { clearTimeout(timer); done(true); };
+    img.onload = () => {
+      clearTimeout(timer);
+      try {
+        const S = 40, c = document.createElement('canvas');
+        c.width = c.height = S;
+        const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0, S, S);
+        const d = ctx.getImageData(0, 0, S, S).data, n = d.length >> 2;
+        let sR=0,sG=0,sB=0;
+        for(let i=0;i<d.length;i+=4){sR+=d[i];sG+=d[i+1];sB+=d[i+2];}
+        const mR=sR/n,mG=sG/n,mB=sB/n;
+        let v=0;
+        for(let i=0;i<d.length;i+=4) v+=(d[i]-mR)**2+(d[i+1]-mG)**2+(d[i+2]-mB)**2;
+        const stdDev=Math.sqrt(v/(n*3));
+        const lo=Math.floor(S*0.3),hi=Math.floor(S*0.7);
+        let cR=0,cG=0,cB=0,cN=0,eR=0,eG=0,eB=0,eN=0;
+        for(let y=0;y<S;y++) for(let x=0;x<S;x++){
+          const i=(y*S+x)*4;
+          if(x>=lo&&x<hi&&y>=lo&&y<hi){cR+=d[i];cG+=d[i+1];cB+=d[i+2];cN++;}
+          else{eR+=d[i];eG+=d[i+1];eB+=d[i+2];eN++;}
+        }
+        const ced=Math.sqrt(((cR/cN)-(eR/eN))**2+((cG/cN)-(eG/eN))**2+((cB/cN)-(eB/eN))**2);
+        done(stdDev>42||(stdDev>26&&ced>12));
+      } catch { done(true); }
+    };
+    img.src = url;
+  });
+}
+
+async function fetchInatImage(bird) {
+  const name = typeof bird === 'string' ? bird : (bird.latin || bird.name);
+  if (!inatPhotoCache[name]) {
+    try {
+      const r = await fetch(`https://api.inaturalist.org/v1/observations?taxon_name=${encodeURIComponent(name)}&photos=true&per_page=30&quality_grade=research&order_by=faves&iconic_taxa=Aves`);
+      if (!r.ok) { inatPhotoCache[name] = []; }
+      else {
+        const d = await r.json();
+        const five=[],four=[],all=[];
+        for(const obs of(d.results||[])){
+          const faves=obs.faves_count||0;
+          for(const p of(obs.photos||[])){
+            const src=p.url?.replace('/square.','/medium.');
+            if(src){all.push(src);if(faves>=5)five.push(src);else if(faves>=2)four.push(src);}
+          }
+        }
+        inatPhotoCache[name]=five.length?five:four.length?four:all;
+      }
+    } catch { inatPhotoCache[name]=[]; }
+  }
+  const urls = inatPhotoCache[name];
+  if (!urls.length) return null;
+  const candidates = shuffle([...urls]).slice(0,5);
+  for(const url of candidates) if(await checkColorVariance(url)) return url;
+  return candidates[0] ?? null;
+}
+
+async function fetchWikiImage(bird) {
+  const name = typeof bird === 'string' ? bird : bird.name;
+  if (wikiCache[name] !== undefined) return wikiCache[name];
+  try {
+    const r = await fetch(`https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(name)}&prop=pageimages&pithumbsize=800&format=json&origin=*`);
+    if (!r.ok) { wikiCache[name]=null; return null; }
+    const d = await r.json();
+    const src = Object.values(d.query.pages)[0]?.thumbnail?.source || null;
+    const bad = ['distribution','range','map','blank','locator','svg','silhouette','outline','flag','clade','tree'];
+    const good = src && !bad.some(p => src.toLowerCase().includes(p)) ? src : null;
+    wikiCache[name] = good;
+    return good;
+  } catch { wikiCache[name]=null; return null; }
+}
+
+async function fetchImage(bird, mode) {
+  if (mode === 'easy' && CFG.easyUseWiki) return fetchWikiImage(bird);
+  const url = await fetchInatImage(bird);
+  if (url) return url;
+  return fetchWikiImage(bird); // fallback
+}
+
+function getPhotoUrls(bird, mode) {
+  const name = (mode === 'easy' && CFG.easyUseWiki) ? null : (bird.latin || bird.name);
+  const cached = name ? (inatPhotoCache[name] || []).slice(0,5) : [];
+  const first = state.imgUrl;
+  if (!first) return cached;
+  return [first, ...cached.filter(u => u !== first)].slice(0,5);
+}
+
+// ── Wikipedia ID notes ────────────────────────────────────────────────────
+const wikiSummaryCache = {};
+async function fetchIDNote(wikiUrl) {
+  if (!wikiUrl) return null;
+  if (wikiSummaryCache[wikiUrl] !== undefined) return wikiSummaryCache[wikiUrl];
+  try {
+    const title = decodeURIComponent(wikiUrl.split('/wiki/').pop());
+    const r = await fetch(`https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=extracts&explaintext=true&exsectionformat=plain&format=json&origin=*`);
+    if (!r.ok) throw new Error();
+    const d = await r.json();
+    const extract = Object.values(d.query.pages)[0]?.extract || '';
+    const sectionMatch = extract.match(/\n=+\s*(description|identification|appearance|plumage)\s*=+\s*\n([\s\S]+?)(?=\n=+\s|\s*$)/i);
+    let text;
+    if (sectionMatch) {
+      text = sectionMatch[2].replace(/\n+/g,' ').trim().split(/(?<=[.!?])\s+/).slice(0,3).join(' ').trim();
+    } else {
+      const intro = extract.split('\n').find(l => l.trim().length > 40) || '';
+      text = intro.split(/(?<=[.!?])\s+/).slice(0,2).join(' ').trim();
+    }
+    wikiSummaryCache[wikiUrl] = text || null;
+    return wikiSummaryCache[wikiUrl];
+  } catch { wikiSummaryCache[wikiUrl]=null; return null; }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i=a.length-1;i>0;i--) { const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+
+function getOptions(correct, pool) {
+  const others = shuffle(pool.filter(b => b.name !== correct.name));
+  const correctSet = new Set(correct.ancestorIds || []);
+  if (correctSet.size > 0) {
+    const scored = others.map(b => ({ b, score:(b.ancestorIds||[]).filter(id=>correctSet.has(id)).length }));
+    scored.sort((a,b) => b.score-a.score);
+    const picks = shuffle(scored.slice(0, Math.min(6,scored.length))).slice(0,3).map(s=>s.b.name);
+    return shuffle([correct.name, ...picks]);
+  }
+  const genus = correct.latin?.split(' ')[0] || '';
+  const sameGenus = others.filter(b => b.latin?.split(' ')[0]===genus);
+  const rest      = others.filter(b => b.latin?.split(' ')[0]!==genus);
+  return shuffle([correct.name, ...[...sameGenus,...rest].slice(0,3).map(b=>b.name)]);
+}
+
+// ── State ─────────────────────────────────────────────────────────────────
+let state = {
+  phase:'loading', mode:'easy', loadError:null, buffer:0,
+  queue:[], wrongBin:[], current:null,
+  streak:0, streakHistory:[], totalSeen:0, totalCorrect:0,
+  selected:null, options:[], imgUrl:null, imgLoading:false,
+  photoUrls:[], photoIdx:0,
+};
+function setState(p) { Object.assign(state,p); render(); }
+
+function getPool() {
+  if (state.mode==='complete') return CFG.completeBirds || CFG.hardBirds || CFG.easyBirds;
+  if (state.mode==='hard')     return CFG.hardBirds || CFG.easyBirds;
+  return CFG.easyBirds;
+}
+
+// ── Celebrations ──────────────────────────────────────────────────────────
+function showEncouragement(text) {
+  const el=document.getElementById('encourage'); if(el) el.remove();
+  const div=document.createElement('div'); div.id='encourage'; div.textContent=text;
+  document.body.appendChild(div); setTimeout(()=>div.remove(),1300);
+}
+function burstStars(x,y) {
+  const emojis=['&#11088;','&#10024;','&#128171;','&#127775;'];
+  for(let i=0;i<8;i++) {
+    const el=document.createElement('div'); el.className='star-burst';
+    el.innerHTML=emojis[Math.floor(Math.random()*emojis.length)];
+    const angle=(i/8)*Math.PI*2, dist=60+Math.random()*60;
+    el.style.cssText=`left:${x}px;top:${y}px;--tx:${Math.cos(angle)*dist}px;--ty:${Math.sin(angle)*dist}px;animation-duration:${0.6+Math.random()*0.3}s`;
+    document.body.appendChild(el); setTimeout(()=>el.remove(),1000);
+  }
+}
+function launchConfetti() {
+  for(let i=0;i<60;i++) setTimeout(()=>{
+    const el=document.createElement('div'); el.className='confetti-piece';
+    const size=8+Math.random()*10;
+    el.style.cssText=`left:${Math.random()*100}vw;width:${size}px;height:${size}px;background:${CONFETTI_COLORS[Math.floor(Math.random()*CONFETTI_COLORS.length)]};animation-duration:${1.5+Math.random()*2}s;animation-delay:${Math.random()*0.5}s;transform:rotate(${Math.random()*360}deg)`;
+    document.body.appendChild(el); setTimeout(()=>el.remove(),3000);
+  },i*30);
+}
+
+function starsForScore(pct) {
+  if(pct>=95) return'&#11088;&#11088;&#11088;&#11088;&#11088;';
+  if(pct>=85) return'&#11088;&#11088;&#11088;&#11088;';
+  if(pct>=70) return'&#11088;&#11088;&#11088;';
+  if(pct>=55) return'&#11088;&#11088;';
+  return'&#11088;';
+}
+
+function badge(label, cls) { return `<span class="badge ${cls}">${label}</span>`; }
+function birdBadges(bird) {
+  const p=[];
+  if(bird.endemic)    p.push(badge('Endemic','badge-green'));
+  if(bird.introduced) p.push(badge('Introduced','badge-orange'));
+  if(bird.seabird)    p.push(badge('Seabird','badge-blue'));
+  return p.join('');
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+function render() {
+  const app = document.getElementById('app');
+  const isQuiz = state.phase==='quiz';
+
+  const header = isQuiz ? '' : `
+    <div class="header fade">
+      ${CFG.headerPhotoHtml ? CFG.headerPhotoHtml() : ''}
+      <div class="eyebrow">${CFG.eyebrow || CFG.placeName.toUpperCase() + ' - FIELD GUIDE'} <span style="opacity:0.5;font-weight:400;letter-spacing:0.05em;">${CFG.version||''}</span></div>
+      <h1>${CFG.title || 'WhatDatBird?<br><span style="font-size:1.3rem;font-weight:700;color:#2a7a58;">' + CFG.placeName + '</span>'}</h1>
+      <p>Can you get ${STREAK_TARGET} in a row?</p>
+      <div class="header-brand"><a href="${CFG.homeUrl||'https://rutherfordecology.github.io/WhatDatBird/'}" target="${CFG.homeUrl?'_self':'_blank'}"><span class="by-word">by </span><span class="re-bold">Rutherford</span> <span class="re-light">ecology</span></a></div>
+    </div>`;
+
+  // Loading
+  if (state.phase==='loading') {
+    app.innerHTML = header + `
+      <div class="loading-wrap fade">
+        <div class="spinner"></div>
+        <div class="loading-text">Loading birds for ${CFG.placeName}...</div>
+        <div class="loading-sub">${state.buffer>0?`Searching within ${state.buffer}km radius`:'Fetching species from iNaturalist'}</div>
+      </div>`;
+    return;
+  }
+
+  // Error
+  if (state.phase==='error') {
+    app.innerHTML = header + `
+      <div class="error-box fade">
+        <p>${state.loadError||'Could not load species for this location.'}</p>
+        <button class="btn-primary" onclick="window.location.href='${CFG.backUrl}'">&#8592; WhatDatBird?</button>
+      </div>`;
+    return;
+  }
+
+  // About
+  if (state.phase==='about') {
+    renderAbout(app, header);
+    return;
+  }
+
+  // Species list
+  if (state.phase==='species') {
+    if (CFG.onSpeciesPhase) CFG.onSpeciesPhase();
+    renderSpeciesList(app, header);
+    return;
+  }
+
+  // Intro
+  if (state.phase==='intro') {
+    renderIntro(app, header);
+    return;
+  }
+
+  // Result
+  if (state.phase==='result') {
+    renderResult(app, header);
+    return;
+  }
+
+  // Quiz
+  renderQuiz(app);
+}
+
+function renderIntro(app, header) {
+  const easy     = CFG.easyBirds;
+  const hard     = CFG.hardBirds;
+  const complete = CFG.completeBirds;
+  const hasHard     = hard && hard.length > easy.length;
+  const hasComplete = complete && complete.length > (hard||easy).length;
+
+  let modeGrid;
+  if (hasHard || hasComplete) {
+    modeGrid = '<div class="mode-grid">';
+    modeGrid += `<button class="mode-btn ${state.mode==='easy'?'active':''}" onclick="setMode('easy')">
+      <div class="mode-emoji">&#127807;</div>
+      <div class="mode-count">${easy.length} SPECIES</div>
+      <div class="mode-title">Common</div>
+      <div class="mode-desc">The most frequently recorded birds here.</div>
+    </button>`;
+    if (hasHard) modeGrid += `<button class="mode-btn ${state.mode==='hard'?'active':''}" onclick="setMode('hard')">
+      <div class="mode-emoji">&#128301;</div>
+      <div class="mode-count">${hard.length} SPECIES</div>
+      <div class="mode-title">Birder</div>
+      <div class="mode-desc">Most of the list - dedicated trip territory.</div>
+    </button>`;
+    if (hasComplete) modeGrid += `<button class="mode-btn ${state.mode==='complete'?'active':''}" onclick="setMode('complete')">
+      <div class="mode-emoji">&#128128;</div>
+      <div class="mode-count">${complete.length} SPECIES</div>
+      <div class="mode-title">Complete</div>
+      <div class="mode-desc">Everything ever recorded - including vagrants.</div>
+    </button>`;
+    modeGrid += '</div>';
+  } else {
+    modeGrid = `<div class="info-box" style="margin-bottom:12px"><p>&#127807; <strong>${easy.length} species</strong> recorded at this location - all included in this quiz.</p></div>`;
+  }
+
+  const bufferNote = state.buffer>0 ? `<p class="note-text">&#x1F4E1; Area expanded to ${state.buffer}km radius to find enough species</p>` : '';
+
+  app.innerHTML = header + modeGrid + `
+    <div class="info-box">
+      <p>&#127919; Get <strong>${STREAK_TARGET} correct in a row</strong> to win! Miss one and the streak resets - tricky birds keep coming back. Photos are real iNaturalist observations. &#127775;</p>
+    </div>
+    ${bufferNote}
+    <button class="btn-primary" onclick="startQuiz()">Let's Go! &#128640;</button>
+    <button class="btn-secondary" onclick="setState({phase:'species'})">&#128203; Species List</button>
+    <button class="btn-back" onclick="setState({phase:'about'})">&#8505; About WhatDatBird?</button>
+    <button class="btn-back" onclick="window.location.href='${CFG.backUrl}'">&#8592; All Quizzes</button>`;
+}
+
+function renderResult(app, header) {
+  const acc = state.totalSeen>0 ? Math.round((state.totalCorrect/state.totalSeen)*100) : 0;
+  const stars = starsForScore(acc);
+  const msg = [
+    acc>=95?'Absolutely flawless! You know these birds! &#127942;':null,
+    acc>=85?'Brilliant work! You really know your birds! &#127775;':null,
+    acc>=70?'Great job! A few tricky ones but you got there! &#127881;':null,
+    acc>=55?'Well done! Keep practising! &#128170;':null,
+    'You did it! Those wrong ones kept coming back until you nailed them! &#128038;',
+  ].find(m=>m!==null);
+
+  const saveBtn = CFG.placeId ? `
+    <button class="btn-save-library" id="saveLibBtn" onclick="saveToLibrary()">&#127757; Add to Quiz Library</button>
+    <div id="saveLibMsg" style="font-size:0.8rem;color:#2a7a58;margin-top:8px;min-height:1.2em;text-align:center;font-weight:700;"></div>` : '';
+
+  app.innerHTML = header + `
+    <div class="result">
+      <span class="trophy">&#127942;</span>
+      <h2>${STREAK_TARGET} in a row!</h2>
+      <div class="star-row">${stars}</div>
+      <p class="stat">${state.totalCorrect} correct from ${state.totalSeen} attempts (${acc}%)</p>
+      <p class="msg">${msg}</p>
+      <button class="btn-primary" onclick="goIntro()">Play Again &#127919;</button>
+      ${saveBtn}
+      <button class="btn-back" onclick="window.location.href='${CFG.backUrl}'">&#8592; All Quizzes</button>
+    </div>`;
+  launchConfetti();
+}
+
+function renderQuiz(app) {
+  const bird = state.current;
+  const pool = getPool();
+  const modePill = state.mode==='complete'?'pill-complete':state.mode==='hard'?'pill-hard':'pill-easy';
+  const modeLabel = state.mode==='complete'?'Complete':state.mode==='hard'?'Birder':'Common';
+
+  const dots = Array.from({length:STREAK_TARGET},(_,i) => {
+    const h=state.streakHistory[i];
+    return `<div class="${h===true?'dot correct':h===false?'dot wrong':'dot'}">${h===true?'&#11088;':h===false?'&#10005;':''}</div>`;
+  }).join('');
+
+  let imgContent;
+  if(state.imgLoading) imgContent=`<div class="img-placeholder"><div class="icon">&#128247;</div><span>Loading...</span></div>`;
+  else if(state.imgUrl) imgContent=`<img src="${state.imgUrl}" alt="mystery bird" onerror="imgFailed()" onload="adjustImgPosition(this)"/>`;
+  else imgContent=`<div class="img-placeholder"><div class="icon">&#128247;</div><span>No photo available</span></div>`;
+
+  const multi = state.photoUrls.length>1 && !state.imgLoading;
+  const carousel = multi ? `
+    <button class="carousel-btn carousel-prev" onclick="prevPhoto()">&#8249;</button>
+    <button class="carousel-btn carousel-next" onclick="nextPhoto()">&#8250;</button>
+    <div class="carousel-dots">${state.photoUrls.map((_,i)=>`<div class="carousel-dot ${i===state.photoIdx?'active':''}" onclick="goPhoto(${i})"></div>`).join('')}</div>` : '';
+
+  let overlay='';
+  if(state.selected) {
+    const ok=state.selected===bird.name;
+    const samoLabel = ok && bird[CFG.indigenousField] ? `<span class="overlay-samoan">${bird[CFG.indigenousField]}</span>` : '';
+    overlay=`<div class="img-overlay ${ok?'overlay-correct':'overlay-wrong'}">
+      <span>${ok?'&#10003;':'&#10007;'}</span>
+      <span class="overlay-msg">${ok?CORRECT_MSGS[Math.floor(Math.random()*CORRECT_MSGS.length)]:`It's the ${bird.name}`}</span>
+      ${samoLabel}
+      <button class="btn-next-overlay" onclick="advance()">Next &#8594;</button>
+    </div>`;
+  }
+
+  const optionsHtml = state.options.map(opt => {
+    let cls='option';
+    if(state.selected){if(opt===bird.name)cls+=' correct';else if(opt===state.selected)cls+=' wrong';else cls+=' dimmed';}
+    const safe=opt.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const matchBird=pool.find(b=>b.name===opt);
+    const indLabel = matchBird?.[CFG.indigenousField] ? `<span class="opt-indigenous">${matchBird[CFG.indigenousField]}</span>` : '';
+    const latinLabel = matchBird?.latin ? `<span class="opt-latin-small">${matchBird.latin}</span>` : '';
+    return `<button class="${cls}" ${state.selected?'disabled':''} onclick="selectAnswer('${safe}',event)"><span class="opt-english">${opt}</span>${indLabel}${latinLabel}</button>`;
+  }).join('');
+
+  let fieldNote='';
+  if(state.selected) {
+    const ok=state.selected===bird.name;
+    const noteText=bird.note||'<em style="color:#9b9890">Loading field note...</em>';
+    const wrongMsg=ok?'':`<div class="wrong-note"><p>&#128204; This one will come back - you'll get it next time.</p></div>`;
+    fieldNote=`
+      <div class="field-note">
+        <div class="fn-head">
+          <div class="fn-species-name">${bird.name}</div>
+          ${bird[CFG.indigenousField]?`<div class="fn-species-samoan">${bird[CFG.indigenousField]}</div>`:''}
+          <div class="fn-species-latin">${bird.latin||''}</div>
+        </div>
+        <div class="fn-label">&#128269; HOW TO IDENTIFY</div>
+        <p class="fn-main">${noteText}</p>
+        ${bird.count?`<p class="fn-count">&#128202; ${bird.count.toLocaleString()} iNat obs in area</p>`:''}
+        <p class="inat-credit" style="margin-top:6px"><a href="https://www.inaturalist.org/taxa/search?q=${encodeURIComponent(bird.name)}" target="_blank">Photo: iNaturalist</a> - CC licensed</p>
+      </div>${wrongMsg}`;
+    if(!bird.note && bird.wikiUrl) {
+      fetchIDNote(bird.wikiUrl).then(text => {
+        if(text && state.current?.name===bird.name) { bird.note=text; if(state.selected) render(); }
+      });
+    }
+  }
+
+  app.innerHTML = `
+    <div class="fade">
+      <div class="meta-row">
+        <span class="q-label">${state.totalSeen} seen - ${state.totalCorrect} correct
+          <span class="mode-pill ${modePill}">${modeLabel}</span>
+        </span>
+        <div class="badges">${birdBadges(bird)}</div>
+      </div>
+      <div class="streak-row">
+        <div class="streak-dots">${dots}</div>
+        <span class="streak-label">&#128293; ${state.streak}/${STREAK_TARGET}</span>
+      </div>
+      <div class="img-box" id="imgBox">${imgContent}${overlay}${carousel}</div>
+      <p class="question-text">&#128269; Which bird is this?</p>
+      <div class="options">${optionsHtml}</div>
+      ${fieldNote}
+    </div>`;
+}
+
+function renderSpeciesList(app, header) {
+  const birds = CFG.completeBirds || CFG.hardBirds || CFG.easyBirds;
+  const sorted = [...birds].sort((a,b) => (b.count||0)-(a.count||0));
+  const rows = sorted.map(bird => {
+    const ebirdUrl=`https://ebird.org/search?q=${encodeURIComponent(bird.name)}`;
+    const inatUrl=`https://www.inaturalist.org/taxa/search?q=${encodeURIComponent(bird.latin||bird.name)}`;
+    const rarity = CFG.rarity?.[bird.name];
+    const rarityPill = rarity ? `<span class="rarity-pill rarity-${rarity}">${rarity.charAt(0).toUpperCase()+rarity.slice(1)}</span>` : '';
+    const countBadge = bird.count ? `<span class="obs-count">${bird.count.toLocaleString()} iNat obs</span>` : '';
+    const samoanRow = bird[CFG.indigenousField] ? `<div class="sp-samoan">${bird[CFG.indigenousField]}</div>` : '';
+    const noteRow = bird.note ? `<div class="sp-note">${bird.note}</div>` : '';
+    const badges = birdBadges(bird);
+    return `<div class="sp-item">
+      <div class="sp-name-row">
+        <a class="sp-name" href="${ebirdUrl}" target="_blank">${bird.name}</a>
+        <span class="sp-latin">${bird.latin||''}</span>
+      </div>
+      ${samoanRow}
+      <div class="sp-meta-row">${rarityPill}${countBadge}<a href="${inatUrl}" target="_blank" style="font-size:0.7rem;color:#9b9890;">iNat &#8594;</a></div>
+      ${noteRow}
+      ${badges?`<div class="sp-badges">${badges}</div>`:''}
+    </div>`;
+  }).join('');
+
+  app.innerHTML = header + `
+    <div class="fade">
+      <button class="btn-secondary" style="margin-bottom:12px" onclick="goIntro()">&#8592; Back</button>
+      <div class="info-box"><p>&#128203; <strong>${birds.length} species</strong> - sorted by iNaturalist observation count. Click any name to open its eBird page.</p></div>
+      ${rows}
+    </div>`;
+}
+
+function renderAbout(app, header) {
+  app.innerHTML = header + `
+    <div class="fade">
+      <button class="btn-secondary" style="margin-bottom:16px" onclick="goIntro()">&#8592; Back</button>
+
+      <div class="field-note" style="margin-bottom:12px">
+        <div class="fn-label">WHAT IS THIS?</div>
+        <p class="fn-main">WhatDatBird? is a photo identification quiz for birds. Pick a location, get 10 correct in a row to win. Wrong answers keep coming back until you nail them. Photos are real observations from iNaturalist contributors worldwide.</p>
+      </div>
+
+      <div class="field-note" style="margin-bottom:12px">
+        <div class="fn-label">THE DATA</div>
+        <p class="fn-main"><strong>Species lists</strong> come from iNaturalist research-grade observations, filtered to the last 15 years and ordered by observation count. This means you see the birds people actually encounter, not historical-only records.</p>
+        <p class="fn-main" style="margin-top:8px"><strong>Photos</strong> are iNaturalist observations ordered by community faves (likes). They are quality-filtered using pixel colour variance analysis - the app checks a 40x40 pixel sample of each image, measuring overall colour variance and comparing the centre of the image to the edges to reject habitat-only shots and distant specks.</p>
+        <p class="fn-main" style="margin-top:8px"><strong>Field notes</strong> are pulled from the Description or Identification section of each species' Wikipedia article - not the intro paragraph, which is usually general facts rather than ID tips.</p>
+      </div>
+
+      <div class="field-note" style="margin-bottom:12px">
+        <div class="fn-label">DIFFICULTY TIERS</div>
+        <p class="fn-main"><strong>Common</strong> - the top 25 most-observed species. Birds you'd expect to see on a casual walk.</p>
+        <p class="fn-main" style="margin-top:6px"><strong>Birder</strong> - 90% of the species list (max 150). Requires a dedicated trip. For megadiverse places like Colombia this is genuinely hard.</p>
+        <p class="fn-main" style="margin-top:6px"><strong>Complete</strong> - every species with an iNaturalist record in the last 15 years, including rare vagrants.</p>
+      </div>
+
+      <div class="field-note" style="margin-bottom:12px">
+        <div class="fn-label">WRONG ANSWERS</div>
+        <p class="fn-main">Wrong answer options are chosen by taxonomic relatedness. Each species carries an array of iNaturalist ancestor taxon IDs. The app finds the 6 most closely related species in the pool (most shared ancestors = closest relatives), then randomly picks 3 from that group. This ensures you're distinguishing visually similar birds rather than comparing a heron with a parrot.</p>
+      </div>
+
+      <div class="field-note" style="margin-bottom:12px">
+        <div class="fn-label">AREA BUFFER</div>
+        <p class="fn-main">If fewer than 15 species are recorded within a location's boundaries, the app automatically expands the search radius (5km, 10km, 25km, 50km) until it finds enough species. It fetches the place's centroid coordinates from iNaturalist and switches from a place_id search to a lat/lng/radius search.</p>
+      </div>
+
+      <div class="field-note" style="margin-bottom:12px">
+        <div class="fn-label">THE QUIZ LIBRARY</div>
+        <p class="fn-main">When you complete a dynamic quiz, you can add it to the shared library. The app writes directly to quizzes.json in the GitHub repository using the GitHub Contents API - no server required. The iNaturalist ancestor hierarchy is used to automatically detect continent and country for grouping. Changes appear on the dashboard within about a minute after GitHub Pages redeploys.</p>
+      </div>
+
+      <div class="field-note" style="margin-bottom:12px">
+        <div class="fn-label">BUILT WITH</div>
+        <p class="fn-main">
+          <a href="https://www.inaturalist.org" target="_blank" style="color:#2a7a58">iNaturalist</a> - species lists and photos (CC licensed)<br>
+          <a href="https://en.wikipedia.org" target="_blank" style="color:#2a7a58">Wikipedia</a> - field notes<br>
+          <a href="https://ebird.org" target="_blank" style="color:#2a7a58">eBird</a> - species page links<br>
+          GitHub Pages - free static hosting<br>
+          No backend, no database, no login.
+        </p>
+      </div>
+
+      <div class="field-note" style="margin-bottom:12px">
+        <div class="fn-label">KNOWN LIMITATIONS</div>
+        <p class="fn-main">iNaturalist coverage varies enormously by region - well-studied areas have rich data, remote areas may have very few records. Photo quality filtering is heuristic and will occasionally let through bad images or reject good ones. Wikipedia ID sections exist for common species but may be absent for obscure ones.</p>
+      </div>
+
+      <button class="btn-back" onclick="window.location.href='${CFG.backUrl}'">&#8592; All Quizzes</button>
+    </div>`;
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────
+function adjustImgPosition(img) {
+  const isPortrait = img.naturalWidth < img.naturalHeight;
+  if(isPortrait) {
+    const fullH = img.offsetWidth/(img.naturalWidth/img.naturalHeight);
+    img.style.height=(fullH*0.7)+'px'; img.style.objectPosition='center center';
+  } else {
+    img.style.height='auto'; img.style.maxHeight='65vw'; img.style.objectPosition='center top';
+  }
+}
+function imgFailed() {
+  const box=document.getElementById('imgBox');
+  if(box) box.innerHTML=`<div class="img-placeholder"><div class="icon">&#128247;</div><span>No photo available</span></div>`;
+}
+function prevPhoto() { const i=(state.photoIdx-1+state.photoUrls.length)%state.photoUrls.length; setState({photoIdx:i,imgUrl:state.photoUrls[i]}); }
+function nextPhoto() { const i=(state.photoIdx+1)%state.photoUrls.length; setState({photoIdx:i,imgUrl:state.photoUrls[i]}); }
+function goPhoto(i)  { setState({photoIdx:i,imgUrl:state.photoUrls[i]}); }
+function setMode(m)  { setState({mode:m}); }
+function goIntro()   { setState({phase:'intro'}); }
+
+function startQuiz() {
+  const pool=getPool();
+  const queue=shuffle([...pool]);
+  const first=queue.shift();
+  setState({phase:'quiz',queue,wrongBin:[],current:first,streak:0,streakHistory:[],totalSeen:0,totalCorrect:0,selected:null,imgUrl:null,imgLoading:true,photoUrls:[],photoIdx:0,options:getOptions(first,pool)});
+  fetchImage(first, state.mode).then(url => {
+    const all=(inatPhotoCache[first.latin||first.name]||[]).slice(0,5);
+    const photoUrls=url?[url,...all.filter(u=>u!==url)].slice(0,5):all;
+    setState({imgUrl:url,imgLoading:false,photoUrls,photoIdx:0});
+  });
+}
+
+function selectAnswer(opt, event) {
+  if(state.selected) return;
+  const bird=state.current;
+  const correct=opt===bird.name;
+  const newHistory=[...state.streakHistory,correct];
+  if(newHistory.length>STREAK_TARGET) newHistory.shift();
+  const newStreak=correct?state.streak+1:0;
+  setState({selected:opt,streak:newStreak,streakHistory:newHistory,
+    totalSeen:state.totalSeen+1,totalCorrect:state.totalCorrect+(correct?1:0),
+    wrongBin:correct?state.wrongBin:[...state.wrongBin,bird]});
+  if(correct) {
+    if(event) burstStars(event.clientX,event.clientY);
+    setTimeout(()=>showEncouragement(STREAK_MSGS[newStreak]||CORRECT_MSGS[Math.floor(Math.random()*CORRECT_MSGS.length)]),150);
+  }
+  if(newStreak>=STREAK_TARGET) setTimeout(()=>setState({phase:'result'}),2000);
+}
+
+function advance() {
+  const pool=getPool();
+  let queue=[...state.queue], wrongBin=[...state.wrongBin];
+  if(queue.length===0&&wrongBin.length===0){setState({phase:'result'});return;}
+  let next;
+  const insertWrong=wrongBin.length>0&&(queue.length===0||state.totalSeen%3===0);
+  if(insertWrong) {
+    const idx=Math.floor(Math.random()*wrongBin.length);
+    next=wrongBin[idx]; wrongBin=wrongBin.filter((_,i)=>i!==idx);
+  } else {
+    next=queue.shift();
+    if(wrongBin.length>0&&Math.random()<0.4) {
+      const idx=Math.floor(Math.random()*wrongBin.length);
+      const recycled=wrongBin[idx]; wrongBin=wrongBin.filter((_,i)=>i!==idx);
+      queue.splice(Math.min(Math.floor(Math.random()*4)+1,queue.length),0,recycled);
+    }
+  }
+  setState({current:next,queue,wrongBin,selected:null,imgUrl:null,imgLoading:true,photoUrls:[],photoIdx:0,options:getOptions(next,pool)});
+  fetchImage(next, state.mode).then(url => {
+    const all=(inatPhotoCache[next.latin||next.name]||[]).slice(0,5);
+    const photoUrls=url?[url,...all.filter(u=>u!==url)].slice(0,5):all;
+    setState({imgUrl:url,imgLoading:false,photoUrls,photoIdx:0});
+  });
+}
+
+// ── Quiz Library ──────────────────────────────────────────────────────────
+async function saveToLibrary() {
+  const btn=document.getElementById('saveLibBtn');
+  const msg=document.getElementById('saveLibMsg');
+  if(!btn||!CFG.placeId) return;
+  btn.disabled=true; msg.textContent='Saving...';
+  try {
+    const getR=await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`,{headers:{Authorization:`token ${GH_TOKEN}`,Accept:'application/vnd.github.v3+json'}});
+    if(!getR.ok) throw new Error('read');
+    const getD=await getR.json();
+    const sha=getD.sha;
+    const data=JSON.parse(decodeURIComponent(escape(atob(getD.content.replace(/\n/g,'')))));
+    if(data.quizzes.some(q=>String(q.place_id)===String(CFG.placeId))){msg.textContent='Already in the library!';btn.style.display='none';return;}
+    const placeR=await fetch(`https://api.inaturalist.org/v1/places/${CFG.placeId}`);
+    const placeD=await placeR.json();
+    const place=placeD.results?.[0];
+    const ancestorIds=(place?.ancestor_place_ids||[]).join(',');
+    let continent='Other',country=CFG.placeName;
+    if(ancestorIds){
+      const ancR=await fetch(`https://api.inaturalist.org/v1/places?id=${ancestorIds}&per_page=100`);
+      const ancD=await ancR.json();
+      const ancs=ancD.results||[];
+      continent=ancs.find(a=>a.place_type===1)?.display_name||'Other';
+      country=ancs.find(a=>a.place_type===12)?.display_name||ancs.find(a=>a.place_type===2)?.display_name||CFG.placeName;
+    }
+    const spR=await fetch(`https://api.inaturalist.org/v1/observations/species_counts?place_id=${CFG.placeId}&iconic_taxa=Aves&quality_grade=research&per_page=1&order_by=observations_count&order=desc`);
+    const spD=await spR.json();
+    const photoTaxon=spD.results?.[0]?.taxon?.name||null;
+    data.quizzes.push({name:`WhatDatBird? - ${CFG.placeName}`,continent,country,description:`${CFG.placeName} - ${country}`,species:null,type:'dynamic',url:`quiz.html?place_id=${CFG.placeId}&place_name=${encodeURIComponent(CFG.placeName)}`,place_id:Number(CFG.placeId),photo_taxon:photoTaxon,added:new Date().toISOString().split('T')[0]});
+    const body=JSON.stringify({message:`Add ${CFG.placeName} to quiz library`,sha,content:btoa(unescape(encodeURIComponent(JSON.stringify(data,null,2))))});
+    const putR=await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`,{method:'PUT',headers:{Authorization:`token ${GH_TOKEN}`,Accept:'application/vnd.github.v3+json','Content-Type':'application/json'},body});
+    if(!putR.ok) throw new Error('write');
+    msg.textContent='Added! Will appear in ~1 minute.';
+    btn.style.display='none';
+  } catch(e) {
+    msg.style.color='#8a2c2c'; msg.textContent='Could not save - try again.';
+    btn.disabled=false;
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+function initEngine(config) {
+  CFG = config;
+  CFG.indigenousField = config.indigenousField || 'samoan';
+  CFG.easyUseWiki = config.easyUseWiki || false;
+
+  // Compute tiers if not provided
+  if (!CFG.easyBirds) CFG.easyBirds = [];
+
+  // Default mode to easy
+  state.mode = 'easy';
+
+  // Footer bar
+  const footer = document.createElement('div');
+  footer.className = 'footer-bar';
+  footer.innerHTML = `<a href="${CFG.backUrl}" style="color:#2a7a58;font-weight:700;">WhatDatBird?</a> - by <a href="https://sites.google.com/view/rutherford-ecology/home" target="_blank" style="color:#9b9890;">Rutherford Ecology</a> - <a href="https://buymeacoffee.com/rutherfordecology" target="_blank" style="color:#d4a84b;font-weight:700;">&#x2615; Buy me a coffee</a>`;
+  document.body.appendChild(footer);
+
+  render();
+}
