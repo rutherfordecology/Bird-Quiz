@@ -35,6 +35,18 @@
       "place_id": 88743,
       "photo_taxon": null,
       "added": "2026-06-06"
+    },
+    {
+      "name": "WhatDatBird? - Nakaseke, LW, UG",
+      "continent": "Other",
+      "country": "Nakaseke, LW, UG",
+      "description": "Nakaseke, LW, UG - Nakaseke, LW, UG",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?place_id=46704&place_name=Nakaseke%2C%20LW%2C%20UG",
+      "place_id": 46704,
+      "photo_taxon": null,
+      "added": "2026-06-06"
     }
   ]
 }
