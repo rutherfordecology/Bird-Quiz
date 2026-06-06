@@ -1,7 +1,7 @@
-// WhatDatBird? Quiz Engine v5.32
+// WhatDatBird? Quiz Engine v5.33
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.32';
+const APP_VERSION = 'v5.33';
 
 // ── Config ────────────────────────────────────────────────────────────────
 let CFG = {};
@@ -72,15 +72,6 @@ async function fetchInatImage(bird) {
       if (or.ok) {
         const od = await or.json();
         for (const o of (od.results || [])) {
-          // For taxon_name fallback, skip cross-genus results (handles reclassifications like Bubulcus→Ardea while blocking obvious bleed)
-          if (!inatId && o.taxon?.name) {
-            const obsGenus  = o.taxon.name.split(' ')[0].toLowerCase();
-            const expGenus  = latin.split(' ')[0].toLowerCase();
-            const obsEpi    = o.taxon.name.split(' ')[1]?.toLowerCase();
-            const expEpi    = latin.split(' ')[1]?.toLowerCase();
-            const epiClose  = obsEpi && expEpi && (obsEpi === expEpi || obsEpi.startsWith(expEpi.slice(0,6)) || expEpi.startsWith(obsEpi.slice(0,6)));
-            if (obsGenus !== expGenus && !epiClose) continue;
-          }
           const src = o.photos?.[0]?.url?.replace('/square.', '/medium.');
           if (src) obsPhotos.push({ src, faves: o.faves_count || 0 });
         }
@@ -94,24 +85,24 @@ async function fetchInatImage(bird) {
       // taxa photo first, then faves-sorted observations
       const photos = [...(preloaded ? [preloaded] : []), ...sorted];
 
-      // If still nothing, look up iNat taxon by name (handles genus reclassifications) and retry
+      // If still nothing, look up iNat taxon — match by exact latin name or common name word overlap
       if (!photos.length) {
         const taxaUrl = inatId
           ? `https://api.inaturalist.org/v1/taxa/${inatId}`
-          : `https://api.inaturalist.org/v1/taxa?q=${encodeURIComponent(latin)}&rank=species&per_page=1`;
+          : `https://api.inaturalist.org/v1/taxa?q=${encodeURIComponent(latin)}&rank=species&per_page=3`;
         const tr = await fetch(taxaUrl);
         if (tr.ok) {
           const td = await tr.json();
-          const epithet = latin.split(' ')[1]?.toLowerCase();
-          const epithetMatch = (a, b) => a && b && (a === b || a.startsWith(b.slice(0,6)) || b.startsWith(a.slice(0,6)));
+          const commonName = typeof bird === 'object' ? bird.name : null;
+          const commonWords = new Set((commonName||'').toLowerCase().split(/\s+/).filter(w => w.length > 2));
           const taxon = inatId ? td.results?.[0] : td.results?.find(t => {
             if (t.name.toLowerCase() === latin.toLowerCase()) return true;
-            return epithetMatch(epithet, t.name.split(' ')[1]?.toLowerCase());
+            if (!commonWords.size || !t.preferred_common_name) return false;
+            return t.preferred_common_name.toLowerCase().split(/\s+/).some(w => commonWords.has(w));
           });
           if (taxon) {
             const dp = taxon.default_photo?.url?.replace('/square.', '/medium.');
             if (dp) photos.push(dp);
-            // Also retry observations with the correct taxon_id
             if (taxon.id && !inatId) {
               const or2 = await fetch(`https://api.inaturalist.org/v1/observations?taxon_id=${taxon.id}&photos=true&per_page=10&quality_grade=research&order_by=faves&iconic_taxa=Aves`);
               if (or2.ok) {
@@ -700,6 +691,17 @@ function goPhoto(i)  { setState({photoIdx:i,imgUrl:state.photoUrls[i]}); }
 function setMode(m)  { setState({mode:m}); }
 function goIntro()   { setState({phase:'intro'}); }
 
+function logNoPhoto(bird) {
+  try {
+    const key = 'wdb_nophoto';
+    const log = JSON.parse(localStorage.getItem(key) || '[]');
+    const entry = { name: bird.name, latin: bird.latin || '', place: CFG.placeName, date: new Date().toISOString().split('T')[0] };
+    if (!log.some(e => e.latin === entry.latin && e.place === entry.place)) log.push(entry);
+    localStorage.setItem(key, JSON.stringify(log));
+    console.warn('[WhatDatBird] No photo — skipping:', bird.name, bird.latin);
+  } catch {}
+}
+
 function startQuiz() {
   const pool=getPool();
   const queue=shuffle([...pool]);
@@ -708,6 +710,7 @@ function startQuiz() {
   fetchImage(first, state.mode).then(url => {
     const all=(inatPhotoCache[first.latin||first.name]||[]).slice(0,5);
     const photoUrls=url?[url,...all.filter(u=>u!==url)].slice(0,5):all;
+    if (!url && !photoUrls.length) { logNoPhoto(first); _advance(); return; }
     setState({imgUrl:url,imgLoading:false,photoUrls,photoIdx:0});
   });
 }
@@ -761,6 +764,11 @@ function _advance() {
   fetchImage(next, state.mode).then(url => {
     const all=(inatPhotoCache[next.latin||next.name]||[]).slice(0,5);
     const photoUrls=url?[url,...all.filter(u=>u!==url)].slice(0,5):all;
+    if (!url && !photoUrls.length) {
+      logNoPhoto(next);
+      _advance();
+      return;
+    }
     setState({imgUrl:url,imgLoading:false,photoUrls,photoIdx:0});
   });
   // Prefetch current bird's field note and next bird's photos + note
