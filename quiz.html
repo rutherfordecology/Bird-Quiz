@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -173,10 +173,10 @@ const PLACE_NAME = params.get('place_name') || 'Unknown Place';
 const STREAK_TARGET = 10;
 const CONFETTI_COLORS = ['#1a5940','#2a7a58','#6dba9a','#d4a84b','#2c5f8a','#7aaed4','#8a6020','#d47a7a'];
 
-const CORRECT_MSGS = ["⭐ Amazing!","🌟 Brilliant!","🎉 Yes!","🔥 On fire!","💫 Super!","🦜 Spot on!","✨ Nailed it!","🎯 Perfect!","🥳 Woohoo!","💥 Awesome!"];
-const STREAK_MSGS  = {3:"🔥 3 in a row!", 5:"⚡ 5 streak — flying!", 7:"🌟 Lucky 7!", 9:"😱 One more!!!"};
+const CORRECT_MSGS = ["â­ Amazing!","ðŸŒŸ Brilliant!","ðŸŽ‰ Yes!","ðŸ”¥ On fire!","ðŸ’« Super!","ðŸ¦œ Spot on!","âœ¨ Nailed it!","ðŸŽ¯ Perfect!","ðŸ¥³ Woohoo!","ðŸ’¥ Awesome!"];
+const STREAK_MSGS  = {3:"ðŸ”¥ 3 in a row!", 5:"âš¡ 5 streak â€” flying!", 7:"ðŸŒŸ Lucky 7!", 9:"ðŸ˜± One more!!!"};
 
-// ── iNat image fetching (quality-filtered) ────────────────────────────────
+// â”€â”€ iNat image fetching (quality-filtered) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const inatPhotoCache = {};
 const colorVarianceCache = new Map();
 
@@ -245,7 +245,7 @@ async function fetchInatImage(bird) {
   return candidates[0] ?? bird.defaultPhoto ?? null;
 }
 
-// ── Wikipedia summary ──────────────────────────────────────────────────────
+// â”€â”€ Wikipedia summary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const wikiSummaryCache = {};
 async function fetchWikiSummary(wikiUrl) {
   if (!wikiUrl) return null;
@@ -279,7 +279,7 @@ async function fetchWikiSummary(wikiUrl) {
   } catch { wikiSummaryCache[wikiUrl] = null; return null; }
 }
 
-// ── Species loading ────────────────────────────────────────────────────────
+// â”€â”€ Species loading â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let STANDARD_BIRDS = [];
 let EXPERT_BIRDS   = [];
 let PLACE_LAT = null, PLACE_LNG = null;
@@ -321,7 +321,7 @@ async function loadSpecies(placeId, bufferKm = 0) {
   return birds.length;
 }
 
-// ── Quiz state ─────────────────────────────────────────────────────────────
+// â”€â”€ Quiz state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let state = {
   phase: 'loading', mode: 'standard', loadError: null, buffer: 0,
   queue: [], wrongBin: [], current: null,
@@ -360,14 +360,14 @@ function getOptions(correct, pool) {
   return shuffle([correct.name, ...[...sameGenus, ...rest].slice(0, 3).map(b => b.name)]);
 }
 
-// ── Celebrations ──────────────────────────────────────────────────────────
+// â”€â”€ Celebrations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function showEncouragement(text){
   const el=document.getElementById('encourage'); if(el) el.remove();
   const div=document.createElement('div'); div.id='encourage'; div.textContent=text;
   document.body.appendChild(div); setTimeout(()=>div.remove(),1300);
 }
 function burstStars(x,y){
-  const emojis=['⭐','✨','💫','🌟'];
+  const emojis=['â­','âœ¨','ðŸ’«','ðŸŒŸ'];
   for(let i=0;i<8;i++){
     const el=document.createElement('div'); el.className='star-burst';
     el.textContent=emojis[Math.floor(Math.random()*emojis.length)];
@@ -386,20 +386,20 @@ function launchConfetti(){
 }
 
 function starsForScore(pct){
-  if(pct>=95) return'⭐⭐⭐⭐⭐';
-  if(pct>=85) return'⭐⭐⭐⭐';
-  if(pct>=70) return'⭐⭐⭐';
-  if(pct>=55) return'⭐⭐';
-  return'⭐';
+  if(pct>=95) return'â­â­â­â­â­';
+  if(pct>=85) return'â­â­â­â­';
+  if(pct>=70) return'â­â­â­';
+  if(pct>=55) return'â­â­';
+  return'â­';
 }
 
-// ── Render ────────────────────────────────────────────────────────────────
+// â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function render(){
   const app = document.getElementById('app');
 
   const header = state.phase === 'quiz' ? '' : `
     <div class="header fade">
-      <div class="eyebrow">${PLACE_NAME.toUpperCase()} · FIELD GUIDE</div>
+      <div class="eyebrow">${PLACE_NAME.toUpperCase()} Â· FIELD GUIDE</div>
       <h1>Birds of<br>${PLACE_NAME}</h1>
       <p>Can you get ${STREAK_TARGET} in a row?</p>
       <div class="header-brand"><a href="https://sites.google.com/view/rutherford-ecology/home" target="_blank"><span class="by-word">by </span><span class="re-bold">Rutherford</span> <span class="re-light">ecology</span></a></div>
@@ -410,7 +410,7 @@ function render(){
     app.innerHTML = header + `
       <div class="loading-wrap fade">
         <div class="spinner"></div>
-        <div class="loading-text">Loading birds for ${PLACE_NAME}…</div>
+        <div class="loading-text">Loading birds for ${PLACE_NAME}â€¦</div>
         <div class="loading-sub">${state.buffer > 0 ? `Searching within ${state.buffer}km radius` : 'Fetching species from iNaturalist'}</div>
       </div>`;
     return;
@@ -421,7 +421,7 @@ function render(){
     app.innerHTML = header + `
       <div class="error-box fade">
         <p>${state.loadError || 'Could not load species for this location.'}</p>
-        <button class="btn-primary" onclick="window.location.href='index.html'">← WhatDatBird?</button>
+        <button class="btn-primary" onclick="window.location.href='index.html'">â† WhatDatBird?</button>
       </div>`;
     return;
   }
@@ -434,33 +434,33 @@ function render(){
     const modeGrid = hasExpert ? `
       <div class="mode-grid">
         <button class="mode-btn ${state.mode==='standard'?'active':''}" onclick="setMode('standard')">
-          <div class="mode-emoji">🌿</div>
+          <div class="mode-emoji">ðŸŒ¿</div>
           <div class="mode-count">${std} SPECIES</div>
           <div class="mode-title">Standard</div>
           <div class="mode-desc">The most commonly recorded birds in this area.</div>
         </button>
         <button class="mode-btn ${state.mode==='expert'?'active':''}" onclick="setMode('expert')">
-          <div class="mode-emoji">🔭</div>
+          <div class="mode-emoji">ðŸ”­</div>
           <div class="mode-count">${total} SPECIES</div>
           <div class="mode-title">Expert</div>
           <div class="mode-desc">All species with iNaturalist records here.</div>
         </button>
       </div>` : `
       <div class="info-box" style="margin-bottom:12px">
-        <p>🌿 <strong>${total} species</strong> recorded at this location — all included in this quiz.</p>
+        <p>ðŸŒ¿ <strong>${total} species</strong> recorded at this location â€” all included in this quiz.</p>
       </div>`;
     app.innerHTML = header + modeGrid + `
       <div class="info-box">
-        <p>🎯 Get <strong>${STREAK_TARGET} correct in a row</strong> to win! Miss one and the streak resets — tricky birds keep coming back. Photos are real iNaturalist observations. 🌟</p>
+        <p>ðŸŽ¯ Get <strong>${STREAK_TARGET} correct in a row</strong> to win! Miss one and the streak resets â€” tricky birds keep coming back. Photos are real iNaturalist observations. ðŸŒŸ</p>
       </div>
       <div class="buffer-row">
-        <span class="buffer-label">📍 Area buffer:</span>
+        <span class="buffer-label">ðŸ“ Area buffer:</span>
         ${[0,5,10,25,50].map(km=>`<button class="buffer-btn${state.buffer===km?' active':''}" onclick="setBuffer(${km})">${km===0?'None':km+'km'}</button>`).join('')}
       </div>
-      ${state.buffer > 0 && EXPERT_BIRDS.length < 15 + state.buffer ? `<p style="font-size:0.75rem;color:#2a7a58;margin:4px 0 8px;text-align:center;">📡 Auto-expanded to ${state.buffer}km — only ${total} species recorded nearby</p>` : state.buffer > 0 ? `<p style="font-size:0.75rem;color:#2a7a58;margin:4px 0 8px;text-align:center;">📡 Showing species within ${state.buffer}km</p>` : ''}
-      <button class="btn-primary" onclick="startQuiz()">Let's Go! 🚀</button>
-      <button class="btn-secondary" onclick="goSpecies()">📋 Species List</button>
-      <a href="index.html" style="display:block;text-align:center;margin-top:14px;font-size:0.8rem;color:#9b9890;text-decoration:none;" onmouseover="this.style.color='#2a7a58'" onmouseout="this.style.color='#9b9890'">← WhatDatBird?</a>`;
+      ${state.buffer > 0 && EXPERT_BIRDS.length < 15 + state.buffer ? `<p style="font-size:0.75rem;color:#2a7a58;margin:4px 0 8px;text-align:center;">ðŸ“¡ Auto-expanded to ${state.buffer}km â€” only ${total} species recorded nearby</p>` : state.buffer > 0 ? `<p style="font-size:0.75rem;color:#2a7a58;margin:4px 0 8px;text-align:center;">ðŸ“¡ Showing species within ${state.buffer}km</p>` : ''}
+      <button class="btn-primary" onclick="startQuiz()">Let's Go! ðŸš€</button>
+      <button class="btn-secondary" onclick="goSpecies()">ðŸ“‹ Species List</button>
+      <a href="index.html" style="display:block;text-align:center;margin-top:14px;font-size:0.8rem;color:#9b9890;text-decoration:none;" onmouseover="this.style.color='#2a7a58'" onmouseout="this.style.color='#9b9890'">â† WhatDatBird?</a>`;
     return;
   }
 
@@ -478,15 +478,15 @@ function render(){
         </div>
         <div class="sp-meta-row">
           ${countBadge}
-          <a href="${inatUrl}" target="_blank" style="font-size:0.7rem;color:#9b9890;">iNat →</a>
+          <a href="${inatUrl}" target="_blank" style="font-size:0.7rem;color:#9b9890;">iNat â†’</a>
         </div>
       </div>`;
     }).join('');
     app.innerHTML = header + `
       <div class="fade">
-        <button class="btn-secondary" style="margin-bottom:12px" onclick="goIntro()">← Back</button>
+        <button class="btn-secondary" style="margin-bottom:12px" onclick="goIntro()">â† Back</button>
         <div class="info-box">
-          <p>📋 <strong>${EXPERT_BIRDS.length} species</strong> recorded in ${PLACE_NAME}. Sorted by iNaturalist observation count. Click any name to open its eBird page.</p>
+          <p>ðŸ“‹ <strong>${EXPERT_BIRDS.length} species</strong> recorded in ${PLACE_NAME}. Sorted by iNaturalist observation count. Click any name to open its eBird page.</p>
         </div>
         ${rows}
       </div>`;
@@ -498,23 +498,23 @@ function render(){
     const acc = state.totalSeen > 0 ? Math.round((state.totalCorrect/state.totalSeen)*100) : 0;
     const stars = starsForScore(acc);
     const msg = [
-      acc>=95?"Absolutely flawless! Bird expert! 🏆":null,
-      acc>=85?"Brilliant work! You really know your birds! 🌟":null,
-      acc>=70?"Great job! A few tricky ones but you got there! 🎉":null,
-      acc>=55?"Well done! Keep practising! 💪":null,
-      "You did it! Those wrong ones kept coming back until you nailed them! 🦜",
+      acc>=95?"Absolutely flawless! Bird expert! ðŸ†":null,
+      acc>=85?"Brilliant work! You really know your birds! ðŸŒŸ":null,
+      acc>=70?"Great job! A few tricky ones but you got there! ðŸŽ‰":null,
+      acc>=55?"Well done! Keep practising! ðŸ’ª":null,
+      "You did it! Those wrong ones kept coming back until you nailed them! ðŸ¦œ",
     ].find(m=>m!==null);
     app.innerHTML = header + `
       <div class="result">
-        <span class="trophy">🏆</span>
+        <span class="trophy">ðŸ†</span>
         <h2>${STREAK_TARGET} in a row!</h2>
         <div class="star-row">${stars}</div>
         <p class="stat">${state.totalCorrect} correct from ${state.totalSeen} attempts (${acc}%)</p>
         <p class="msg">${msg}</p>
-        <button class="btn-primary" onclick="goIntro()">Play Again 🎯</button>
-        <button class="btn-save-library" id="saveLibBtn" onclick="saveToLibrary()">🌍 Add to Quiz Library</button>
+        <button class="btn-primary" onclick="goIntro()">Play Again ðŸŽ¯</button>
+        <button class="btn-save-library" id="saveLibBtn" onclick="saveToLibrary()">ðŸŒ Add to Quiz Library</button>
         <div id="saveLibMsg" style="font-size:0.8rem;color:#2a7a58;margin-top:8px;min-height:1.2em;text-align:center;font-weight:700;"></div>
-        <a href="index.html" style="display:block;text-align:center;margin-top:14px;font-size:0.8rem;color:#9b9890;text-decoration:none;" onmouseover="this.style.color='#2a7a58'" onmouseout="this.style.color='#9b9890'">← WhatDatBird?</a>
+        <a href="index.html" style="display:block;text-align:center;margin-top:14px;font-size:0.8rem;color:#9b9890;text-decoration:none;" onmouseover="this.style.color='#2a7a58'" onmouseout="this.style.color='#9b9890'">â† WhatDatBird?</a>
       </div>`;
     launchConfetti();
     return;
@@ -525,26 +525,26 @@ function render(){
   const isExpert = state.mode === 'expert';
   const dots = Array.from({length:STREAK_TARGET},(_,i)=>{
     const h=state.streakHistory[i];
-    return `<div class="${h===true?'dot correct':h===false?'dot wrong':'dot'}">${h===true?'⭐':h===false?'✗':''}</div>`;
+    return `<div class="${h===true?'dot correct':h===false?'dot wrong':'dot'}">${h===true?'â­':h===false?'âœ—':''}</div>`;
   }).join('');
 
   let imgContent;
-  if(state.imgLoading) imgContent=`<div class="img-placeholder"><div class="icon">📷</div><span>Loading…</span></div>`;
+  if(state.imgLoading) imgContent=`<div class="img-placeholder"><div class="icon">ðŸ“·</div><span>Loadingâ€¦</span></div>`;
   else if(state.imgUrl) imgContent=`<img src="${state.imgUrl}" alt="mystery bird" onerror="imgFailed()" onload="adjustImgPosition(this)"/>`;
-  else imgContent=`<div class="img-placeholder"><div class="icon">📷</div><span>No photo available</span></div>`;
+  else imgContent=`<div class="img-placeholder"><div class="icon">ðŸ“·</div><span>No photo available</span></div>`;
   const multiPhoto=state.photoUrls.length>1&&!state.imgLoading;
   const carouselControls=multiPhoto?`
-    <button class="carousel-btn carousel-prev" onclick="prevPhoto()">‹</button>
-    <button class="carousel-btn carousel-next" onclick="nextPhoto()">›</button>
+    <button class="carousel-btn carousel-prev" onclick="prevPhoto()">â€¹</button>
+    <button class="carousel-btn carousel-next" onclick="nextPhoto()">â€º</button>
     <div class="carousel-dots">${state.photoUrls.map((_,i)=>`<div class="carousel-dot ${i===state.photoIdx?'active':''}" onclick="goPhoto(${i})"></div>`).join('')}</div>`:'';
 
   let overlay='';
   if(state.selected){
     const ok=state.selected===bird.name;
     overlay=`<div class="img-overlay ${ok?'overlay-correct':'overlay-wrong'}">
-      <span>${ok?'✓':'✗'}</span>
+      <span>${ok?'âœ“':'âœ—'}</span>
       <span class="overlay-msg">${ok?CORRECT_MSGS[Math.floor(Math.random()*CORRECT_MSGS.length)]:`It's the ${bird.name}`}</span>
-      <button class="btn-next-overlay" onclick="advance()">Next →</button>
+      <button class="btn-next-overlay" onclick="advance()">Next â†’</button>
     </div>`;
   }
 
@@ -565,8 +565,8 @@ function render(){
   let fieldNote='';
   if(state.selected){
     const ok=state.selected===bird.name;
-    const noteText=bird.note||'<em style="color:#9b9890">Loading field note…</em>';
-    const wrongMsg=ok?'':`<div class="wrong-note"><p>📌 This one will come back — you'll get it next time.</p></div>`;
+    const noteText=bird.note||'<em style="color:#9b9890">Loading field noteâ€¦</em>';
+    const wrongMsg=ok?'':`<div class="wrong-note"><p>ðŸ“Œ This one will come back â€” you'll get it next time.</p></div>`;
     const nextBtn=``; // Next button is on the photo overlay
     fieldNote=`
       <div class="field-note">
@@ -574,10 +574,10 @@ function render(){
           <div class="fn-species-name">${bird.name}</div>
           <div class="fn-species-latin">${bird.latin}</div>
         </div>
-        <div class="fn-label">🔍 HOW TO IDENTIFY</div>
+        <div class="fn-label">ðŸ” HOW TO IDENTIFY</div>
         <p class="fn-main">${noteText}</p>
-        <p class="fn-count" style="margin-top:6px">${bird.count ? `📊 ${bird.count.toLocaleString()} iNat obs` : ''}</p>
-        <p class="inat-credit" style="margin-top:6px"><a href="https://www.inaturalist.org/taxa/search?q=${encodeURIComponent(bird.name)}" target="_blank">Photo: iNaturalist</a> · CC licensed</p>
+        <p class="fn-count" style="margin-top:6px">${bird.count ? `ðŸ“Š ${bird.count.toLocaleString()} iNat obs` : ''}</p>
+        <p class="inat-credit" style="margin-top:6px"><a href="https://www.inaturalist.org/taxa/search?q=${encodeURIComponent(bird.name)}" target="_blank">Photo: iNaturalist</a> Â· CC licensed</p>
       </div>${wrongMsg}${nextBtn}`;
     // Fetch Wikipedia summary async if not yet loaded
     if(!bird.note && bird.wikiUrl) {
@@ -593,17 +593,17 @@ function render(){
   app.innerHTML = `
     <div class="fade">
       <div class="meta-row">
-        <span class="q-label">${state.totalSeen} seen · ${state.totalCorrect} correct
+        <span class="q-label">${state.totalSeen} seen Â· ${state.totalCorrect} correct
           <span class="mode-pill ${isExpert?'pill-hard':'pill-easy'}">${isExpert?'Expert':'Standard'}</span>
         </span>
         <div class="badges">${bird.seabird?'<span class="badge badge-blue">Seabird</span>':''}</div>
       </div>
       <div class="streak-row">
         <div class="streak-dots">${dots}</div>
-        <span class="streak-label">🔥 ${state.streak}/${STREAK_TARGET}</span>
+        <span class="streak-label">ðŸ”¥ ${state.streak}/${STREAK_TARGET}</span>
       </div>
       <div class="img-box" id="imgBox">${imgContent}${overlay}${carouselControls}</div>
-      <p class="question-text">🔍 Which bird is this?</p>
+      <p class="question-text">ðŸ” Which bird is this?</p>
       <div class="options">${optionsHtml}</div>
       ${fieldNote}
     </div>`;
@@ -623,7 +623,7 @@ function adjustImgPosition(img){
 }
 function imgFailed(){
   const box=document.getElementById('imgBox');
-  if(box) box.innerHTML=`<div class="img-placeholder"><div class="icon">📷</div><span>No photo available</span></div>`;
+  if(box) box.innerHTML=`<div class="img-placeholder"><div class="icon">ðŸ“·</div><span>No photo available</span></div>`;
 }
 
 function setMode(m)   { setState({mode:m}); }
@@ -658,7 +658,7 @@ function selectAnswer(opt,event){
     setTimeout(()=>showEncouragement(STREAK_MSGS[newStreak]||CORRECT_MSGS[Math.floor(Math.random()*CORRECT_MSGS.length)]),150);
   }
   if(newStreak>=STREAK_TARGET) setTimeout(()=>setState({phase:'result'}),2000);
-  // No auto-advance — user clicks Next
+  // No auto-advance â€” user clicks Next
 }
 
 function advance(){
@@ -683,7 +683,7 @@ function advance(){
   fetchInatImage(next).then(url=>{const all=(inatPhotoCache[next.latin||next.name]||[]).slice(0,5);const photoUrls=url?[url,...all.filter(u=>u!==url)].slice(0,5):all;setState({imgUrl:url,imgLoading:false,photoUrls,photoIdx:0});});
 }
 
-// ── Quiz Library ──────────────────────────────────────────────────────────
+// â”€â”€ Quiz Library â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const _gh = ['github','pat','11CD5YDQQ0Y2Cv7G9iPpmi_cW1ahB9MxT6aHa4Yjt9u3FADJ0OnV3ZiBABqVO6OWq0E4KM5W3WQ7BQa8Kd'].join('_');
 const GH_REPO = 'rutherfordecology/WhatDatBird';
 const GH_FILE = 'quizzes.json';
@@ -693,7 +693,7 @@ async function saveToLibrary() {
   const msg = document.getElementById('saveLibMsg');
   if (!btn || !PLACE_ID) return;
   btn.disabled = true;
-  msg.textContent = 'Saving…';
+  msg.textContent = 'Savingâ€¦';
   try {
     // 1. Read current quizzes.json
     const getR = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`, {
@@ -702,12 +702,12 @@ async function saveToLibrary() {
     if (!getR.ok) throw new Error('read');
     const getD = await getR.json();
     const sha = getD.sha;
-    // Decode UTF-8 correctly (atob alone corrupts non-ASCII chars like — · é)
+    // Decode UTF-8 correctly (atob alone corrupts non-ASCII chars like â€” Â· Ã©)
     const data = JSON.parse(decodeURIComponent(escape(atob(getD.content.replace(/\n/g,'')))));
 
     // 2. Check if already saved
     if (data.quizzes.some(q => String(q.place_id) === String(PLACE_ID))) {
-      msg.textContent = '✓ Already in the library!';
+      msg.textContent = 'âœ“ Already in the library!';
       btn.style.display = 'none'; return;
     }
 
@@ -753,16 +753,16 @@ async function saveToLibrary() {
       body
     });
     if (!putR.ok) throw new Error('write');
-    msg.textContent = '🌍 Added! Will appear in ~1 minute.';
+    msg.textContent = 'ðŸŒ Added! Will appear in ~1 minute.';
     btn.style.display = 'none';
   } catch(e) {
     msg.style.color = '#8a2c2c';
-    msg.textContent = 'Could not save — try again.';
+    msg.textContent = 'Could not save â€” try again.';
     btn.disabled = false;
   }
 }
 
-// ── Boot ───────────────────────────────────────────────────────────────────
+// â”€â”€ Boot â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const MIN_SPECIES = 15;
 const BUFFER_STEPS = [0, 5, 10, 25, 50];
 
@@ -785,7 +785,7 @@ async function autoLoadSpecies(placeId) {
         setState({ phase: 'intro', buffer: buf });
         return;
       }
-      // Not enough — update loading message and try next buffer
+      // Not enough â€” update loading message and try next buffer
       setState({ buffer: buf }); // triggers render with updated sub-message
     } catch (err) {
       setState({ phase: 'error', loadError: err.message });
@@ -804,7 +804,7 @@ if (!PLACE_ID) {
 }
 </script>
 <div style="position:fixed;bottom:0;left:0;right:0;text-align:center;padding:6px;background:rgba(243,242,238,0.92);backdrop-filter:blur(4px);border-top:1px solid #dddbd3;font-size:0.7rem;color:#9b9890;z-index:999;">
-  <a href="index.html" style="color:#2a7a58;text-decoration:none;font-weight:700;">WhatDatBird?</a> · by <a href="https://sites.google.com/view/rutherford-ecology/home" target="_blank" style="color:#9b9890;text-decoration:none;">Rutherford Ecology</a> · <a href="https://buymeacoffee.com/rutherfordecology" target="_blank" style="color:#d4a84b;text-decoration:none;font-weight:700;">☕ Buy me a coffee</a>
+  <a href="index.html" style="color:#2a7a58;text-decoration:none;font-weight:700;">WhatDatBird?</a> Â· by <a href="https://sites.google.com/view/rutherford-ecology/home" target="_blank" style="color:#9b9890;text-decoration:none;">Rutherford Ecology</a> Â· <a href="https://buymeacoffee.com/rutherfordecology" target="_blank" style="color:#d4a84b;text-decoration:none;font-weight:700;">â˜• Buy me a coffee</a>
 </div>
 </body>
 </html>

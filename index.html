@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WhatDatBird? · Rutherford Ecology</title>
+<title>WhatDatBird? - Rutherford Ecology</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -95,36 +95,36 @@
 
 <div class="topbar">
   <div class="topbar-left">
-    <span style="font-size:1.3rem">🦜</span>
+    <span style="font-size:1.3rem">&#x1F426;</span>
     <span class="topbar-title">WhatDatBird?</span>
-    <span style="font-size:0.7rem;font-weight:400;color:rgba(255,255,255,0.35);letter-spacing:0.04em;">v2.5</span>
+    <span style="font-size:0.7rem;font-weight:400;color:rgba(255,255,255,0.35);letter-spacing:0.04em;">v3.2</span>
   </div>
   <span class="topbar-re">by <a href="https://sites.google.com/view/rutherford-ecology/home" target="_blank"><strong>Rutherford</strong> ecology</a></span>
 </div>
 
 <div class="hero">
-  <div class="eyebrow">BIRD PHOTO IDENTIFICATION · WORLDWIDE</div>
+  <div class="eyebrow">BIRD PHOTO IDENTIFICATION - WORLDWIDE</div>
   <h1>WhatDatBird?</h1>
   <p>Test your bird ID skills. Pick a preset location or search anywhere in the world.</p>
 </div>
 
 <div class="search-section">
   <input class="search-input" id="searchInput" type="text"
-    placeholder="🔍 Search any place — country, island, park…" autocomplete="off" />
+    placeholder="Search any place - country, island, park..." autocomplete="off" />
   <div class="search-drop" id="searchDrop"></div>
 </div>
 
-<div id="quizLibrary"><div class="section-label" style="max-width:640px;margin:0 auto 14px;padding:0 20px;">Loading quiz library…</div></div>
+<div id="quizLibrary"><div class="section-label" style="max-width:640px;margin:0 auto 14px;padding:0 20px;">Loading quiz library...</div></div>
 
 <footer>
-  Photos from <a href="https://www.inaturalist.org" target="_blank">iNaturalist</a> · CC licensed ·
+  Photos from <a href="https://www.inaturalist.org" target="_blank">iNaturalist</a> - CC licensed -
   <a href="https://sites.google.com/view/rutherford-ecology/home" target="_blank">Rutherford Ecology</a>
   <br><br>
-  <a href="https://buymeacoffee.com/rutherfordecology" target="_blank" style="color:#d4a84b;font-weight:700;text-decoration:none;">☕ Buy me a coffee</a>
+  <a href="https://buymeacoffee.com/rutherfordecology" target="_blank" style="color:#d4a84b;font-weight:700;text-decoration:none;">&#x2615; Buy me a coffee</a>
 </footer>
 
 <script>
-// ── Quiz library ───────────────────────────────────────────────────────────
+// Quiz library
 const CONTINENT_ORDER = ['Africa','Antarctica','Asia','Europe','North America','Oceania','South America','Other'];
 
 async function loadLibrary() {
@@ -133,7 +133,6 @@ async function loadLibrary() {
     const d = await r.json();
     const quizzes = d.quizzes || [];
 
-    // Group by continent
     const groups = {};
     for (const q of quizzes) {
       const c = q.continent || 'Other';
@@ -154,7 +153,7 @@ async function loadLibrary() {
         const count = q.species ? `<span class="card-count">${q.species} species</span>` : '';
         const imgId = `card-img-${q.place_id || q.url.replace(/\W/g,'')}`;
         html += `<a class="place-card" href="${q.url}">
-          <div class="card-img" id="${imgId}"><div class="card-img-ph">🦜</div></div>
+          <div class="card-img" id="${imgId}"><div class="card-img-ph">&#x1F426;</div></div>
           <div class="card-body">
             <div class="card-name">${q.name}</div>
             <div class="card-sub">${q.description}</div>
@@ -166,7 +165,6 @@ async function loadLibrary() {
     }
     lib.innerHTML = html;
 
-    // Load photos for each card
     for (const q of quizzes) {
       const imgId = `card-img-${q.place_id || q.url.replace(/\W/g,'')}`;
       const el = document.getElementById(imgId);
@@ -203,7 +201,7 @@ async function loadPlacePhoto(placeId, el) {
 
 loadLibrary();
 
-// ── Search ─────────────────────────────────────────────────────────────────
+// Search
 const inp = document.getElementById('searchInput');
 const drop = document.getElementById('searchDrop');
 let timer;
@@ -212,7 +210,7 @@ inp.addEventListener('input', () => {
   clearTimeout(timer);
   const q = inp.value.trim();
   if (q.length < 2) { drop.classList.remove('open'); return; }
-  drop.innerHTML = '<div class="search-msg">Searching…</div>';
+  drop.innerHTML = '<div class="search-msg">Searching...</div>';
   drop.classList.add('open');
   timer = setTimeout(() => doSearch(q), 350);
 });
@@ -230,7 +228,7 @@ async function doSearch(q) {
     if (!results.length) { drop.innerHTML = '<div class="search-msg">No places found.</div>'; return; }
     drop.innerHTML = results.map(p => `
       <div class="search-item" data-id="${p.id}" data-name="${p.display_name.replace(/"/g,'&quot;')}">
-        <span style="font-size:1.1rem">📍</span>
+        <span style="font-size:1.1rem">&#x1F4CD;</span>
         <div>
           <div class="search-item-name">${p.display_name}</div>
           <div class="search-item-type">${TYPE_LABEL[p.place_type] || 'Place'}</div>
@@ -239,7 +237,7 @@ async function doSearch(q) {
     drop.querySelectorAll('.search-item').forEach(el =>
       el.addEventListener('mousedown', () => goPlace(el.dataset.id, el.dataset.name))
     );
-  } catch { drop.innerHTML = '<div class="search-msg">Search failed — try again.</div>'; }
+  } catch { drop.innerHTML = '<div class="search-msg">Search failed - try again.</div>'; }
 }
 
 function goPlace(id, name) {
