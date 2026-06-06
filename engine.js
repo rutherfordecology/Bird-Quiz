@@ -397,7 +397,27 @@ function renderResult(app, header) {
       <button class="btn-back" onclick="window.location.href='${CFG.backUrl}'">&#8592; All Quizzes</button>
     </div>`;
   launchConfetti();
-  if (CFG.placeId) loadLeaderboard();
+  if (CFG.placeId) {
+    loadLeaderboard();
+    checkInLibrary();
+  }
+}
+
+async function checkInLibrary() {
+  try {
+    const r = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`, {
+      headers: { Authorization: `token ${GH_TOKEN}`, Accept: 'application/vnd.github.v3+json' }
+    });
+    if (!r.ok) return;
+    const d = await r.json();
+    const data = JSON.parse(decodeURIComponent(escape(atob(d.content.replace(/\n/g, '')))).replace(/^﻿/, ''));
+    if (data.quizzes.some(q => String(q.place_id) === String(CFG.placeId))) {
+      const btn = document.getElementById('saveLibBtn');
+      const msg = document.getElementById('saveLibMsg');
+      if (btn) btn.style.display = 'none';
+      if (msg) msg.style.display = 'none';
+    }
+  } catch {}
 }
 
 function renderQuiz(app) {
