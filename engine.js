@@ -141,7 +141,7 @@ async function fetchIDNote(wikiUrl) {
   if (wikiSummaryCache[wikiUrl] !== undefined) return wikiSummaryCache[wikiUrl];
   try {
     const title = decodeURIComponent(wikiUrl.split('/wiki/').pop());
-    const r = await fetch(`https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=extracts&explaintext=true&exsectionformat=plain&format=json&origin=*`);
+    const r = await fetch(`https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&redirects=1&prop=extracts&explaintext=true&exsectionformat=plain&format=json&origin=*`);
     if (!r.ok) throw new Error();
     const d = await r.json();
     const extract = Object.values(d.query.pages)[0]?.extract || '';
