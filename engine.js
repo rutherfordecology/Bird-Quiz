@@ -1,7 +1,7 @@
-// WhatDatBird? Quiz Engine v5.13
+// WhatDatBird? Quiz Engine v5.14
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.13';
+const APP_VERSION = 'v5.14';
 
 // ── Config ────────────────────────────────────────────────────────────────
 let CFG = {};
@@ -175,35 +175,35 @@ function shuffle(arr) {
   return a;
 }
 
+function scoreByAncestry(candidates, correctIds, correctSet) {
+  return candidates.map(b => {
+    const shared = (b.ancestorIds || []).filter(id => correctSet.has(id));
+    const depth = shared.length > 0
+      ? Math.max(...shared.map(id => correctIds.indexOf(id)))
+      : -1;
+    return { b, depth, shared: shared.length };
+  }).sort((a, b) => b.depth - a.depth || b.shared - a.shared);
+}
+
 function getOptions(correct, pool) {
-  const others     = shuffle(pool.filter(b => b.name !== correct.name));
   const correctIds = correct.ancestorIds || [];
   const correctSet = new Set(correctIds);
 
-  if (correctSet.size > 0 && others.length >= 3) {
-    // Score by deepest shared ancestor position (later in the array = more specific)
-    const scored = others.map(b => {
-      const shared = (b.ancestorIds || []).filter(id => correctSet.has(id));
-      // Use the highest index of any shared ancestor in the correct bird's ancestor list
-      const depth = shared.length > 0
-        ? Math.max(...shared.map(id => correctIds.indexOf(id)))
-        : -1;
-      return { b, depth, shared: shared.length };
-    });
-    scored.sort((a, b) => b.depth - a.depth || b.shared - a.shared);
+  if (correctSet.size > 0) {
+    const others = shuffle(pool.filter(b => b.name !== correct.name));
+    const scored = others.length >= 3 ? scoreByAncestry(others, correctIds, correctSet) : [];
 
-    // Build distractors: at least 2 from the top 6, 1 allowed from top 12 for variety
-    // Pick 1 from top 5 closest, 2 more from next 5 — varied but taxonomically close
-    const top5  = scored.slice(0, Math.min(5, scored.length));
-    const next5 = scored.slice(5, Math.min(10, scored.length));
-    const picks = [
-      shuffle(top5)[0],
-      ...shuffle(next5.length >= 2 ? next5 : scored.slice(1, Math.min(6, scored.length))).slice(0, 2),
-    ];
-    return shuffle([correct.name, ...picks.map(s => s.b.name)]);
+    if (scored.length >= 3) {
+      // Always include the closest relative, fill remaining 2 from next closest
+      const closest = scored[0];
+      const rest    = shuffle(scored.slice(1, Math.min(10, scored.length)));
+      const picks   = [closest, ...rest.slice(0, 2)];
+      return shuffle([correct.name, ...picks.map(s => s.b.name)]);
+    }
   }
 
   // Fallback: same genus first, then rest
+  const others   = shuffle(pool.filter(b => b.name !== correct.name));
   const genus    = correct.latin?.split(' ')[0] || '';
   const sameGenus = others.filter(b => b.latin?.split(' ')[0] === genus);
   const rest      = others.filter(b => b.latin?.split(' ')[0] !== genus);
