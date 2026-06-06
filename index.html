@@ -352,18 +352,31 @@ async function onMapClick(e) {
   placesEl.innerHTML = '';
 
   try {
-    // Use iNat nearby endpoint — returns places at all scales containing this point
-    const pad = 0.5;
-    const r = await fetch(
-      `https://api.inaturalist.org/v1/places/nearby?nelat=${lat+pad}&nelng=${lng+pad}&swlat=${lat-pad}&swlng=${lng-pad}&per_page=20`
-    );
-    const d = await r.json();
+    // 1. Reverse geocode to get local place name
+    const nomR = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`, {
+      headers: { 'Accept-Language': 'en' }
+    });
+    const nomD = await nomR.json();
+    const localName = nomD.address?.city || nomD.address?.town || nomD.address?.village
+                   || nomD.address?.suburb || nomD.address?.county || '';
 
-    // Combine standard + community places, dedupe, sort specific → broad
-    const PRIORITY = { 6:0, 100:1, 4:2, 10:3, 5:4, 3:5, 9:6, 13:7, 3:8, 2:9, 12:10, 1:11 };
-    const all = [...(d.results?.standard || []), ...(d.results?.community || [])]
-      .filter((p, i, a) => a.findIndex(x => x.id === p.id) === i)
-      .filter(p => ![1].includes(p.place_type)) // drop continents
+    // 2. iNat nearby (small pad) + iNat autocomplete for local name — in parallel
+    const pad = 0.1;
+    const [nearbyR, autoR] = await Promise.all([
+      fetch(`https://api.inaturalist.org/v1/places/nearby?nelat=${lat+pad}&nelng=${lng+pad}&swlat=${lat-pad}&swlng=${lng-pad}&per_page=20`),
+      localName ? fetch(`https://api.inaturalist.org/v1/places/autocomplete?q=${encodeURIComponent(localName)}&geo=true&per_page=5`) : Promise.resolve(null),
+    ]);
+
+    const nearbyD = await nearbyR.json();
+    const PRIORITY = { 6:0, 100:1, 5:2, 4:3, 10:4, 3:5, 9:6, 13:7, 2:8, 12:9, 1:10 };
+
+    const nearby = [...(nearbyD.results?.standard || []), ...(nearbyD.results?.community || [])];
+    const auto   = autoR?.ok ? (await autoR.json()).results || [] : [];
+
+    // Merge, dedupe by id, drop continents, sort specific → broad
+    const seen = new Set();
+    const all = [...auto, ...nearby]
+      .filter(p => { if (seen.has(p.id) || p.place_type === 1) return false; seen.add(p.id); return true; })
       .sort((a, b) => (PRIORITY[a.place_type] ?? 99) - (PRIORITY[b.place_type] ?? 99))
       .slice(0, 8);
 
