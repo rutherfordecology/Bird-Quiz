@@ -103,15 +103,18 @@ async function processBatch(speciesItems) {
       const latin = gd.canonicalName;
       if (!latin) return null;
 
-      // 2. iNat: English common name + wiki URL (in parallel with nothing to wait for)
-      const inat = await fetch(
-        `https://api.inaturalist.org/v1/taxa?q=${encodeURIComponent(latin)}&rank=species&per_page=1`
-      ).then(r => r.json()).then(d => {
-        const t = d.results?.[0];
-        return (t && t.name.toLowerCase() === latin.toLowerCase()) ? t : null;
-      }).catch(() => null);
+      // 2. iNat: only needed if GBIF has no vernacular name
+      let inat = null;
+      if (!gd.vernacularName) {
+        inat = await fetch(
+          `https://api.inaturalist.org/v1/taxa?q=${encodeURIComponent(latin)}&rank=species&per_page=1`
+        ).then(r => r.json()).then(d => {
+          const t = d.results?.[0];
+          return (t && t.name.toLowerCase() === latin.toLowerCase()) ? t : null;
+        }).catch(() => null);
+      }
 
-      const name = inat?.preferred_common_name || gd.vernacularName || null;
+      const name = gd.vernacularName || inat?.preferred_common_name || null;
       if (!name) return null; // skip species with no usable common name
 
       return {
@@ -200,7 +203,7 @@ async function loadFromGBIF() {
   if (speciesItems.length < 8) throw new Error('Not enough GBIF data for this location');
 
   const birds  = [];
-  const BATCH  = 12;
+  const BATCH  = 40;
   let introShown = false;
 
   for (let i = 0; i < speciesItems.length; i += BATCH) {
