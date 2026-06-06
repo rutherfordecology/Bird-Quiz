@@ -193,10 +193,13 @@ function getOptions(correct, pool) {
     scored.sort((a, b) => b.depth - a.depth || b.shared - a.shared);
 
     // Build distractors: at least 2 from the top 6, 1 allowed from top 12 for variety
-    // Always include the closest relative, then pick 2 more from the next best
-    const closest = scored[0];
-    const rest    = shuffle(scored.slice(1, Math.min(7, scored.length))).slice(0, 2);
-    const picks   = [closest, ...rest];
+    // Pick 1 from top 5 closest, 2 more from next 5 — varied but taxonomically close
+    const top5  = scored.slice(0, Math.min(5, scored.length));
+    const next5 = scored.slice(5, Math.min(10, scored.length));
+    const picks = [
+      shuffle(top5)[0],
+      ...shuffle(next5.length >= 2 ? next5 : scored.slice(1, Math.min(6, scored.length))).slice(0, 2),
+    ];
     return shuffle([correct.name, ...picks.map(s => s.b.name)]);
   }
 
