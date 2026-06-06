@@ -457,6 +457,7 @@ function render(){
         <span class="buffer-label">📍 Area buffer:</span>
         ${[0,5,10,25,50].map(km=>`<button class="buffer-btn${state.buffer===km?' active':''}" onclick="setBuffer(${km})">${km===0?'None':km+'km'}</button>`).join('')}
       </div>
+      ${state.buffer > 0 && EXPERT_BIRDS.length < 15 + state.buffer ? `<p style="font-size:0.75rem;color:#2a7a58;margin:4px 0 8px;text-align:center;">📡 Auto-expanded to ${state.buffer}km — only ${total} species recorded nearby</p>` : state.buffer > 0 ? `<p style="font-size:0.75rem;color:#2a7a58;margin:4px 0 8px;text-align:center;">📡 Showing species within ${state.buffer}km</p>` : ''}
       <button class="btn-primary" onclick="startQuiz()">Let's Go! 🚀</button>
       <button class="btn-secondary" onclick="goSpecies()">📋 Species List</button>
       <a href="index.html" style="display:block;text-align:center;margin-top:14px;font-size:0.8rem;color:#9b9890;text-decoration:none;" onmouseover="this.style.color='#2a7a58'" onmouseout="this.style.color='#9b9890'">← WhatDatBird?</a>`;
@@ -762,15 +763,44 @@ async function saveToLibrary() {
 }
 
 // ── Boot ───────────────────────────────────────────────────────────────────
+const MIN_SPECIES = 15;
+const BUFFER_STEPS = [0, 5, 10, 25, 50];
+
+async function prefetchCentroid(placeId) {
+  try {
+    const pr = await fetch(`https://api.inaturalist.org/v1/places/${placeId}`);
+    const pd = await pr.json();
+    const coords = pd.results?.[0]?.point_geojson?.coordinates;
+    if (coords) { PLACE_LNG = coords[0]; PLACE_LAT = coords[1]; }
+  } catch {}
+}
+
+async function autoLoadSpecies(placeId) {
+  // Pre-fetch centroid in parallel so buffer steps are fast
+  prefetchCentroid(placeId);
+  for (const buf of BUFFER_STEPS) {
+    try {
+      const count = await loadSpecies(placeId, buf);
+      if (count >= MIN_SPECIES || buf === BUFFER_STEPS[BUFFER_STEPS.length - 1]) {
+        setState({ phase: 'intro', buffer: buf });
+        return;
+      }
+      // Not enough — update loading message and try next buffer
+      setState({ buffer: buf }); // triggers render with updated sub-message
+    } catch (err) {
+      setState({ phase: 'error', loadError: err.message });
+      return;
+    }
+  }
+}
+
 if (!PLACE_ID) {
   state.phase = 'error';
   state.loadError = 'No place specified. Please go back and search for a location.';
   render();
 } else {
-  render(); // show loading screen
-  loadSpecies(PLACE_ID)
-    .then(() => setState({phase:'intro'}))
-    .catch(err => setState({phase:'error', loadError: err.message}));
+  render();
+  autoLoadSpecies(PLACE_ID);
 }
 </script>
 <div style="position:fixed;bottom:0;left:0;right:0;text-align:center;padding:6px;background:rgba(243,242,238,0.92);backdrop-filter:blur(4px);border-top:1px solid #dddbd3;font-size:0.7rem;color:#9b9890;z-index:999;">
