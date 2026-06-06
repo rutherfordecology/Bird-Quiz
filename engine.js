@@ -441,7 +441,7 @@ function renderQuiz(app) {
   if(state.selected) {
     const ok=state.selected===bird.name;
     const noteText=bird.note||'<em style="color:#9b9890">Loading field note...</em>';
-    const wrongMsg=ok?'':`<div class="wrong-note"><p>&#128204; This one will come back - you'll get it next time.</p></div>`;
+    const wrongMsg=ok?'':`<div class="wrong-note"><p>&#128204; -2 points. This one will come back after a few birds.</p></div>`;
     fieldNote=`
       <div class="field-note">
         <div class="fn-head">
@@ -616,7 +616,7 @@ function selectAnswer(opt, event) {
   const newStreak=correct?state.streak+1:Math.max(0,state.streak-2);
   setState({selected:opt,streak:newStreak,streakHistory:newHistory,
     totalSeen:state.totalSeen+1,totalCorrect:state.totalCorrect+(correct?1:0),
-    wrongBin:correct?state.wrongBin:[...state.wrongBin,bird]});
+    wrongBin:correct?state.wrongBin:[...state.wrongBin,{bird,wrongAt:state.totalSeen}]});
   if(correct) {
     if(event) burstStars(event.clientX,event.clientY);
     setTimeout(()=>showEncouragement(STREAK_MSGS[newStreak]||CORRECT_MSGS[Math.floor(Math.random()*CORRECT_MSGS.length)]),150);
@@ -634,17 +634,22 @@ function _advance() {
   const pool=getPool();
   let queue=[...state.queue], wrongBin=[...state.wrongBin];
   if(queue.length===0&&wrongBin.length===0){setState({phase:'result'});return;}
+
+  const WRONG_GAP = 3;
+  const eligible = wrongBin.filter(w => state.totalSeen - w.wrongAt >= WRONG_GAP);
+  const insertWrong = eligible.length > 0 && (queue.length === 0 || state.totalSeen % 3 === 0);
+
   let next;
-  const insertWrong=wrongBin.length>0&&(queue.length===0||state.totalSeen%3===0);
   if(insertWrong) {
-    const idx=Math.floor(Math.random()*wrongBin.length);
-    next=wrongBin[idx]; wrongBin=wrongBin.filter((_,i)=>i!==idx);
+    const pick = eligible[Math.floor(Math.random()*eligible.length)];
+    next = pick.bird;
+    wrongBin = wrongBin.filter(w => w !== pick);
   } else {
     next=queue.shift();
-    if(wrongBin.length>0&&Math.random()<0.4) {
-      const idx=Math.floor(Math.random()*wrongBin.length);
-      const recycled=wrongBin[idx]; wrongBin=wrongBin.filter((_,i)=>i!==idx);
-      queue.splice(Math.min(Math.floor(Math.random()*4)+1,queue.length),0,recycled);
+    if(eligible.length>0&&Math.random()<0.4) {
+      const pick = eligible[Math.floor(Math.random()*eligible.length)];
+      wrongBin = wrongBin.filter(w => w !== pick);
+      queue.splice(Math.min(Math.floor(Math.random()*4)+1,queue.length),0,pick.bird);
     }
   }
   setState({current:next,queue,wrongBin,selected:null,imgUrl:null,imgLoading:true,photoUrls:[],photoIdx:0,options:getOptions(next,pool)});
