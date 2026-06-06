@@ -17,6 +17,7 @@ const PLACE_ID   = params.get('place_id');
 const PLACE_NAME = decodeURIComponent(params.get('place_name') || 'Unknown Place');
 
 let PLACE_LAT = null, PLACE_LNG = null, COUNTRY_CODE = null;
+let placeNames = null;
 let PLACE_BBOX = null;   // {minLat, maxLat, minLng, maxLng} from iNat bounding box
 let IS_COUNTRY = false;  // true if the searched place itself is a country
 const YEAR_FROM  = new Date().getFullYear() - 15;
@@ -331,7 +332,6 @@ async function boot() {
   });
 
   // Load place-specific indigenous names if available
-  let placeNames = null;
   fetch(`place-names/${PLACE_ID}.json`)
     .then(r => r.ok ? r.json() : null)
     .then(d => {
