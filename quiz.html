@@ -221,26 +221,62 @@ async function loadFromGBIF() {
   return birds;
 }
 
+// ── Country → iNat locale map ─────────────────────────────────────────────
+const COUNTRY_LOCALE = {
+  'WS':'sm','TO':'to','FJ':'fj','WF':'wls','CK':'rar','NU':'niu','TV':'tvl',
+  'NZ':'mi','PF':'ty','NC':'fr',
+  'MX':'es','GT':'es','HN':'es','NI':'es','CR':'es','PA':'es',
+  'CO':'es','VE':'es','PE':'es','BO':'es','EC':'es','CL':'es','AR':'es','UY':'es','PY':'es','CU':'es',
+  'ES':'es','PT':'pt','BR':'pt',
+  'FR':'fr','BE':'fr','CH':'fr',
+  'DE':'de','AT':'de',
+  'JP':'ja','CN':'zh','TW':'zh','KR':'ko',
+  'RU':'ru','UA':'uk',
+  'AR':'ar','EG':'ar','MA':'ar','SA':'ar',
+  'IN':'hi','BD':'bn',
+};
+
+async function fetchIndigenousNames(baseUrl, locale) {
+  try {
+    const r = await fetch(baseUrl + `&locale=${locale}`);
+    if (!r.ok) return {};
+    const d = await r.json();
+    const map = {};
+    for (const item of (d.results || [])) {
+      const name = item.taxon?.preferred_common_name;
+      const latin = item.taxon?.name;
+      if (name && latin) map[latin] = name;
+    }
+    return map;
+  } catch { return {}; }
+}
+
 // ── iNat fallback (for places without a country code, or if GBIF fails) ───
 async function loadFromInat(bufferKm = 0) {
   if (bufferKm > 0 && PLACE_LAT === null) await fetchPlaceMeta(PLACE_ID);
-  const url = (bufferKm > 0 && PLACE_LAT !== null)
+  const baseUrl = (bufferKm > 0 && PLACE_LAT !== null)
     ? `https://api.inaturalist.org/v1/observations/species_counts?lat=${PLACE_LAT}&lng=${PLACE_LNG}&radius=${bufferKm}&iconic_taxa=Aves&quality_grade=research&per_page=200&order_by=observations_count&order=desc&d1=${YEAR_FROM}-01-01`
     : `https://api.inaturalist.org/v1/observations/species_counts?place_id=${PLACE_ID}&iconic_taxa=Aves&quality_grade=research&per_page=200&order_by=observations_count&order=desc&d1=${YEAR_FROM}-01-01`;
-  const r = await fetch(url);
+
+  const locale = COUNTRY_CODE ? COUNTRY_LOCALE[COUNTRY_CODE] : null;
+  const [r, indNames] = await Promise.all([
+    fetch(baseUrl),
+    locale ? fetchIndigenousNames(baseUrl, locale) : Promise.resolve({}),
+  ]);
   if (!r.ok) throw new Error('iNat API error');
   const d = await r.json();
   return (d.results || [])
     .filter(item => item.taxon?.preferred_common_name && item.taxon?.rank === 'species')
     .map(item => ({
-      name:        item.taxon.preferred_common_name,
-      latin:       item.taxon.name,
-      inatId:      item.taxon.id,
-      ancestorIds: item.taxon.ancestor_ids || [],
-      count:       item.count,
-      wikiUrl:     item.taxon.wikipedia_url || null,
-      note:        null,
-      seabird:     false,
+      name:          item.taxon.preferred_common_name,
+      latin:         item.taxon.name,
+      inatId:        item.taxon.id,
+      ancestorIds:   item.taxon.ancestor_ids || [],
+      count:         item.count,
+      wikiUrl:       item.taxon.wikipedia_url || null,
+      note:          null,
+      seabird:       false,
+      indigenousName: indNames[item.taxon.name] || null,
     }));
 }
 
@@ -253,10 +289,11 @@ async function boot() {
   }
 
   initEngine({
-    placeName: PLACE_NAME,
-    placeId:   PLACE_ID,
-    backUrl:   'index.html',
-    easyBirds: [],
+    placeName:      PLACE_NAME,
+    placeId:        PLACE_ID,
+    backUrl:        'index.html',
+    indigenousField:'indigenousName',
+    easyBirds:      [],
   });
 
   // Fetch place metadata (centroid + country code) — needed before GBIF call
