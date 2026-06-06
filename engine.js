@@ -665,9 +665,13 @@ function _advance() {
     const photoUrls=url?[url,...all.filter(u=>u!==url)].slice(0,5):all;
     setState({imgUrl:url,imgLoading:false,photoUrls,photoIdx:0});
   });
-  // Prefetch next bird's photos in background
+  // Prefetch current bird's field note and next bird's photos + note
+  if (next.wikiUrl && !next.note) fetchIDNote(next.wikiUrl).catch(() => {});
   const prefetchBird = queue[0] || wrongBin[0]?.bird;
-  if (prefetchBird) fetchInatImage(prefetchBird).catch(() => {});
+  if (prefetchBird) {
+    fetchInatImage(prefetchBird).catch(() => {});
+    if (prefetchBird.wikiUrl && !prefetchBird.note) fetchIDNote(prefetchBird.wikiUrl).catch(() => {});
+  }
 }
 
 // ── Leaderboard ───────────────────────────────────────────────────────────
