@@ -272,14 +272,14 @@ function render() {
     <div class="header fade">
       <div class="eyebrow">WHATDATBIRD?</div>
       <h1>WhatDatBird?</h1>
-      <div class="header-brand"><a href="${CFG.homeUrl||'https://rutherfordecology.github.io/WhatDatBird/'}" target="${CFG.homeUrl?'_self':'_blank'}"><span class="by-word">by </span><span class="re-bold">Rutherford</span> <span class="re-light">ecology</span></a></div>
+      <div class="header-brand"><a href="https://www.rutherfordecology.co.nz/" target="_blank"><span class="by-word">by </span><span class="re-bold">Rutherford</span> <span class="re-light">ecology</span></a></div>
     </div>` : `
     <div class="header fade">
       ${CFG.headerPhotoHtml ? CFG.headerPhotoHtml() : ''}
       <div class="eyebrow">${CFG.eyebrow || CFG.placeName.toUpperCase() + ' - FIELD GUIDE'} <span style="opacity:0.5;font-weight:400;letter-spacing:0.05em;">${APP_VERSION}</span></div>
       <h1>${CFG.title || 'WhatDatBird?<br><span style="font-size:1.3rem;font-weight:700;color:#2a7a58;">' + CFG.placeName + '</span>'}</h1>
       <p>Can you get ${STREAK_TARGET} in a row?</p>
-      <div class="header-brand"><a href="${CFG.homeUrl||'https://rutherfordecology.github.io/WhatDatBird/'}" target="${CFG.homeUrl?'_self':'_blank'}"><span class="by-word">by </span><span class="re-bold">Rutherford</span> <span class="re-light">ecology</span></a></div>
+      <div class="header-brand"><a href="https://www.rutherfordecology.co.nz/" target="_blank"><span class="by-word">by </span><span class="re-bold">Rutherford</span> <span class="re-light">ecology</span></a></div>
     </div>`;
 
   // Loading
