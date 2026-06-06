@@ -1,7 +1,7 @@
-// WhatDatBird? Quiz Engine v4.9
+// WhatDatBird? Quiz Engine v5.0
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v4.9';
+const APP_VERSION = 'v5.0';
 
 // ── Config ────────────────────────────────────────────────────────────────
 let CFG = {};
@@ -82,7 +82,7 @@ async function fetchInatImage(bird) {
       if (or.ok) {
         const od = await or.json();
         for (const o of (od.results || [])) {
-          if ((o.faves_count || 0) >= 3) {
+          if ((o.faves_count || 0) >= 1) {
             for (const p of (o.photos || [])) {
               const src = p.url?.replace('/square.', '/medium.');
               if (src && !photos.includes(src)) photos.push(src);
