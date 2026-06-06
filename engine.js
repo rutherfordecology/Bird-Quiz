@@ -239,7 +239,12 @@ function render() {
   const app = document.getElementById('app');
   const isQuiz = state.phase==='quiz';
 
-  const header = isQuiz ? '' : `
+  const header = isQuiz ? '' : state.phase === 'about' ? `
+    <div class="header fade">
+      <div class="eyebrow">WHATDATBIRD?</div>
+      <h1>WhatDatBird?</h1>
+      <div class="header-brand"><a href="${CFG.homeUrl||'https://rutherfordecology.github.io/WhatDatBird/'}" target="${CFG.homeUrl?'_self':'_blank'}"><span class="by-word">by </span><span class="re-bold">Rutherford</span> <span class="re-light">ecology</span></a></div>
+    </div>` : `
     <div class="header fade">
       ${CFG.headerPhotoHtml ? CFG.headerPhotoHtml() : ''}
       <div class="eyebrow">${CFG.eyebrow || CFG.placeName.toUpperCase() + ' - FIELD GUIDE'} <span style="opacity:0.5;font-weight:400;letter-spacing:0.05em;">${CFG.version||''}</span></div>
