@@ -47,6 +47,18 @@
       "place_id": 46704,
       "photo_taxon": null,
       "added": "2026-06-06"
+    },
+    {
+      "name": "WhatDatBird? - Brisbane City",
+      "continent": "Other",
+      "country": "Brisbane City",
+      "description": "Brisbane City - Brisbane City",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?place_id=144315&place_name=Brisbane%20City",
+      "place_id": 144315,
+      "photo_taxon": "Alectura lathami",
+      "added": "2026-06-06"
     }
   ]
 }
