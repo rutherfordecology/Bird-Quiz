@@ -1,6 +1,7 @@
-// WhatDatBird? Quiz Engine v4.0
+// WhatDatBird? Quiz Engine v4.6
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
+const APP_VERSION = 'v4.6';
 
 // ── Config ────────────────────────────────────────────────────────────────
 let CFG = {};
@@ -247,7 +248,7 @@ function render() {
     </div>` : `
     <div class="header fade">
       ${CFG.headerPhotoHtml ? CFG.headerPhotoHtml() : ''}
-      <div class="eyebrow">${CFG.eyebrow || CFG.placeName.toUpperCase() + ' - FIELD GUIDE'} <span style="opacity:0.5;font-weight:400;letter-spacing:0.05em;">${CFG.version||''}</span></div>
+      <div class="eyebrow">${CFG.eyebrow || CFG.placeName.toUpperCase() + ' - FIELD GUIDE'} <span style="opacity:0.5;font-weight:400;letter-spacing:0.05em;">${APP_VERSION}</span></div>
       <h1>${CFG.title || 'WhatDatBird?<br><span style="font-size:1.3rem;font-weight:700;color:#2a7a58;">' + CFG.placeName + '</span>'}</h1>
       <p>Can you get ${STREAK_TARGET} in a row?</p>
       <div class="header-brand"><a href="${CFG.homeUrl||'https://rutherfordecology.github.io/WhatDatBird/'}" target="${CFG.homeUrl?'_self':'_blank'}"><span class="by-word">by </span><span class="re-bold">Rutherford</span> <span class="re-light">ecology</span></a></div>
