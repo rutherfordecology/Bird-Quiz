@@ -1,7 +1,7 @@
-// WhatDatBird? Quiz Engine v5.29
+// WhatDatBird? Quiz Engine v5.30
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.29';
+const APP_VERSION = 'v5.30';
 
 // ── Config ────────────────────────────────────────────────────────────────
 let CFG = {};
@@ -72,8 +72,12 @@ async function fetchInatImage(bird) {
       if (or.ok) {
         const od = await or.json();
         for (const o of (od.results || [])) {
-          // Skip observations of a different species (taxon_id query is exact, but taxon_name fallback can bleed)
-          if (!inatId && o.taxon?.name && o.taxon.name.toLowerCase() !== latin.toLowerCase()) continue;
+          // For taxon_name fallback, skip cross-genus results (handles reclassifications like Bubulcus→Ardea while blocking obvious bleed)
+          if (!inatId && o.taxon?.name) {
+            const obsGenus = o.taxon.name.split(' ')[0].toLowerCase();
+            const expGenus = latin.split(' ')[0].toLowerCase();
+            if (obsGenus !== expGenus && o.taxon.name.split(' ')[1]?.toLowerCase() !== latin.split(' ')[1]?.toLowerCase()) continue;
+          }
           const src = o.photos?.[0]?.url?.replace('/square.', '/medium.');
           if (src) obsPhotos.push({ src, faves: o.faves_count || 0 });
         }
