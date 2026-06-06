@@ -11,6 +11,18 @@
       "place_id": 11508,
       "photo_taxon": "Hemiphaga novaeseelandiae",
       "added": "2026-06-05"
+    },
+    {
+      "name": "WhatDatBird? - Samoa",
+      "continent": "Other",
+      "country": "Samoa",
+      "description": "Samoa - Samoa",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?place_id=8504&place_name=Samoa",
+      "place_id": 8504,
+      "photo_taxon": null,
+      "added": "2026-06-06"
     }
   ]
 }
