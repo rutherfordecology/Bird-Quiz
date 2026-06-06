@@ -83,6 +83,18 @@
       "place_id": 97925,
       "photo_taxon": null,
       "added": "2026-06-06"
+    },
+    {
+      "name": "WhatDatBird? - Chao Phraya River (Bangkok Zone), Bangkok, Thailand",
+      "continent": "Other",
+      "country": "Chao Phraya River (Bangkok Zone), Bangkok, Thailand",
+      "description": "Chao Phraya River (Bangkok Zone), Bangkok, Thailand",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?place_id=184909&place_name=Chao%20Phraya%20River%20(Bangkok%20Zone)%2C%20Bangkok%2C%20Thailand",
+      "place_id": 184909,
+      "photo_taxon": null,
+      "added": "2026-06-06"
     }
   ]
 }
