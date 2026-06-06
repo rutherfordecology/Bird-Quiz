@@ -840,11 +840,9 @@ async function saveToLibrary() {
       const ancR = await fetch(`https://api.inaturalist.org/v1/places?id=${ancestorIds}&per_page=100`);
       const ancD = await ancR.json();
       const ancs = ancD.results || [];
-      continent = ancs.find(a => a.place_type === 1)?.display_name
-               || ancs.find(a => a.place_type === 2)?.display_name
-               || 'Other';
+      continent = ancs.find(a => a.place_type === 29)?.display_name || 'Other';
       country   = ancs.find(a => a.place_type === 12)?.display_name
-               || ancs.find(a => a.place_type === 6)?.display_name
+               || ancs.find(a => a.place_type === 2)?.display_name
                || CFG.placeName;
     }
     const spR = await fetch(`https://api.inaturalist.org/v1/observations/species_counts?place_id=${CFG.placeId}&iconic_taxa=Aves&quality_grade=research&per_page=1&order_by=observations_count&order=desc`);

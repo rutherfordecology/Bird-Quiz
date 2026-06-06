@@ -38,9 +38,9 @@
     },
     {
       "name": "WhatDatBird? - Nakaseke, LW, UG",
-      "continent": "Other",
-      "country": "Nakaseke, LW, UG",
-      "description": "Nakaseke, LW, UG - Nakaseke, LW, UG",
+      "continent": "Africa",
+      "country": "Uganda",
+      "description": "Nakaseke, Uganda",
       "species": null,
       "type": "dynamic",
       "url": "quiz.html?place_id=46704&place_name=Nakaseke%2C%20LW%2C%20UG",
@@ -49,10 +49,10 @@
       "added": "2026-06-06"
     },
     {
-      "name": "WhatDatBird? - Brisbane City",
-      "continent": "Other",
-      "country": "Brisbane City",
-      "description": "Brisbane City - Brisbane City",
+      "name": "WhatDatBird? - Brisbane, AU",
+      "continent": "Oceania",
+      "country": "Australia",
+      "description": "Brisbane, Australia",
       "species": null,
       "type": "dynamic",
       "url": "quiz.html?place_id=144315&place_name=Brisbane%20City",
