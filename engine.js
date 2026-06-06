@@ -78,9 +78,7 @@ async function fetchInatImage(bird) {
   }
   const urls = inatPhotoCache[name];
   if (!urls.length) return null;
-  const candidates = shuffle([...urls]).slice(0,5);
-  for(const url of candidates) if(await checkColorVariance(url)) return url;
-  return candidates[0] ?? null;
+  return shuffle([...urls])[0];
 }
 
 async function fetchWikiImage(bird) {
@@ -667,6 +665,9 @@ function _advance() {
     const photoUrls=url?[url,...all.filter(u=>u!==url)].slice(0,5):all;
     setState({imgUrl:url,imgLoading:false,photoUrls,photoIdx:0});
   });
+  // Prefetch next bird's photos in background
+  const prefetchBird = queue[0] || wrongBin[0]?.bird;
+  if (prefetchBird) fetchInatImage(prefetchBird).catch(() => {});
 }
 
 // ── Leaderboard ───────────────────────────────────────────────────────────
