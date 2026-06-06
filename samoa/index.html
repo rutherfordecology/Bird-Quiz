@@ -67,6 +67,9 @@ async function boot() {
     easyBirds:       [],
   });
 
+  const initPhase = new URLSearchParams(location.search).get('phase');
+  if (initPhase === 'about') { setState({ phase: 'about' }); return; }
+
   try {
     const birds = await loadBirds();
     if (birds.length < 8) throw new Error('Not enough species data from iNaturalist.');
