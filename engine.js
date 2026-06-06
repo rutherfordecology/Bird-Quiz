@@ -488,7 +488,7 @@ function renderQuiz(app) {
     const safe=opt.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     const matchBird=pool.find(b=>b.name===opt);
     const indLabel = matchBird?.[CFG.indigenousField] ? `<span class="opt-indigenous">${matchBird[CFG.indigenousField]}</span>` : '';
-    const latinLabel = state.selected && matchBird?.latin ? `<span class="opt-latin-small">${matchBird.latin}</span>` : '';
+    const latinLabel = matchBird?.latin ? `<span class="opt-latin-small">${matchBird.latin}</span>` : '';
     return `<button class="${cls}" ${state.selected?'disabled':''} onclick="selectAnswer('${safe}',event)"><span class="opt-english">${opt}</span>${indLabel}${latinLabel}</button>`;
   }).join('');
 
