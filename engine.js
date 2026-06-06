@@ -1,7 +1,7 @@
-// WhatDatBird? Quiz Engine v5.33
+// WhatDatBird? Quiz Engine v5.34
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.33';
+const APP_VERSION = 'v5.34';
 
 // ── Config ────────────────────────────────────────────────────────────────
 let CFG = {};
@@ -691,14 +691,26 @@ function goPhoto(i)  { setState({photoIdx:i,imgUrl:state.photoUrls[i]}); }
 function setMode(m)  { setState({mode:m}); }
 function goIntro()   { setState({phase:'intro'}); }
 
-function logNoPhoto(bird) {
+async function logNoPhoto(bird) {
+  const entry = { name: bird.name, latin: bird.latin || '', place: CFG.placeName, date: new Date().toISOString().split('T')[0] };
+  console.warn('[WhatDatBird] No photo — skipping:', bird.name, bird.latin);
   try {
-    const key = 'wdb_nophoto';
-    const log = JSON.parse(localStorage.getItem(key) || '[]');
-    const entry = { name: bird.name, latin: bird.latin || '', place: CFG.placeName, date: new Date().toISOString().split('T')[0] };
-    if (!log.some(e => e.latin === entry.latin && e.place === entry.place)) log.push(entry);
-    localStorage.setItem(key, JSON.stringify(log));
-    console.warn('[WhatDatBird] No photo — skipping:', bird.name, bird.latin);
+    const headers = { Authorization: `token ${GH_TOKEN}`, Accept: 'application/vnd.github.v3+json' };
+    const NP_FILE = 'nophoto.json';
+    const r = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${NP_FILE}`, { headers });
+    let log = [], sha;
+    if (r.ok) {
+      const d = await r.json();
+      sha = d.sha;
+      log = JSON.parse(atob(d.content.replace(/\n/g,'')));
+    }
+    if (log.some(e => e.latin === entry.latin && e.place === entry.place)) return;
+    log.push(entry);
+    await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${NP_FILE}`, {
+      method: 'PUT',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: `Log missing photo: ${entry.name} (${entry.place})`, sha, content: btoa(unescape(encodeURIComponent(JSON.stringify(log, null, 2)))) }),
+    });
   } catch {}
 }
 
