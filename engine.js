@@ -1,7 +1,7 @@
-// WhatDatBird? Quiz Engine v5.0
+// WhatDatBird? Quiz Engine v5.1
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.0';
+const APP_VERSION = 'v5.1';
 
 // ── Config ────────────────────────────────────────────────────────────────
 let CFG = {};
@@ -343,19 +343,19 @@ function renderIntro(app, header) {
 
   const modeGrid = `<div class="mode-grid">
     <button class="mode-btn ${state.mode==='easy'?'active':''}" onclick="setMode('easy')">
-      <div class="mode-emoji">&#127807;</div>
+      <div class="mode-emoji">&#129414;</div>
       <div class="mode-count" id="mc-easy">${easy.length} SPECIES</div>
       <div class="mode-title">Common</div>
       <div class="mode-desc">The most frequently recorded birds here.</div>
     </button>
     <button class="mode-btn ${state.mode==='hard'?'active':''}" ${hasHard?'':'disabled'} onclick="setMode('hard')">
-      <div class="mode-emoji">&#128301;</div>
+      <div class="mode-emoji">&#128247;</div>
       <div class="mode-count" id="mc-hard">${hasHard?hard.length+' SPECIES':'Loading...'}</div>
       <div class="mode-title">Birder</div>
       <div class="mode-desc">Most of the list - dedicated trip territory.</div>
     </button>
     <button class="mode-btn ${state.mode==='complete'?'active':''}" ${hasComplete?'':'disabled'} onclick="setMode('complete')">
-      <div class="mode-emoji">&#128128;</div>
+      <div class="mode-emoji">&#128301;</div>
       <div class="mode-count" id="mc-complete">${hasComplete?complete.length+' SPECIES':'Loading...'}</div>
       <div class="mode-title">Complete</div>
       <div class="mode-desc">Everything ever recorded - including vagrants.</div>
