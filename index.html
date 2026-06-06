@@ -113,8 +113,13 @@
   #pickMap { flex:1; min-height:380px; }
   .map-status { padding:10px 18px; font-size:0.85rem; color:#6b6960; border-top:1px solid #dddbd3; flex-shrink:0; min-height:44px; display:flex; align-items:center; }
   .map-status strong { color:#1a5940; }
-  .map-go { margin-left:auto; background:#1a5940; color:#fff; border:none; border-radius:8px; padding:7px 18px; font-size:0.85rem; font-weight:800; cursor:pointer; font-family:system-ui,-apple-system,sans-serif; display:none; }
-  .map-go:hover { opacity:0.85; }
+  .map-places { border-top:1px solid #dddbd3; flex-shrink:0; overflow-y:auto; max-height:220px; }
+  .map-place-item { padding:11px 18px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #f3f2ee; transition:background 0.1s; }
+  .map-place-item:last-child { border-bottom:none; }
+  .map-place-item:hover { background:#e8f4ef; }
+  .map-place-name { font-size:0.9rem; font-weight:700; color:#1c1b18; }
+  .map-place-type { font-size:0.72rem; color:#9b9890; margin-top:1px; }
+  .map-place-go { font-size:0.75rem; font-weight:800; color:#2a7a58; white-space:nowrap; }
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -154,9 +159,9 @@
     </div>
     <div id="pickMap"></div>
     <div class="map-status" id="mapStatus">
-      <span id="mapStatusText">Click anywhere on the map to find a quiz location.</span>
-      <button class="map-go" id="mapGoBtn" onclick="goMapPlace()">Let&#x2019;s Go &#8594;</button>
+      <span id="mapStatusText">Click anywhere on the map to choose a location.</span>
     </div>
+    <div class="map-places" id="mapPlaces"></div>
   </div>
 </div>
 
@@ -290,7 +295,13 @@ function goPlace(id, name) {
 }
 
 // ── Map picker ────────────────────────────────────────────────────────────
-let pickMap = null, pickMarker = null, pendingPlace = null;
+let pickMap = null, pickMarker = null;
+
+const MAP_TYPE_LABEL = {
+  1:'Continent', 2:'Country', 3:'State / Region', 4:'County / District',
+  5:'Town / City', 6:'Park / Reserve', 7:'Marine Area', 9:'State',
+  10:'County', 12:'Country', 13:'State', 100:'Community', 102:'Country'
+};
 
 function openMapPicker() {
   document.getElementById('mapModal').classList.add('open');
@@ -307,6 +318,8 @@ function openMapPicker() {
 
 function closeMapPicker() {
   document.getElementById('mapModal').classList.remove('open');
+  document.getElementById('mapPlaces').innerHTML = '';
+  document.getElementById('mapStatusText').textContent = 'Click anywhere on the map to choose a location.';
 }
 
 async function onMapClick(e) {
@@ -315,38 +328,48 @@ async function onMapClick(e) {
   pickMarker = L.marker([lat, lng]).addTo(pickMap);
 
   const statusText = document.getElementById('mapStatusText');
-  const goBtn = document.getElementById('mapGoBtn');
-  statusText.textContent = 'Finding location…';
-  goBtn.style.display = 'none';
-  pendingPlace = null;
+  const placesEl   = document.getElementById('mapPlaces');
+  statusText.textContent = 'Finding nearby locations…';
+  placesEl.innerHTML = '';
 
   try {
-    // Reverse geocode with Nominatim
-    const nomR = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`, {
-      headers: { 'Accept-Language': 'en' }
-    });
-    const nomD = await nomR.json();
-    const query = nomD.address?.country || nomD.display_name?.split(',').slice(-2).join(',').trim() || '';
+    // Use iNat nearby endpoint — returns places at all scales containing this point
+    const pad = 0.5;
+    const r = await fetch(
+      `https://api.inaturalist.org/v1/places/nearby?nelat=${lat+pad}&nelng=${lng+pad}&swlat=${lat-pad}&swlng=${lng-pad}&per_page=20`
+    );
+    const d = await r.json();
 
-    // Find iNat place
-    const inatR = await fetch(`https://api.inaturalist.org/v1/places/autocomplete?q=${encodeURIComponent(query)}&geo=true`);
-    const inatD = await inatR.json();
-    const place = inatD.results?.find(p => [12,2,1].includes(p.place_type)) || inatD.results?.[0];
+    // Combine standard + community places, dedupe, sort specific → broad
+    const PRIORITY = { 6:0, 100:1, 4:2, 10:3, 5:4, 3:5, 9:6, 13:7, 3:8, 2:9, 12:10, 1:11 };
+    const all = [...(d.results?.standard || []), ...(d.results?.community || [])]
+      .filter((p, i, a) => a.findIndex(x => x.id === p.id) === i)
+      .filter(p => ![1].includes(p.place_type)) // drop continents
+      .sort((a, b) => (PRIORITY[a.place_type] ?? 99) - (PRIORITY[b.place_type] ?? 99))
+      .slice(0, 8);
 
-    if (!place) { statusText.textContent = 'No quiz location found here — try another spot.'; return; }
+    if (!all.length) {
+      statusText.textContent = 'No locations found here — try another spot.';
+      return;
+    }
 
-    pendingPlace = { id: place.id, name: place.display_name };
-    statusText.innerHTML = `<strong>${place.display_name}</strong>`;
-    goBtn.style.display = 'block';
+    statusText.textContent = 'Choose a location:';
+    placesEl.innerHTML = all.map(p => `
+      <div class="map-place-item" onclick="pickMapPlace(${p.id}, '${p.display_name.replace(/'/g,"\\'")}')">
+        <div>
+          <div class="map-place-name">${p.display_name}</div>
+          <div class="map-place-type">${MAP_TYPE_LABEL[p.place_type] || 'Place'}</div>
+        </div>
+        <span class="map-place-go">Let&#x2019;s Go &#8594;</span>
+      </div>`).join('');
   } catch {
     statusText.textContent = 'Could not look up this location — try again.';
   }
 }
 
-function goMapPlace() {
-  if (!pendingPlace) return;
+function pickMapPlace(id, name) {
   closeMapPicker();
-  goPlace(pendingPlace.id, pendingPlace.name);
+  goPlace(id, name);
 }
 </script>
 </body>
