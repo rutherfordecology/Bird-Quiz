@@ -315,37 +315,32 @@ function renderIntro(app, header) {
   const hasComplete = complete && complete.length > (hard||easy).length;
   const hasRarity   = rarity && rarity.length >= 8;
 
-  let modeGrid;
-  if (hasHard || hasComplete || hasRarity) {
-    modeGrid = '<div class="mode-grid">';
-    modeGrid += `<button class="mode-btn ${state.mode==='easy'?'active':''}" onclick="setMode('easy')">
+  const modeGrid = `<div class="mode-grid">
+    <button class="mode-btn ${state.mode==='easy'?'active':''}" onclick="setMode('easy')">
       <div class="mode-emoji">&#127807;</div>
       <div class="mode-count" id="mc-easy">${easy.length} SPECIES</div>
       <div class="mode-title">Common</div>
       <div class="mode-desc">The most frequently recorded birds here.</div>
-    </button>`;
-    if (hasHard) modeGrid += `<button class="mode-btn ${state.mode==='hard'?'active':''}" onclick="setMode('hard')">
+    </button>
+    <button class="mode-btn ${state.mode==='hard'?'active':''}" ${hasHard?'':'disabled'} onclick="setMode('hard')">
       <div class="mode-emoji">&#128301;</div>
-      <div class="mode-count" id="mc-hard">${hard.length} SPECIES</div>
+      <div class="mode-count" id="mc-hard">${hasHard?hard.length+' SPECIES':'Loading...'}</div>
       <div class="mode-title">Birder</div>
       <div class="mode-desc">Most of the list - dedicated trip territory.</div>
-    </button>`;
-    if (hasComplete) modeGrid += `<button class="mode-btn ${state.mode==='complete'?'active':''}" onclick="setMode('complete')">
+    </button>
+    <button class="mode-btn ${state.mode==='complete'?'active':''}" ${hasComplete?'':'disabled'} onclick="setMode('complete')">
       <div class="mode-emoji">&#128128;</div>
-      <div class="mode-count" id="mc-complete">${complete.length} SPECIES</div>
+      <div class="mode-count" id="mc-complete">${hasComplete?complete.length+' SPECIES':'Loading...'}</div>
       <div class="mode-title">Complete</div>
       <div class="mode-desc">Everything ever recorded - including vagrants.</div>
-    </button>`;
-    if (hasRarity) modeGrid += `<button class="mode-btn ${state.mode==='rarity'?'active':''}" onclick="setMode('rarity')">
+    </button>
+    <button class="mode-btn ${state.mode==='rarity'?'active':''}" ${hasRarity?'':'disabled'} ${hasRarity?`onclick="setMode('rarity')"`:''}>
       <div class="mode-emoji">&#128269;</div>
-      <div class="mode-count" id="mc-rarity">${rarity.length} SPECIES</div>
+      <div class="mode-count" id="mc-rarity">${hasRarity?rarity.length+' SPECIES':'Not enough species'}</div>
       <div class="mode-title">Rarity</div>
       <div class="mode-desc">The least-recorded birds in this area.</div>
-    </button>`;
-    modeGrid += '</div>';
-  } else {
-    modeGrid = `<div class="info-box" style="margin-bottom:12px"><p>&#127807; <strong>${easy.length} species</strong> recorded at this location - all included in this quiz.</p></div>`;
-  }
+    </button>
+  </div>`;
 
   const rarityNote = state.mode === 'rarity' ? `
     <div class="info-box" style="margin-bottom:12px;border-color:#d47a7a;background:#faf0f0;">

@@ -44,9 +44,10 @@ body {
 .error-box p { color:#8a2c2c; font-size:0.9rem; font-weight:600; margin-bottom:12px; }
 
 /* Mode picker */
-.mode-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(130px,1fr)); gap:12px; margin-bottom:16px; }
+.mode-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
 .mode-btn { background:#fff; border:1.5px solid #dddbd3; border-radius:12px; padding:16px 12px; cursor:pointer; text-align:center; transition:all 0.2s; font-family:system-ui,-apple-system,sans-serif; }
-.mode-btn:hover { border-color:#2a7a58; transform:translateY(-2px); box-shadow:0 4px 12px rgba(42,122,88,0.1); }
+.mode-btn:not(:disabled):hover { border-color:#2a7a58; transform:translateY(-2px); box-shadow:0 4px 12px rgba(42,122,88,0.1); }
+.mode-btn:disabled { opacity:0.4; cursor:default; }
 .mode-btn.active { border-color:#2a7a58; background:#e8f4ef; box-shadow:0 0 0 3px rgba(42,122,88,0.12); }
 .mode-btn .mode-emoji { font-size:1.6rem; margin-bottom:6px; }
 .mode-btn .mode-title { font-size:0.95rem; font-weight:800; color:#1c1b18; margin-bottom:3px; }
