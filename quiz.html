@@ -132,10 +132,11 @@ async function processBatch(speciesItems) {
 }
 
 function setTiers(birds) {
-  const { easy, hard, complete } = computeTiers(birds);
+  const { easy, hard, complete, rarity } = computeTiers(birds);
   CFG.easyBirds     = easy;
   CFG.hardBirds     = hard;
   CFG.completeBirds = complete;
+  CFG.rarityBirds   = rarity;
 }
 
 function computeTiers(allBirds) {
@@ -143,10 +144,14 @@ function computeTiers(allBirds) {
   const n     = birds.length;
   const easyCount = Math.min(25, n);
   const hardCount = Math.min(150, Math.max(easyCount + 1, Math.floor(n * 0.9)));
+  // Rarity: bottom 10% by count, minimum 8 species
+  const rarityPool = birds.slice(Math.floor(n * 0.9)).filter(b => (b.count||0) >= 1);
+  const rarity = rarityPool.length >= 8 ? rarityPool : null;
   return {
     easy:     birds.slice(0, easyCount),
-    hard:     hardCount > easyCount     ? birds.slice(0, hardCount) : null,
-    complete: n > hardCount             ? birds                     : null,
+    hard:     hardCount > easyCount ? birds.slice(0, hardCount) : null,
+    complete: n > hardCount         ? birds                     : null,
+    rarity,
   };
 }
 
@@ -214,13 +219,15 @@ async function loadFromGBIF() {
     } else if (introShown) {
       setTiers(birds);
       if (state.phase === 'intro') {
-        const easy = CFG.easyBirds, hard = CFG.hardBirds, complete = CFG.completeBirds;
+        const easy = CFG.easyBirds, hard = CFG.hardBirds, complete = CFG.completeBirds, rarity = CFG.rarityBirds;
         const ec = document.getElementById('mc-easy');
         const hc = document.getElementById('mc-hard');
         const cc = document.getElementById('mc-complete');
+        const rc = document.getElementById('mc-rarity');
         if (ec) ec.textContent = (easy?.length || 0) + ' SPECIES';
         if (hc && hard) hc.textContent = hard.length + ' SPECIES';
         if (cc && complete) cc.textContent = complete.length + ' SPECIES';
+        if (rc && rarity) rc.textContent = rarity.length + ' SPECIES';
       }
     }
   }

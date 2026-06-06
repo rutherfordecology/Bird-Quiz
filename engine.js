@@ -189,6 +189,7 @@ let state = {
 function setState(p) { Object.assign(state,p); render(); }
 
 function getPool() {
+  if (state.mode==='rarity')   return CFG.rarityBirds || CFG.easyBirds;
   if (state.mode==='complete') return CFG.completeBirds || CFG.hardBirds || CFG.easyBirds;
   if (state.mode==='hard')     return CFG.hardBirds || CFG.easyBirds;
   return CFG.easyBirds;
@@ -309,11 +310,13 @@ function renderIntro(app, header) {
   const easy     = CFG.easyBirds;
   const hard     = CFG.hardBirds;
   const complete = CFG.completeBirds;
+  const rarity   = CFG.rarityBirds;
   const hasHard     = hard && hard.length > easy.length;
   const hasComplete = complete && complete.length > (hard||easy).length;
+  const hasRarity   = rarity && rarity.length >= 8;
 
   let modeGrid;
-  if (hasHard || hasComplete) {
+  if (hasHard || hasComplete || hasRarity) {
     modeGrid = '<div class="mode-grid">';
     modeGrid += `<button class="mode-btn ${state.mode==='easy'?'active':''}" onclick="setMode('easy')">
       <div class="mode-emoji">&#127807;</div>
@@ -333,14 +336,25 @@ function renderIntro(app, header) {
       <div class="mode-title">Complete</div>
       <div class="mode-desc">Everything ever recorded - including vagrants.</div>
     </button>`;
+    if (hasRarity) modeGrid += `<button class="mode-btn ${state.mode==='rarity'?'active':''}" onclick="setMode('rarity')">
+      <div class="mode-emoji">&#128269;</div>
+      <div class="mode-count" id="mc-rarity">${rarity.length} SPECIES</div>
+      <div class="mode-title">Rarity</div>
+      <div class="mode-desc">The least-recorded birds in this area.</div>
+    </button>`;
     modeGrid += '</div>';
   } else {
     modeGrid = `<div class="info-box" style="margin-bottom:12px"><p>&#127807; <strong>${easy.length} species</strong> recorded at this location - all included in this quiz.</p></div>`;
   }
 
+  const rarityNote = state.mode === 'rarity' ? `
+    <div class="info-box" style="margin-bottom:12px;border-color:#d47a7a;background:#faf0f0;">
+      <p style="color:#8a2c2c;"><strong>Rarity mode:</strong> These species have very few recorded occurrences in this area. Some may be genuine rarities, but others could represent misidentifications, data entry errors, or escaped captive birds. Treat them with appropriate scepticism.</p>
+    </div>` : '';
+
   const bufferNote = state.buffer>0 ? `<p class="note-text">&#x1F4E1; Area expanded to ${state.buffer}km radius to find enough species</p>` : '';
 
-  app.innerHTML = header + modeGrid + `
+  app.innerHTML = header + modeGrid + rarityNote + `
     <div class="info-box">
       <p>&#127919; Get your score to <strong>${STREAK_TARGET} to win!</strong> Each correct answer scores +1, wrong answers cost -2. Tricky birds keep coming back. Photos are real iNaturalist observations. &#127775;</p>
     </div>
@@ -396,8 +410,8 @@ function renderResult(app, header) {
 function renderQuiz(app) {
   const bird = state.current;
   const pool = getPool();
-  const modePill = state.mode==='complete'?'pill-complete':state.mode==='hard'?'pill-hard':'pill-easy';
-  const modeLabel = state.mode==='complete'?'Complete':state.mode==='hard'?'Birder':'Common';
+  const modePill = state.mode==='complete'?'pill-complete':state.mode==='hard'?'pill-hard':state.mode==='rarity'?'pill-complete':'pill-easy';
+  const modeLabel = state.mode==='complete'?'Complete':state.mode==='hard'?'Birder':state.mode==='rarity'?'Rarity':'Common';
 
   const dots = Array.from({length:STREAK_TARGET},(_,i) => {
     const h=state.streakHistory[i];
@@ -678,7 +692,7 @@ async function loadLeaderboard() {
     const { data } = await readLB();
     const entries = (data.boards?.[`${CFG.placeId}_${state.mode}`] || []).slice(0, 10);
     if (!entries.length) { board.innerHTML = ''; return; }
-    const modeLabel = state.mode==='complete'?'Complete':state.mode==='hard'?'Birder':'Common';
+    const modeLabel = state.mode==='complete'?'Complete':state.mode==='hard'?'Birder':state.mode==='rarity'?'Rarity':'Common';
     board.innerHTML = `<div class="lb-title">&#127942; Leaderboard — ${CFG.placeName} · ${modeLabel}</div>` +
       entries.map((e, i) => `<div class="lb-row-item">
         <span class="lb-rank">${i + 1}</span>
