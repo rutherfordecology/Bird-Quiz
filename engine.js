@@ -1,7 +1,7 @@
-// WhatDatBird? Quiz Engine v5.15
+// WhatDatBird? Quiz Engine v5.16
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.15';
+const APP_VERSION = 'v5.16';
 
 // ── Config ────────────────────────────────────────────────────────────────
 let CFG = {};
@@ -65,16 +65,14 @@ async function fetchInatImage(bird) {
     try {
       const preloaded = typeof bird === 'object' ? bird.defaultPhoto : null;
 
-      // Collect observations sorted by faves (API already returns faves-desc)
-      const obsPhotos = []; // [{src, faves}]
+      // One photo per observation (the first/best), sorted by faves — avoids multi-photo same-bird runs
+      const obsPhotos = [];
       const or = await fetch(`https://api.inaturalist.org/v1/observations?taxon_name=${encodeURIComponent(latin)}&photos=true&per_page=20&quality_grade=research&order_by=faves&iconic_taxa=Aves`);
       if (or.ok) {
         const od = await or.json();
         for (const o of (od.results || [])) {
-          for (const p of (o.photos || [])) {
-            const src = p.url?.replace('/square.', '/medium.');
-            if (src) obsPhotos.push({ src, faves: o.faves_count || 0 });
-          }
+          const src = o.photos?.[0]?.url?.replace('/square.', '/medium.');
+          if (src) obsPhotos.push({ src, faves: o.faves_count || 0 });
         }
       }
 
