@@ -1,7 +1,7 @@
-// WhatDatBird? Quiz Engine v5.18
+// WhatDatBird? Quiz Engine v5.19
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.18';
+const APP_VERSION = 'v5.19';
 
 // ── Config ────────────────────────────────────────────────────────────────
 let CFG = {};
@@ -188,7 +188,14 @@ function getOptions(correct, pool) {
   const correctSet = new Set(correctIds);
   // Always draw distractors from the full species list so choices aren't limited to the active tier
   const fullPool = CFG.completeBirds?.length ? CFG.completeBirds : pool;
-  const notCorrect = b => b.name !== correct.name && !(correct.latin && b.latin && b.latin === correct.latin);
+  const notCorrect = b => {
+    if (b.name === correct.name) return false;
+    if (correct.latin && b.latin && b.latin === correct.latin) return false;
+    // Exclude partial-name duplicates e.g. "Fernbird" vs "New Zealand Fernbird"
+    const a = correct.name.toLowerCase(), bn = b.name.toLowerCase();
+    if (a.includes(bn) || bn.includes(a)) return false;
+    return true;
+  };
 
   if (correctSet.size > 0) {
     const others = shuffle(fullPool.filter(notCorrect));
