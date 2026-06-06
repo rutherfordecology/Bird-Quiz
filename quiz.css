@@ -103,7 +103,7 @@ body {
 .overlay-correct { background:rgba(26,89,64,0.75); }
 .overlay-wrong   { background:rgba(138,44,44,0.75); }
 .overlay-msg { font-size:1.1rem; font-weight:800; color:white; margin-top:8px; text-shadow:0 2px 8px rgba(0,0,0,0.3); }
-.overlay-samoan { font-size:0.9rem; font-weight:700; color:#d4a84b; margin-top:4px; }
+.overlay-samoan { font-size:1.1rem; font-weight:800; color:#d4a84b; margin-top:4px; }
 .btn-next-overlay { margin-top:14px; background:rgba(255,255,255,0.92); border:none; border-radius:20px; padding:9px 24px; font-size:0.9rem; font-weight:800; cursor:pointer; color:#1a5940; font-family:system-ui,-apple-system,sans-serif; transition:all 0.2s; box-shadow:0 2px 8px rgba(0,0,0,0.2); }
 .btn-next-overlay:hover { background:white; transform:scale(1.05); }
 
@@ -135,7 +135,7 @@ body {
 .field-note { background:#e8f4ef; border:1.5px solid #6dba9a; border-radius:12px; padding:14px 16px; animation:fadeUp 0.4s ease both; }
 .fn-head { margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid rgba(109,186,154,0.3); }
 .fn-species-name    { font-size:1.15rem; font-weight:900; color:#1a5940; line-height:1.2; }
-.fn-species-samoan  { font-size:1.1rem; font-weight:800; color:#8a6020; margin-top:2px; }
+.fn-species-samoan  { font-size:1.15rem; font-weight:900; color:#8a6020; margin-top:2px; }
 .fn-species-latin   { font-size:0.78rem; font-style:italic; color:#9b9890; margin-top:3px; }
 .field-note .fn-label { font-size:0.62rem; letter-spacing:0.1em; color:#2a7a58; font-weight:800; margin-bottom:6px; }
 .field-note .fn-main  { color:#1a5940; font-size:0.85rem; line-height:1.6; }
@@ -161,7 +161,7 @@ body {
 .sp-name { font-size:0.92rem; font-weight:800; color:#1c1b18; text-decoration:none; }
 .sp-name:hover { color:#2a7a58; text-decoration:underline; }
 .sp-latin { font-size:0.75rem; color:#9b9890; font-style:italic; }
-.sp-samoan { font-size:0.75rem; color:#8a6020; font-weight:700; margin-bottom:4px; }
+.sp-samoan { font-size:0.92rem; color:#8a6020; font-weight:800; margin-bottom:4px; }
 .sp-note { font-size:0.78rem; color:#6b6960; line-height:1.5; margin-top:4px; }
 .sp-badges { display:flex; gap:5px; flex-wrap:wrap; margin-top:6px; }
 .sp-meta-row { display:flex; align-items:center; gap:10px; margin:5px 0 3px; }
