@@ -162,39 +162,29 @@ function countryUrl() {
 }
 
 async function getGBIFSpeciesKeys() {
-  // Strategy: for countries use country query directly.
-  // For sub-national places, try progressively larger bounding boxes,
-  // then fall back to country if still not enough.
-  const MIN_RESULTS = 30;
-
   if (IS_COUNTRY && COUNTRY_CODE) {
     const r = await fetch(countryUrl());
     const d = await r.json();
     return (d.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
   }
-
   if (PLACE_BBOX) {
-    for (const pad of [0.2, 0.5, 1.0, 2.0]) {
-      const r = await fetch(bboxUrl(PLACE_BBOX, pad));
-      const d = await r.json();
-      const items = (d.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
-      if (items.length >= MIN_RESULTS) return items;
-      // Too few — try bigger padding
+    // Use 0.2 deg (~22km) padding for sub-national places
+    const r = await fetch(bboxUrl(PLACE_BBOX, 0.2));
+    const d = await r.json();
+    const items = (d.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
+    // Fall back to country if too few local records
+    if (items.length < 15 && COUNTRY_CODE) {
+      const cr = await fetch(countryUrl());
+      const cd = await cr.json();
+      return (cd.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
     }
-    // Still too few — fall back to country if available
-    if (COUNTRY_CODE) {
-      const r = await fetch(countryUrl());
-      const d = await r.json();
-      return (d.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
-    }
+    return items;
   }
-
   if (COUNTRY_CODE) {
     const r = await fetch(countryUrl());
     const d = await r.json();
     return (d.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
   }
-
   throw new Error('No geographic data available for GBIF query');
 }
 

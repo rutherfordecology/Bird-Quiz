@@ -426,7 +426,7 @@ function renderQuiz(app) {
   }
 
   app.innerHTML = `
-    <div class="fade">
+    <div>
       <div class="meta-row">
         <span class="q-label">${state.totalSeen} seen - ${state.totalCorrect} correct
           <span class="mode-pill ${modePill}">${modeLabel}</span>
@@ -586,6 +586,12 @@ function selectAnswer(opt, event) {
 }
 
 function advance() {
+  // Fade out current image before re-rendering
+  const box = document.getElementById('imgBox');
+  if (box) { box.style.opacity='0'; box.style.transition='opacity 0.18s ease'; }
+  setTimeout(_advance, box ? 180 : 0);
+}
+function _advance() {
   const pool=getPool();
   let queue=[...state.queue], wrongBin=[...state.wrongBin];
   if(queue.length===0&&wrongBin.length===0){setState({phase:'result'});return;}
