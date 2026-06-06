@@ -634,7 +634,7 @@ async function saveToLibrary() {
     if (!r.ok) throw new Error(`GitHub read ${r.status}`);
     const d = await r.json();
     sha  = d.sha;
-    data = JSON.parse(decodeURIComponent(escape(atob(d.content.replace(/\n/g, '')))));
+    data = JSON.parse(decodeURIComponent(escape(atob(d.content.replace(/\n/g, '')))).replace(/^﻿/, ''));
   } catch (e) {
     msg.style.color = '#8a2c2c';
     msg.textContent = `Read failed: ${e.message}`;
