@@ -618,41 +618,96 @@ function _advance() {
 
 // ── Quiz Library ──────────────────────────────────────────────────────────
 async function saveToLibrary() {
-  const btn=document.getElementById('saveLibBtn');
-  const msg=document.getElementById('saveLibMsg');
-  if(!btn||!CFG.placeId) return;
-  btn.disabled=true; msg.textContent='Saving...';
+  const btn = document.getElementById('saveLibBtn');
+  const msg = document.getElementById('saveLibMsg');
+  if (!btn || !CFG.placeId) return;
+  btn.disabled = true;
+  msg.style.color = '#2a7a58';
+  msg.textContent = 'Reading library...';
+
+  // 1. Read current quizzes.json from GitHub
+  let sha, data;
   try {
-    const getR=await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`,{headers:{Authorization:`token ${GH_TOKEN}`,Accept:'application/vnd.github.v3+json'}});
-    if(!getR.ok) throw new Error('read');
-    const getD=await getR.json();
-    const sha=getD.sha;
-    const data=JSON.parse(decodeURIComponent(escape(atob(getD.content.replace(/\n/g,'')))));
-    if(data.quizzes.some(q=>String(q.place_id)===String(CFG.placeId))){msg.textContent='Already in the library!';btn.style.display='none';return;}
-    const placeR=await fetch(`https://api.inaturalist.org/v1/places/${CFG.placeId}`);
-    const placeD=await placeR.json();
-    const place=placeD.results?.[0];
-    const ancestorIds=(place?.ancestor_place_ids||[]).join(',');
-    let continent='Other',country=CFG.placeName;
-    if(ancestorIds){
-      const ancR=await fetch(`https://api.inaturalist.org/v1/places?id=${ancestorIds}&per_page=100`);
-      const ancD=await ancR.json();
-      const ancs=ancD.results||[];
-      continent=ancs.find(a=>a.place_type===1)?.display_name||'Other';
-      country=ancs.find(a=>a.place_type===12)?.display_name||ancs.find(a=>a.place_type===2)?.display_name||CFG.placeName;
+    const r = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`, {
+      headers: { Authorization: `token ${GH_TOKEN}`, Accept: 'application/vnd.github.v3+json' }
+    });
+    if (!r.ok) throw new Error(`GitHub read ${r.status}`);
+    const d = await r.json();
+    sha  = d.sha;
+    data = JSON.parse(decodeURIComponent(escape(atob(d.content.replace(/\n/g, '')))));
+  } catch (e) {
+    msg.style.color = '#8a2c2c';
+    msg.textContent = `Read failed: ${e.message}`;
+    btn.disabled = false;
+    return;
+  }
+
+  if (data.quizzes.some(q => String(q.place_id) === String(CFG.placeId))) {
+    msg.textContent = 'Already in the library!';
+    btn.style.display = 'none';
+    return;
+  }
+
+  // 2. Fetch place metadata from iNat
+  msg.textContent = 'Fetching place info...';
+  let continent = 'Other', country = CFG.placeName, photoTaxon = null;
+  try {
+    const placeR = await fetch(`https://api.inaturalist.org/v1/places/${CFG.placeId}`);
+    const placeD = await placeR.json();
+    const place  = placeD.results?.[0];
+    const ancestorIds = (place?.ancestor_place_ids || []).join(',');
+    if (ancestorIds) {
+      const ancR = await fetch(`https://api.inaturalist.org/v1/places?id=${ancestorIds}&per_page=100`);
+      const ancD = await ancR.json();
+      const ancs = ancD.results || [];
+      continent = ancs.find(a => a.place_type === 1)?.display_name || 'Other';
+      country   = ancs.find(a => a.place_type === 12)?.display_name
+               || ancs.find(a => a.place_type === 2)?.display_name
+               || CFG.placeName;
     }
-    const spR=await fetch(`https://api.inaturalist.org/v1/observations/species_counts?place_id=${CFG.placeId}&iconic_taxa=Aves&quality_grade=research&per_page=1&order_by=observations_count&order=desc`);
-    const spD=await spR.json();
-    const photoTaxon=spD.results?.[0]?.taxon?.name||null;
-    data.quizzes.push({name:`WhatDatBird? - ${CFG.placeName}`,continent,country,description:`${CFG.placeName} - ${country}`,species:null,type:'dynamic',url:`quiz.html?place_id=${CFG.placeId}&place_name=${encodeURIComponent(CFG.placeName)}`,place_id:Number(CFG.placeId),photo_taxon:photoTaxon,added:new Date().toISOString().split('T')[0]});
-    const body=JSON.stringify({message:`Add ${CFG.placeName} to quiz library`,sha,content:btoa(unescape(encodeURIComponent(JSON.stringify(data,null,2))))});
-    const putR=await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`,{method:'PUT',headers:{Authorization:`token ${GH_TOKEN}`,Accept:'application/vnd.github.v3+json','Content-Type':'application/json'},body});
-    if(!putR.ok) throw new Error('write');
-    msg.textContent='Added! Will appear in ~1 minute.';
-    btn.style.display='none';
-  } catch(e) {
-    msg.style.color='#8a2c2c'; msg.textContent='Could not save - try again.';
-    btn.disabled=false;
+    const spR = await fetch(`https://api.inaturalist.org/v1/observations/species_counts?place_id=${CFG.placeId}&iconic_taxa=Aves&quality_grade=research&per_page=1&order_by=observations_count&order=desc`);
+    const spD = await spR.json();
+    photoTaxon = spD.results?.[0]?.taxon?.name || null;
+  } catch (e) {
+    // Non-fatal — save with defaults
+    console.warn('iNat metadata fetch failed:', e.message);
+  }
+
+  // 3. Write updated quizzes.json to GitHub
+  msg.textContent = 'Saving...';
+  data.quizzes.push({
+    name:        `WhatDatBird? - ${CFG.placeName}`,
+    continent,
+    country,
+    description: `${CFG.placeName} - ${country}`,
+    species:     null,
+    type:        'dynamic',
+    url:         `quiz.html?place_id=${CFG.placeId}&place_name=${encodeURIComponent(CFG.placeName)}`,
+    place_id:    Number(CFG.placeId),
+    photo_taxon: photoTaxon,
+    added:       new Date().toISOString().split('T')[0],
+  });
+  try {
+    const body = JSON.stringify({
+      message: `Add ${CFG.placeName} to quiz library`,
+      sha,
+      content: btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2)))),
+    });
+    const putR = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`, {
+      method: 'PUT',
+      headers: { Authorization: `token ${GH_TOKEN}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+      body,
+    });
+    if (!putR.ok) {
+      const errD = await putR.json().catch(() => ({}));
+      throw new Error(`GitHub write ${putR.status}: ${errD.message || ''}`);
+    }
+    msg.textContent = 'Added! Will appear in ~1 minute.';
+    btn.style.display = 'none';
+  } catch (e) {
+    msg.style.color = '#8a2c2c';
+    msg.textContent = `Save failed: ${e.message}`;
+    btn.disabled = false;
   }
 }
 
