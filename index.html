@@ -161,9 +161,7 @@ async function loadLibrary() {
       html += `<div class="section-label" style="max-width:640px;margin:0 auto 14px;padding:0 20px;">${continent}</div>
                <div class="cards-grid">`;
       for (const q of groups[continent]) {
-        const tag = q.type === 'preset'
-          ? `<span class="tag tag-preset">Curated</span>`
-          : `<span class="tag tag-dynamic">Dynamic</span>`;
+        const tag = '';
         const count = q.species ? `<span class="card-count">${q.species} species</span>` : '';
         const imgId = `card-img-${q.place_id || q.url.replace(/\W/g,'')}`;
         html += `<a class="place-card" href="${q.url}">
