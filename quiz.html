@@ -205,12 +205,12 @@ async function loadFromGBIF() {
     const results = await processBatch(speciesItems.slice(i, i + BATCH));
     birds.push(...results);
 
-    // Show intro as soon as we have enough for Easy tier — don't wait for the full list
-    if (!introShown && birds.length >= 15) {
+    // Show intro once we have enough for at least two tiers (so mode buttons render)
+    if (!introShown && birds.length >= 30) {
       introShown = true;
       setTiers(birds);
       setState({ phase: 'intro' });
-      // Loop continues in background, updating tiers silently
+      // Loop continues in background, updating counts in place
     } else if (introShown) {
       setTiers(birds);
       if (state.phase === 'intro') {
