@@ -72,7 +72,7 @@ async function fetchInatImage(bird) {
       if (or.ok) {
         const od = await or.json();
         for (const o of (od.results || [])) {
-          if ((o.faves_count || 0) >= 1) {
+          if ((o.faves_count || 0) >= 0) {
             for (const p of (o.photos || [])) {
               const src = p.url?.replace('/square.', '/medium.');
               if (src && !photos.includes(src)) photos.push(src);

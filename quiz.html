@@ -333,14 +333,14 @@ async function boot() {
     easyBirds:      [],
   });
 
-  // Load place-specific indigenous names if available
-  fetch(`place-names/${PLACE_ID}.json`)
-    .then(r => r.ok ? r.json() : null)
-    .then(d => {
-      if (!d) return;
-      placeNames = d;
-      CFG.indigenousField = d.field || 'indigenousName';
-    }).catch(() => {});
+  // Load place-specific indigenous names (await so names are ready before setTiers)
+  try {
+    const pnr = await fetch(`place-names/${PLACE_ID}.json`);
+    if (pnr.ok) {
+      placeNames = await pnr.json();
+      CFG.indigenousField = placeNames.field || 'indigenousName';
+    }
+  } catch {}
 
   // Fetch place metadata (centroid + country code) — needed before GBIF call
   updateLoadingProgress('Identifying location...');
