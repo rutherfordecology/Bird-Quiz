@@ -63,22 +63,21 @@ async function fetchInatImage(bird) {
 
   if (!inatPhotoCache[cacheKey]) {
     try {
-      const photos = [];
-
-      // 1. Get taxon default_photo (best single curated photo)
       const taxaUrl = inatId
         ? `https://api.inaturalist.org/v1/taxa/${inatId}`
         : `https://api.inaturalist.org/v1/taxa?q=${encodeURIComponent(latin)}&rank=species&per_page=1`;
-      const tr = await fetch(taxaUrl);
+      const obsUrl = `https://api.inaturalist.org/v1/observations?taxon_name=${encodeURIComponent(latin)}&photos=true&per_page=20&quality_grade=research&order_by=faves&iconic_taxa=Aves`;
+
+      // Run taxa + observations in parallel
+      const [tr, or] = await Promise.all([fetch(taxaUrl), fetch(obsUrl)]);
+      const photos = [];
+
       if (tr.ok) {
         const td = await tr.json();
         const taxon = inatId ? td.results?.[0] : td.results?.find(t => t.name.toLowerCase() === latin.toLowerCase());
         const defaultPhoto = taxon?.default_photo?.url?.replace('/square.', '/medium.');
         if (defaultPhoto) photos.push(defaultPhoto);
       }
-
-      // 2. Fill remaining slots from high-fave observations
-      const or = await fetch(`https://api.inaturalist.org/v1/observations?taxon_name=${encodeURIComponent(latin)}&photos=true&per_page=20&quality_grade=research&order_by=faves&iconic_taxa=Aves`);
       if (or.ok) {
         const od = await or.json();
         for (const o of (od.results || [])) {
@@ -101,18 +100,23 @@ async function fetchInatImage(bird) {
 }
 
 async function fetchWikiImage(bird) {
-  const name = typeof bird === 'string' ? bird : bird.name;
-  if (wikiCache[name] !== undefined) return wikiCache[name];
-  try {
-    const r = await fetch(`https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(name)}&prop=pageimages&pithumbsize=800&format=json&origin=*`);
-    if (!r.ok) { wikiCache[name]=null; return null; }
+  const common = typeof bird === 'string' ? bird : bird.name;
+  const latin  = typeof bird === 'object' ? (bird.latin || null) : null;
+  const cacheKey = common;
+  if (wikiCache[cacheKey] !== undefined) return wikiCache[cacheKey];
+  const bad = ['distribution','range','map','blank','locator','svg','silhouette','outline','flag','clade','tree'];
+  const tryTitle = async (title) => {
+    const r = await fetch(`https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=pageimages&pithumbsize=800&format=json&origin=*`);
+    if (!r.ok) return null;
     const d = await r.json();
     const src = Object.values(d.query.pages)[0]?.thumbnail?.source || null;
-    const bad = ['distribution','range','map','blank','locator','svg','silhouette','outline','flag','clade','tree'];
-    const good = src && !bad.some(p => src.toLowerCase().includes(p)) ? src : null;
-    wikiCache[name] = good;
-    return good;
-  } catch { wikiCache[name]=null; return null; }
+    return src && !bad.some(p => src.toLowerCase().includes(p)) ? src : null;
+  };
+  try {
+    const result = (await tryTitle(common)) || (latin ? await tryTitle(latin) : null);
+    wikiCache[cacheKey] = result;
+    return result;
+  } catch { wikiCache[cacheKey] = null; return null; }
 }
 
 async function fetchImage(bird, mode) {
