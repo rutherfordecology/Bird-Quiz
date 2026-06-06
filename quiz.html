@@ -154,34 +154,52 @@ function updateLoadingProgress(text) {
 }
 
 // ── GBIF-first loading ─────────────────────────────────────────────────────
-async function buildGBIFUrl() {
+function bboxUrl(b, pad) {
+  return `https://api.gbif.org/v1/occurrence/search?decimalLatitude=${(b.minLat-pad).toFixed(4)},${(b.maxLat+pad).toFixed(4)}&decimalLongitude=${(b.minLng-pad).toFixed(4)},${(b.maxLng+pad).toFixed(4)}&taxonKey=212&facet=speciesKey&facetMincount=1&facetLimit=500&limit=0&year=${YEAR_RANGE}`;
+}
+function countryUrl() {
+  return `https://api.gbif.org/v1/occurrence/search?country=${COUNTRY_CODE}&taxonKey=212&facet=speciesKey&facetMincount=1&facetLimit=1000&limit=0&year=${YEAR_RANGE}`;
+}
+
+async function getGBIFSpeciesKeys() {
+  // Strategy: for countries use country query directly.
+  // For sub-national places, try progressively larger bounding boxes,
+  // then fall back to country if still not enough.
+  const MIN_RESULTS = 30;
+
   if (IS_COUNTRY && COUNTRY_CODE) {
-    // Whole-country query — use country code
-    return `https://api.gbif.org/v1/occurrence/search?country=${COUNTRY_CODE}&taxonKey=212&facet=speciesKey&facetMincount=1&facetLimit=1000&limit=0&year=${YEAR_RANGE}`;
+    const r = await fetch(countryUrl());
+    const d = await r.json();
+    return (d.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
   }
+
   if (PLACE_BBOX) {
-    // Sub-national place — use bounding box with small padding (0.2 deg ≈ 22km)
-    const PAD = 0.2;
-    const b = PLACE_BBOX;
-    return `https://api.gbif.org/v1/occurrence/search?decimalLatitude=${(b.minLat-PAD).toFixed(4)},${(b.maxLat+PAD).toFixed(4)}&decimalLongitude=${(b.minLng-PAD).toFixed(4)},${(b.maxLng+PAD).toFixed(4)}&taxonKey=212&facet=speciesKey&facetMincount=1&facetLimit=500&limit=0&year=${YEAR_RANGE}`;
+    for (const pad of [0.2, 0.5, 1.0, 2.0]) {
+      const r = await fetch(bboxUrl(PLACE_BBOX, pad));
+      const d = await r.json();
+      const items = (d.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
+      if (items.length >= MIN_RESULTS) return items;
+      // Too few — try bigger padding
+    }
+    // Still too few — fall back to country if available
+    if (COUNTRY_CODE) {
+      const r = await fetch(countryUrl());
+      const d = await r.json();
+      return (d.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
+    }
   }
+
   if (COUNTRY_CODE) {
-    // Fallback: have country but no bbox — use country
-    return `https://api.gbif.org/v1/occurrence/search?country=${COUNTRY_CODE}&taxonKey=212&facet=speciesKey&facetMincount=1&facetLimit=1000&limit=0&year=${YEAR_RANGE}`;
+    const r = await fetch(countryUrl());
+    const d = await r.json();
+    return (d.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
   }
+
   throw new Error('No geographic data available for GBIF query');
 }
 
 async function loadFromGBIF() {
-  const gbifUrl = await buildGBIFUrl();
-  const r = await fetch(gbifUrl);
-  if (!r.ok) throw new Error('GBIF unavailable');
-  const d = await r.json();
-
-  const speciesItems = (d.facets?.[0]?.counts || [])
-    .map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }))
-    .sort((a,b) => b.count - a.count);
-
+  const speciesItems = (await getGBIFSpeciesKeys()).sort((a,b) => b.count - a.count);
   if (speciesItems.length < 8) throw new Error('Not enough GBIF data for this location');
 
   const birds  = [];
