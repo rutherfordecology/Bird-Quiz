@@ -252,9 +252,17 @@ async function loadLibrary() {
 
 async function loadTaxonPhoto(taxon, el) {
   try {
-    const r = await fetch(`https://api.inaturalist.org/v1/observations?taxon_name=${encodeURIComponent(taxon)}&photos=true&per_page=5&quality_grade=research&order_by=faves&iconic_taxa=Aves`);
+    const r = await fetch(`https://api.inaturalist.org/v1/observations?taxon_name=${encodeURIComponent(taxon)}&photos=true&per_page=20&quality_grade=research&order_by=faves&iconic_taxa=Aves`);
     const d = await r.json();
-    const url = d.results?.[0]?.photos?.[0]?.url?.replace('/square.','/medium.');
+    let url = null;
+    for (const obs of (d.results || [])) {
+      for (const p of (obs.photos || [])) {
+        const w = p.original_dimensions?.width || 0;
+        const h = p.original_dimensions?.height || 0;
+        if (w > h) { url = p.url?.replace('/square.', '/medium.'); break; }
+      }
+      if (url) break;
+    }
     if (url) el.innerHTML = `<img src="${url}" alt="${taxon}">`;
   } catch {}
 }
