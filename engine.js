@@ -671,9 +671,10 @@ async function loadLeaderboard() {
   if (!board) return;
   try {
     const { data } = await readLB();
-    const entries = (data.boards?.[String(CFG.placeId)] || []).slice(0, 10);
+    const entries = (data.boards?.[`${CFG.placeId}_${state.mode}`] || []).slice(0, 10);
     if (!entries.length) { board.innerHTML = ''; return; }
-    board.innerHTML = `<div class="lb-title">&#127942; Leaderboard — ${CFG.placeName}</div>` +
+    const modeLabel = state.mode==='complete'?'Complete':state.mode==='hard'?'Birder':'Common';
+    board.innerHTML = `<div class="lb-title">&#127942; Leaderboard — ${CFG.placeName} · ${modeLabel}</div>` +
       entries.map((e, i) => `<div class="lb-row-item">
         <span class="lb-rank">${i + 1}</span>
         <span class="lb-name">${e.name}</span>
@@ -694,7 +695,7 @@ async function submitScore(totalSeen) {
   try {
     const { sha, data } = await readLB();
     if (!data.boards) data.boards = {};
-    const key = String(CFG.placeId);
+    const key = `${CFG.placeId}_${state.mode}`;
     if (!data.boards[key]) data.boards[key] = [];
     data.boards[key].push({ name, score: totalSeen, date: new Date().toISOString().split('T')[0] });
     data.boards[key].sort((a, b) => a.score - b.score);
