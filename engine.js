@@ -63,41 +63,41 @@ async function fetchInatImage(bird) {
 
   if (!inatPhotoCache[cacheKey]) {
     try {
-      // Prefer taxa endpoint (curated photos) when we have inatId
-      const url = inatId
-        ? `https://api.inaturalist.org/v1/taxa/${inatId}?photos=true`
-        : `https://api.inaturalist.org/v1/taxa?q=${encodeURIComponent(latin)}&rank=species&per_page=1&photos=true`;
-      const r = await fetch(url);
-      if (!r.ok) throw new Error();
-      const d = await r.json();
-      const taxon = inatId ? d.results?.[0] : d.results?.find(t => t.name.toLowerCase() === latin.toLowerCase());
-      const photos = (taxon?.taxon_photos || [])
-        .map(tp => tp.photo?.url?.replace('/square.', '/medium.'))
-        .filter(Boolean);
+      const photos = [];
 
-      if (photos.length >= 3) {
-        inatPhotoCache[cacheKey] = photos;
-      } else {
-        // Fall back to observations sorted by faves
-        const or = await fetch(`https://api.inaturalist.org/v1/observations?taxon_name=${encodeURIComponent(latin)}&photos=true&per_page=20&quality_grade=research&order_by=faves&iconic_taxa=Aves`);
-        const od = or.ok ? await or.json() : { results: [] };
-        const obs = [];
+      // 1. Get taxon default_photo (best single curated photo)
+      const taxaUrl = inatId
+        ? `https://api.inaturalist.org/v1/taxa/${inatId}`
+        : `https://api.inaturalist.org/v1/taxa?q=${encodeURIComponent(latin)}&rank=species&per_page=1`;
+      const tr = await fetch(taxaUrl);
+      if (tr.ok) {
+        const td = await tr.json();
+        const taxon = inatId ? td.results?.[0] : td.results?.find(t => t.name.toLowerCase() === latin.toLowerCase());
+        const defaultPhoto = taxon?.default_photo?.url?.replace('/square.', '/medium.');
+        if (defaultPhoto) photos.push(defaultPhoto);
+      }
+
+      // 2. Fill remaining slots from high-fave observations
+      const or = await fetch(`https://api.inaturalist.org/v1/observations?taxon_name=${encodeURIComponent(latin)}&photos=true&per_page=20&quality_grade=research&order_by=faves&iconic_taxa=Aves`);
+      if (or.ok) {
+        const od = await or.json();
         for (const o of (od.results || [])) {
-          if ((o.faves_count || 0) >= 2) {
+          if ((o.faves_count || 0) >= 3) {
             for (const p of (o.photos || [])) {
               const src = p.url?.replace('/square.', '/medium.');
-              if (src) obs.push(src);
+              if (src && !photos.includes(src)) photos.push(src);
             }
           }
         }
-        inatPhotoCache[cacheKey] = photos.length ? [...photos, ...obs] : obs;
       }
+
+      inatPhotoCache[cacheKey] = photos;
     } catch { inatPhotoCache[cacheKey] = []; }
   }
 
   const urls = inatPhotoCache[cacheKey];
   if (!urls.length) return null;
-  return shuffle([...urls])[0];
+  return urls[0]; // default_photo always first
 }
 
 async function fetchWikiImage(bird) {
