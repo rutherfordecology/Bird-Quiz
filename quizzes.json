@@ -71,6 +71,18 @@
       "place_id": 121402,
       "photo_taxon": null,
       "added": "2026-06-06"
+    },
+    {
+      "name": "WhatDatBird? - Thun, BE, CH",
+      "continent": "Other",
+      "country": "Thun, BE, CH",
+      "description": "Thun, BE, CH",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?place_id=97925&place_name=Thun%2C%20BE%2C%20CH",
+      "place_id": 97925,
+      "photo_taxon": null,
+      "added": "2026-06-06"
     }
   ]
 }
