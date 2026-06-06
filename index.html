@@ -196,24 +196,43 @@ async function loadLibrary() {
     let html = '';
     const continents = CONTINENT_ORDER.filter(c => groups[c]);
     for (const continent of continents) {
-      html += `<div class="section-label" style="max-width:640px;margin:0 auto 14px;padding:0 20px;">${continent}</div>
-               <div class="cards-grid">`;
-      for (const q of groups[continent]) {
-        const tag = '';
-        const count = q.species ? `<span class="card-count">${q.species} species</span>` : '';
-        const imgId = `card-img-${q.place_id || q.url.replace(/\W/g,'')}`;
-        html += `<a class="place-card" href="${q.url}">
-          <div class="card-img" id="${imgId}"><div class="card-img-ph">&#x1F426;</div></div>
-          <div class="card-body">
-            <div class="card-name">${q.name}</div>
-            <div class="card-sub">${q.description}</div>
-            <div class="card-meta">${count}${tag}</div>
-          </div>
-        </a>`;
+      const quizzesInContinent = groups[continent];
+      html += `<div class="section-label" style="max-width:640px;margin:0 auto 14px;padding:0 20px;">${continent}</div>`;
+
+      if (quizzesInContinent.length > 10) {
+        // Sub-group by country
+        const byCountry = {};
+        for (const q of quizzesInContinent) {
+          const c = q.country || 'Other';
+          if (!byCountry[c]) byCountry[c] = [];
+          byCountry[c].push(q);
+        }
+        for (const [country, qs] of Object.entries(byCountry).sort()) {
+          html += `<div class="section-label" style="max-width:640px;margin:0 auto 10px;padding:0 20px;font-size:0.6rem;color:#b0aea6;">${country}</div>
+                   <div class="cards-grid">`;
+          for (const q of qs) html += cardHtml(q);
+          html += `</div>`;
+        }
+      } else {
+        html += `<div class="cards-grid">`;
+        for (const q of quizzesInContinent) html += cardHtml(q);
+        html += `</div>`;
       }
-      html += `</div>`;
     }
     lib.innerHTML = html;
+
+    function cardHtml(q) {
+      const count = q.species ? `<span class="card-count">${q.species} species</span>` : '';
+      const imgId = `card-img-${q.place_id || q.url.replace(/\W/g,'')}`;
+      return `<a class="place-card" href="${q.url}">
+        <div class="card-img" id="${imgId}"><div class="card-img-ph">&#x1F426;</div></div>
+        <div class="card-body">
+          <div class="card-name">${q.name}</div>
+          <div class="card-sub">${q.description}</div>
+          <div class="card-meta">${count}</div>
+        </div>
+      </a>`;
+    }
 
     for (const q of quizzes) {
       const imgId = `card-img-${q.place_id || q.url.replace(/\W/g,'')}`;
