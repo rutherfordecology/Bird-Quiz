@@ -1,7 +1,7 @@
-// WhatDatBird? Quiz Engine v5.16
+// WhatDatBird? Quiz Engine v5.17
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.16';
+const APP_VERSION = 'v5.17';
 
 // ── Config ────────────────────────────────────────────────────────────────
 let CFG = {};
@@ -186,9 +186,11 @@ function scoreByAncestry(candidates, correctIds, correctSet) {
 function getOptions(correct, pool) {
   const correctIds = correct.ancestorIds || [];
   const correctSet = new Set(correctIds);
+  // Always draw distractors from the full species list so choices aren't limited to the active tier
+  const fullPool = CFG.completeBirds?.length ? CFG.completeBirds : pool;
 
   if (correctSet.size > 0) {
-    const others = shuffle(pool.filter(b => b.name !== correct.name));
+    const others = shuffle(fullPool.filter(b => b.name !== correct.name));
     const scored = others.length >= 3 ? scoreByAncestry(others, correctIds, correctSet) : [];
 
     if (scored.length >= 3) {
@@ -201,7 +203,7 @@ function getOptions(correct, pool) {
   }
 
   // Fallback: same genus first, then rest
-  const others   = shuffle(pool.filter(b => b.name !== correct.name));
+  const others   = shuffle(fullPool.filter(b => b.name !== correct.name));
   const genus    = correct.latin?.split(' ')[0] || '';
   const sameGenus = others.filter(b => b.latin?.split(' ')[0] === genus);
   const rest      = others.filter(b => b.latin?.split(' ')[0] !== genus);
