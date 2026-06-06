@@ -134,7 +134,16 @@ async function processBatch(speciesItems) {
   }))).filter(Boolean);
 }
 
+function applyPlaceNames(birds) {
+  if (!placeNames?.names) return;
+  for (const bird of birds) {
+    const indName = placeNames.names[bird.latin];
+    if (indName) bird.indigenousName = indName;
+  }
+}
+
 function setTiers(birds) {
+  applyPlaceNames(birds);
   const { easy, hard, complete, rarity } = computeTiers(birds);
   CFG.easyBirds     = easy;
   CFG.hardBirds     = hard;
@@ -320,6 +329,16 @@ async function boot() {
     indigenousField:'indigenousName',
     easyBirds:      [],
   });
+
+  // Load place-specific indigenous names if available
+  let placeNames = null;
+  fetch(`place-names/${PLACE_ID}.json`)
+    .then(r => r.ok ? r.json() : null)
+    .then(d => {
+      if (!d) return;
+      placeNames = d;
+      CFG.indigenousField = d.field || 'indigenousName';
+    }).catch(() => {});
 
   // Fetch place metadata (centroid + country code) — needed before GBIF call
   updateLoadingProgress('Identifying location...');
