@@ -316,19 +316,19 @@ function renderIntro(app, header) {
     modeGrid = '<div class="mode-grid">';
     modeGrid += `<button class="mode-btn ${state.mode==='easy'?'active':''}" onclick="setMode('easy')">
       <div class="mode-emoji">&#127807;</div>
-      <div class="mode-count">${easy.length} SPECIES</div>
+      <div class="mode-count" id="mc-easy">${easy.length} SPECIES</div>
       <div class="mode-title">Common</div>
       <div class="mode-desc">The most frequently recorded birds here.</div>
     </button>`;
     if (hasHard) modeGrid += `<button class="mode-btn ${state.mode==='hard'?'active':''}" onclick="setMode('hard')">
       <div class="mode-emoji">&#128301;</div>
-      <div class="mode-count">${hard.length} SPECIES</div>
+      <div class="mode-count" id="mc-hard">${hard.length} SPECIES</div>
       <div class="mode-title">Birder</div>
       <div class="mode-desc">Most of the list - dedicated trip territory.</div>
     </button>`;
     if (hasComplete) modeGrid += `<button class="mode-btn ${state.mode==='complete'?'active':''}" onclick="setMode('complete')">
       <div class="mode-emoji">&#128128;</div>
-      <div class="mode-count">${complete.length} SPECIES</div>
+      <div class="mode-count" id="mc-complete">${complete.length} SPECIES</div>
       <div class="mode-title">Complete</div>
       <div class="mode-desc">Everything ever recorded - including vagrants.</div>
     </button>`;
