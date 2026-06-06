@@ -10,210 +10,75 @@
 <div id="app"></div>
 <script src="../engine.js"></script>
 <script>
-// ── Bird data ──────────────────────────────────────────────────────────────
-const ALL_BIRDS = [
-  // Suliformes
-  { name:"Lesser Frigatebird",       latin:"Fregata ariel",             samoan:"atafa",       family:"Fregatidae",    order:"Suliformes",       seabird:true,  note:"Male has a white belly patch - key distinction from Great Frigatebird in flight." },
-  { name:"Great Frigatebird",        latin:"Fregata minor",             samoan:"atafa",       family:"Fregatidae",    order:"Suliformes",       seabird:true,  note:"Male has iridescent green sheen on back; female all-dark unlike Lesser." },
-  { name:"Red-footed Booby",         latin:"Sula sula",                 samoan:"tavake",      family:"Sulidae",       order:"Suliformes",       seabird:true,  note:"Bright red feet unmistakable; white and dark morphs both occur in Samoa." },
-  { name:"Brown Booby",              latin:"Sula leucogaster",          samoan:"tavake",      family:"Sulidae",       order:"Suliformes",       seabird:true,  note:"Chocolate brown above with a sharply defined white belly; yellow feet." },
-  { name:"Masked Booby",             latin:"Sula dactylatra",           family:"Sulidae",       order:"Suliformes",       seabird:true,  note:"White with black flight feathers and black mask; largest booby." },
-  // Phaethontiformes
-  { name:"White-tailed Tropicbird",  latin:"Phaethon lepturus",         samoan:"tavake",      family:"Phaethontidae", order:"Phaethontiformes", seabird:true,  note:"Long white tail streamers make this unmistakable; nests on sea cliffs." },
-  { name:"Red-tailed Tropicbird",    latin:"Phaethon rubricauda",       family:"Phaethontidae", order:"Phaethontiformes", seabird:true, note:"Red tail streamers; more robust than White-tailed Tropicbird." },
-  // Procellariiformes
-  { name:"Wedge-tailed Shearwater",  latin:"Ardenna pacifica",          family:"Procellariidae",order:"Procellariiformes",seabird:true,  note:"Long wedge-shaped tail; pale and dark morphs; common tropical Pacific shearwater." },
-  { name:"Tropical Shearwater",      latin:"Puffinus bailloni",         family:"Procellariidae",order:"Procellariiformes",seabird:true,  note:"Small shearwater; dark above, white below with fast fluttery wingbeats." },
-  { name:"Sooty Shearwater",         latin:"Ardenna grisea",            family:"Procellariidae",order:"Procellariiformes",seabird:true,  note:"All dark with silvery underwing flash; long-distance migrant from southern oceans." },
-  { name:"Short-tailed Shearwater",  latin:"Ardenna tenuirostris",      family:"Procellariidae",order:"Procellariiformes",seabird:true,  note:"Very similar to Sooty Shearwater; shorter bill and rounder head." },
-  { name:"Buller's Shearwater",      latin:"Ardenna bulleri",           family:"Procellariidae",order:"Procellariiformes",seabird:true,  note:"Clean white below; bold black M-pattern on upperwing; elegant flight." },
-  { name:"Flesh-footed Shearwater",  latin:"Ardenna carneipes",         family:"Procellariidae",order:"Procellariiformes",seabird:true,  note:"All dark body with pale pinkish bill and feet; heavier flight than Sooty." },
-  { name:"Tahiti Petrel",            latin:"Pseudobulweria rostrata",   family:"Procellariidae",order:"Procellariiformes",seabird:true,  note:"Dark brown above and on breast; white belly; distinctive upright posture at sea." },
-  { name:"Cook's Petrel",            latin:"Pterodroma cookii",         family:"Procellariidae",order:"Procellariiformes",seabird:true,  note:"Small pale gadfly petrel; grey above with dark M on upperwing." },
-  { name:"Collared Petrel",          latin:"Pterodroma brevipes",       family:"Procellariidae",order:"Procellariiformes",seabird:true,  note:"Variable breast band; pale morph has white underparts; fast erratic flight." },
-  { name:"Gould's Petrel",           latin:"Pterodroma leucoptera",     family:"Procellariidae",order:"Procellariiformes",seabird:true,  note:"Small gadfly petrel; dark cap, white underparts, dark diagonal bar on upperwing." },
-  { name:"White-naped Petrel",       latin:"Pterodroma cervicalis",     family:"Procellariidae",order:"Procellariiformes",seabird:true,  note:"Large gadfly petrel; white nape, dark cap, white underparts." },
-  { name:"Herald Petrel",            latin:"Pterodroma heraldica",      family:"Procellariidae",order:"Procellariiformes",seabird:true,  note:"Polymorphic; dark, intermediate and pale morphs; buoyant flight." },
-  { name:"Mottled Petrel",           latin:"Pterodroma inexpectata",    family:"Procellariidae",order:"Procellariiformes",seabird:true,  note:"Grey belly patch and dark diagonal bar on underwing are diagnostic." },
-  { name:"Black-winged Petrel",      latin:"Pterodroma nigripennis",    family:"Procellariidae",order:"Procellariiformes",seabird:true,  note:"White underparts; bold black wing margins; breeds on Pacific islands." },
-  { name:"Stejneger's Petrel",       latin:"Pterodroma longirostris",   family:"Procellariidae",order:"Procellariiformes",seabird:true,  note:"Small dark-capped gadfly petrel; similar to Cook's but darker mantle." },
-  { name:"Polynesian Storm Petrel",  latin:"Nesofregetta fuliginosa",   family:"Oceanitidae",   order:"Procellariiformes",seabird:true,  note:"White rump and belly; fluttery flight low over water." },
-  // Pelecaniformes
-  { name:"Reef Heron",               latin:"Egretta sacra",             samoan:"matu'u",      family:"Ardeidae",      order:"Pelecaniformes",   note:"White and dark morphs both occur; hunts on rocky coasts and reef flats." },
-  { name:"White-faced Heron",        latin:"Ardea novaehollandiae",     samoan:"matu'u",      family:"Ardeidae",      order:"Pelecaniformes",   note:"Blue-grey with a white face; vagrant from Australia/New Zealand." },
-  // Anseriformes
-  { name:"Grey Duck",                latin:"Anas superciliosa",         samoan:"toloa",       family:"Anatidae",      order:"Anseriformes",     note:"Rare; very similar to Mallard and heavily hybridized - darker face." },
-  // Galliformes
-  { name:"Red Junglefowl",           latin:"Gallus gallus",             samoan:"moavao",      family:"Phasianidae",   order:"Galliformes",      introduced:true, note:"INTRODUCED - ancestor of domestic chicken; wild populations in forest." },
-  // Gruiformes
-  { name:"Banded Rail",              latin:"Hypotaenidia philippensis", samoan:"ve'a",        family:"Rallidae",      order:"Gruiformes",       note:"Secretive; rufous breast band and streaked brown upperparts." },
-  { name:"Pukeko",                   latin:"Porphyrio melanotus",       samoan:"manuali'i",   family:"Rallidae",      order:"Gruiformes",       note:"Purple-blue swamphen with bright red bill and frontal shield; loud." },
-  { name:"White-browed Crake",       latin:"Amaurornis cinereus",       samoan:"vai",         family:"Rallidae",      order:"Gruiformes",       note:"White supercilium and face; secretive in dense marsh vegetation." },
-  { name:"Spotless Crake",           latin:"Zapornia tabuensis",        family:"Rallidae",      order:"Gruiformes",       note:"All dark with red eye and legs; tiny and very secretive in wetlands." },
-  // Charadriiformes - shorebirds
-  { name:"Pacific Golden-Plover",    latin:"Pluvialis fulva",           samoan:"tuli",        family:"Charadriidae",  order:"Charadriiformes",  note:"Golden-spangled upperparts; long-distance migrant common on lawns." },
-  { name:"Grey Plover",              latin:"Pluvialis squatarola",      family:"Charadriidae",  order:"Charadriiformes",  note:"Diagnostic black armpits in flight; spangled grey in non-breeding." },
-  { name:"Ruddy Turnstone",          latin:"Arenaria interpres",        samoan:"tuli",        family:"Scolopacidae",  order:"Charadriiformes",  note:"Flips stones for food; striking harlequin pattern in breeding plumage." },
-  { name:"Wandering Tattler",        latin:"Tringa incana",             samoan:"tuli",        family:"Scolopacidae",  order:"Charadriiformes",  note:"Gray shorebird that bobs its tail constantly on rocky coasts." },
-  { name:"Gray-tailed Tattler",      latin:"Tringa brevipes",           samoan:"tuli",        family:"Scolopacidae",  order:"Charadriiformes",  note:"Very similar to Wandering Tattler; shorter nasal groove." },
-  { name:"Bar-tailed Godwit",        latin:"Limosa lapponica",          samoan:"tuli",        family:"Scolopacidae",  order:"Charadriiformes",  note:"Long upturned bill; makes the longest non-stop migration of any bird - Alaska to NZ." },
-  { name:"Eurasian Whimbrel",        latin:"Numenius phaeopus",         samoan:"tuli",        family:"Scolopacidae",  order:"Charadriiformes",  note:"Downcurved bill with kink; bold head stripes; tittering call." },
-  { name:"Bristle-thighed Curlew",   latin:"Numenius tahitiensis",      samoan:"tuli'olovalu",family:"Scolopacidae",  order:"Charadriiformes",  note:"Like Whimbrel but with buffy rump and diagnostic bristles on thighs." },
-  { name:"Far Eastern Curlew",       latin:"Numenius madagascariensis", family:"Scolopacidae",  order:"Charadriiformes",  note:"Largest shorebird; very long downcurved bill; plain brown without head stripes." },
-  { name:"Red Knot",                 latin:"Calidris canutus",          family:"Scolopacidae",  order:"Charadriiformes",  note:"Stocky wader; brick-red in breeding plumage, pale grey in non-breeding." },
-  { name:"Sanderling",               latin:"Calidris alba",             family:"Scolopacidae",  order:"Charadriiformes",  note:"Chases waves on sandy beaches; pale grey in non-breeding; bold white wingbar." },
-  { name:"Red-necked Stint",         latin:"Calidris ruficollis",       family:"Scolopacidae",  order:"Charadriiformes",  note:"Tiny stint; rufous neck in breeding; straight fine bill." },
-  { name:"Pectoral Sandpiper",       latin:"Calidris melanotos",        family:"Scolopacidae",  order:"Charadriiformes",  note:"Sharp breast band; streaked above; longer-winged than similar stints." },
-  { name:"Common Sandpiper",         latin:"Actitis hypoleucos",        family:"Scolopacidae",  order:"Charadriiformes",  note:"Bobs rear constantly; white wedge on shoulder; low flickering flight." },
-  { name:"Wood Sandpiper",           latin:"Tringa glareola",           family:"Scolopacidae",  order:"Charadriiformes",  note:"Spotted brown above; white supercilium; yellow legs." },
-  // Charadriiformes - terns and gulls
-  { name:"Gray-backed Tern",         latin:"Onychoprion lunatus",       family:"Laridae",       order:"Charadriiformes",  seabird:true, note:"Pale gray back contrasts with white underparts; offshore species." },
-  { name:"Great Crested Tern",       latin:"Thalasseus bergii",         family:"Laridae",       order:"Charadriiformes",  seabird:true, note:"Large tern with a shaggy black crest and yellow-orange bill." },
-  { name:"Black-naped Tern",         latin:"Sterna sumatrana",          family:"Laridae",       order:"Charadriiformes",  seabird:true, note:"White with a fine black nape stripe; delicate and buoyant over lagoons." },
-  { name:"Blue-billed White-Tern",   latin:"Gygis microrhyncha",        family:"Laridae",       order:"Charadriiformes",  seabird:true, note:"All white with a distinctive blue-gray bill; nests on bare branches." },
-  { name:"Brown Noddy",              latin:"Anous stolidus",            family:"Laridae",       order:"Charadriiformes",  seabird:true, note:"Dark chocolate-brown with a white cap; commonest noddy around Samoa." },
-  { name:"Black Noddy",              latin:"Anous minutus",             family:"Laridae",       order:"Charadriiformes",  seabird:true, note:"Smaller and blacker than Brown Noddy; thinner bill and longer tail." },
-  { name:"Blue-gray Noddy",          latin:"Procelsterna cerulea",      family:"Laridae",       order:"Charadriiformes",  seabird:true, note:"Tiny, pale blue-gray noddy - much smaller and paler than Brown Noddy." },
-  { name:"Sooty Tern",               latin:"Onychoprion fuscatus",      family:"Laridae",       order:"Charadriiformes",  seabird:true, note:"Jet black above, white below; white forehead; spends years at sea without landing." },
-  { name:"Bridled Tern",             latin:"Onychoprion anaethetus",    family:"Laridae",       order:"Charadriiformes",  seabird:true, note:"Similar to Sooty Tern but browner above; white collar behind black cap." },
-  { name:"Roseate Tern",             latin:"Sterna dougallii",          family:"Laridae",       order:"Charadriiformes",  seabird:true, note:"Very long tail streamers; pinkish flush on breast in breeding; pale above." },
-  { name:"Little Tern",              latin:"Sternula albifrons",        family:"Laridae",       order:"Charadriiformes",  seabird:true, note:"Smallest tern; yellow bill with black tip; white forehead; rapid wingbeats." },
-  { name:"Fairy Tern",               latin:"Sternula nereis",           family:"Laridae",       order:"Charadriiformes",  seabird:true, note:"White with black bill; similar to White Tern but smaller; vagrant." },
-  { name:"Laughing Gull",            latin:"Leucophaeus atricilla",     family:"Laridae",       order:"Charadriiformes",  seabird:true, note:"Only gull likely in Samoa; black hood in breeding; vagrant from Americas." },
-  // Cuculiformes
-  { name:"Long-tailed Cuckoo",       latin:"Urodynamis taitensis",      samoan:"aleva",       family:"Cuculidae",     order:"Cuculiformes",     note:"Long barred tail; brood parasite that migrates to Pacific islands in winter." },
-  // Columbiformes
-  { name:"Metallic Pigeon",          latin:"Columba vitiensis",         samoan:"fiaui",       family:"Columbidae",    order:"Columbiformes",    note:"Striking iridescent green and purple plumage; forest canopy specialist." },
-  { name:"Pacific Imperial-Pigeon",  latin:"Ducula pacifica",           samoan:"lupe",        family:"Columbidae",    order:"Columbiformes",    note:"Large elegant pigeon; white body with black flight feathers." },
-  { name:"Rock Pigeon",              latin:"Columba livia",             samoan:"lupe palagi", family:"Columbidae",    order:"Columbiformes",    introduced:true, note:"INTRODUCED - feral pigeon common around Apia." },
-  { name:"Tooth-billed Pigeon",      latin:"Didunculus strigirostris",  samoan:"manumea",     family:"Columbidae",    order:"Columbiformes",    endemic:true, note:"The Manumea - Samoa's national bird; critically endangered; unique notched bill." },
-  { name:"Crimson-crowned Fruit-Dove",latin:"Ptilinopus porphyraceus",  samoan:"manutagi",    family:"Columbidae",    order:"Columbiformes",    note:"Vivid green with a crimson crown; often heard cooing before you spot it." },
-  { name:"Many-colored Fruit-Dove",  latin:"Ptilinopus perousii",       samoan:"manuma",      family:"Columbidae",    order:"Columbiformes",    note:"Kaleidoscopic plumage of green, yellow, purple and red; cryptic in canopy." },
-  { name:"Shy Ground Dove",          latin:"Pampusana stairi",          samoan:"tu'aimeo",    family:"Columbidae",    order:"Columbiformes",    note:"Tiny ground dove; brown with scaly pattern; walks on ground in forest." },
-  // Psittaciformes
-  { name:"Blue-crowned Lorikeet",    latin:"Vini australis",            samoan:"sega",        family:"Psittaculidae", order:"Psittaciformes",   note:"Tiny fast lorikeet; blue crown and red-orange breast are the key marks." },
-  // Strigiformes
-  { name:"Eastern Barn Owl",         latin:"Tyto javanica",             samoan:"lulu",        family:"Tytonidae",     order:"Strigiformes",     note:"Heart-shaped facial disc; strictly nocturnal, often heard screeching." },
-  // Apodiformes
-  { name:"White-rumped Swiftlet",    latin:"Aerodramus spodiopygius",   samoan:"pe'ape'a",    family:"Apodidae",      order:"Apodiformes",      note:"Small fast swift; white rump is the key field mark." },
-  // Coraciiformes
-  { name:"Flat-billed Kingfisher",   latin:"Todiramphus recurvirostris",samoan:"tiotala",     family:"Alcedinidae",   order:"Coraciiformes",    endemic:true, note:"Samoa endemic; turquoise kingfisher with an unusually broad, flat bill." },
-  // Passeriformes
-  { name:"Pacific Swallow",          latin:"Hirundo tahitica",          samoan:"tola'i",      family:"Hirundinidae",  order:"Passeriformes",    note:"Blue-black above with rufous throat; shallow tail fork; fast and agile." },
-  { name:"Mao",                      latin:"Gymnomyza samoensis",       samoan:"mao",         family:"Meliphagidae",  order:"Passeriformes",    endemic:true, note:"Large, noisy Samoa endemic honeyeater; endangered." },
-  { name:"Samoan Myzomela",          latin:"Myzomela samoa",            samoan:"segasegamau'u",family:"Meliphagidae", order:"Passeriformes",    endemic:true, note:"Male is brilliant red and black - one of the most striking birds in Samoa." },
-  { name:"Eastern Wattled-Honeyeater",latin:"Foulehaio carunculatus",   samoan:"fuia",        family:"Meliphagidae",  order:"Passeriformes",    note:"Yellow wattles at the base of the bill; loud and conspicuous in canopy." },
-  { name:"Samoan Triller",           latin:"Lalage sharpei",            samoan:"miti",        family:"Campephagidae", order:"Passeriformes",    endemic:true, note:"Samoa endemic; heavily streaked underparts distinguish from Polynesian Triller." },
-  { name:"Polynesian Triller",       latin:"Lalage maculosa",           samoan:"miti",        family:"Campephagidae", order:"Passeriformes",    note:"Black and white; less streaked below than Samoan Triller." },
-  { name:"Samoan Whistler",          latin:"Pachycephala flavifrons",   samoan:"miti'ai",     family:"Pachycephalidae",order:"Passeriformes",   endemic:true, note:"Samoa endemic; rich melodious whistling song, olive-yellow plumage." },
-  { name:"Samoan Fantail",           latin:"Rhipidura nebulosa",        samoan:"se'use'u",    family:"Rhipiduridae",  order:"Passeriformes",    endemic:true, note:"Samoa endemic; fans tail constantly and follows you through undergrowth." },
-  { name:"Samoan Flycatcher",        latin:"Myiagra albiventris",       samoan:"tolai",       family:"Monarchidae",   order:"Passeriformes",    endemic:true, note:"Samoa endemic; active in forest understory, often flicks wings while perched." },
-  { name:"Pacific Robin",            latin:"Petroica pusilla",          samoan:"tolai",       family:"Petroicidae",   order:"Passeriformes",    note:"Males have a striking orange-red breast; females brown and easily overlooked." },
-  { name:"Samoan Island-Thrush",     latin:"Turdus poliocephalus",      samoan:"tuli'au",     family:"Turdidae",      order:"Passeriformes",    note:"Variable across Pacific; Samoan birds have black head and orange bill." },
-  { name:"Samoan White-eye",         latin:"Zosterops samoensis",       samoan:"ve'amo'o",    family:"Zosteropidae",  order:"Passeriformes",    endemic:true, note:"Samoa endemic; white eye-ring; olive-green; often in noisy flocks." },
-  { name:"Polynesian Starling",      latin:"Aplonis tabuensis",         samoan:"fuia",        family:"Sturnidae",     order:"Passeriformes",    note:"Olive-brown starling with a pale eye; common in forest and gardens." },
-  { name:"Samoan Starling",          latin:"Aplonis atrifusca",         samoan:"fui'a",       family:"Sturnidae",     order:"Passeriformes",    endemic:true, note:"Samoa endemic; heavier and glossier than Polynesian Starling." },
-  { name:"Jungle Myna",              latin:"Acridotheres fuscus",       samoan:"maina",       family:"Sturnidae",     order:"Passeriformes",    introduced:true, note:"INTRODUCED - yellow bill base, bare eye patch, bold white wing patches." },
-  { name:"Common Myna",              latin:"Acridotheres tristis",      samoan:"maina",       family:"Sturnidae",     order:"Passeriformes",    introduced:true, note:"INTRODUCED - brown body, yellow face and bill; ubiquitous around towns." },
-  { name:"Royal Parrotfinch",        latin:"Erythrura regia",           samoan:"segasega",    family:"Estrildidae",   order:"Passeriformes",    note:"Brilliant blue-green with red face and rump; striking small finch." },
-  { name:"Red-vented Bulbul",        latin:"Pycnonotus cafer",          samoan:"manu'ula",    family:"Pycnonotidae",  order:"Passeriformes",    introduced:true, note:"INTRODUCED - invasive; red patch under tail is diagnostic." },
-];
+const SAMOA_PLACE_ID = 7079;
 
-// Rarity ratings
-const RARITY = {
-  'Lesser Frigatebird':'common','Great Frigatebird':'common','Red-footed Booby':'common','Brown Booby':'common','Masked Booby':'uncommon',
-  'White-tailed Tropicbird':'uncommon','Red-tailed Tropicbird':'uncommon',
-  'Wedge-tailed Shearwater':'common','Tropical Shearwater':'uncommon','Sooty Shearwater':'rare','Short-tailed Shearwater':'rare',
-  "Buller's Shearwater":'rare','Flesh-footed Shearwater':'rare','Tahiti Petrel':'uncommon',"Cook's Petrel":'rare',
-  'Collared Petrel':'rare',"Gould's Petrel":'rare','White-naped Petrel':'rare','Herald Petrel':'rare',
-  'Mottled Petrel':'rare','Black-winged Petrel':'uncommon',"Stejneger's Petrel":'rare','Polynesian Storm Petrel':'rare',
-  'Reef Heron':'common','White-faced Heron':'vagrant',
-  'Grey Duck':'rare','Red Junglefowl':'uncommon',
-  'Banded Rail':'uncommon','Pukeko':'common','White-browed Crake':'uncommon','Spotless Crake':'uncommon',
-  'Pacific Golden-Plover':'common','Grey Plover':'rare','Ruddy Turnstone':'uncommon','Wandering Tattler':'uncommon',
-  'Gray-tailed Tattler':'uncommon','Bar-tailed Godwit':'uncommon','Eurasian Whimbrel':'uncommon',
-  'Bristle-thighed Curlew':'rare','Far Eastern Curlew':'vagrant','Red Knot':'rare','Sanderling':'rare',
-  'Red-necked Stint':'rare','Pectoral Sandpiper':'vagrant','Common Sandpiper':'rare','Wood Sandpiper':'rare',
-  'Gray-backed Tern':'uncommon','Great Crested Tern':'uncommon','Black-naped Tern':'uncommon',
-  'Blue-billed White-Tern':'common','Brown Noddy':'common','Black Noddy':'common','Blue-gray Noddy':'uncommon',
-  'Sooty Tern':'common','Bridled Tern':'uncommon','Roseate Tern':'uncommon','Little Tern':'rare',
-  'Fairy Tern':'vagrant','Laughing Gull':'vagrant',
-  'Long-tailed Cuckoo':'uncommon',
-  'Metallic Pigeon':'uncommon','Pacific Imperial-Pigeon':'common','Rock Pigeon':'common',
-  'Tooth-billed Pigeon':'rare','Crimson-crowned Fruit-Dove':'common','Many-colored Fruit-Dove':'uncommon','Shy Ground Dove':'uncommon',
-  'Blue-crowned Lorikeet':'common','Eastern Barn Owl':'uncommon','White-rumped Swiftlet':'common',
-  'Flat-billed Kingfisher':'uncommon',
-  'Pacific Swallow':'common','Mao':'rare','Samoan Myzomela':'common','Eastern Wattled-Honeyeater':'common',
-  'Samoan Triller':'uncommon','Polynesian Triller':'common','Samoan Whistler':'uncommon',
-  'Samoan Fantail':'common','Samoan Flycatcher':'common','Pacific Robin':'uncommon',
-  'Samoan Island-Thrush':'uncommon','Samoan White-eye':'common',
-  'Polynesian Starling':'common','Samoan Starling':'common','Jungle Myna':'common','Common Myna':'common',
-  'Royal Parrotfinch':'uncommon','Red-vented Bulbul':'common',
-};
-
-// Assign fake ancestorIds from family/order for taxonomic option grouping
-const FAMILY_IDS = {}, ORDER_IDS = {};
-let _id = 10000;
-ALL_BIRDS.forEach(b => {
-  if (b.family && !FAMILY_IDS[b.family]) FAMILY_IDS[b.family] = _id++;
-  if (b.order  && !ORDER_IDS[b.order])   ORDER_IDS[b.order]   = _id++;
-  b.ancestorIds = [ORDER_IDS[b.order], FAMILY_IDS[b.family]].filter(Boolean);
-});
-
-// Build tiers
-const RARITY_RANK = { common:1, uncommon:2, rare:3, vagrant:4 };
-const sorted = [...ALL_BIRDS].sort((a,b) => (RARITY_RANK[RARITY[a.name]]||2) - (RARITY_RANK[RARITY[b.name]]||2));
-
-const EASY_BIRDS     = sorted.filter(b => (RARITY[b.name]||'uncommon') === 'common').slice(0, 25);
-const HARD_BIRDS     = sorted.filter(b => (RARITY[b.name]||'uncommon') !== 'vagrant');
-const COMPLETE_BIRDS = sorted;
-
-// Fetch iNat obs counts for species list (loaded on demand)
-let samoaObsCounts;
-async function loadSamoaObsCounts() {
-  if (samoaObsCounts !== undefined) return;
-  samoaObsCounts = null;
-  try {
-    const pr = await fetch('https://api.inaturalist.org/v1/places/autocomplete?q=Samoa&geo=true');
-    const pd = await pr.json();
-    const place = pd.results?.find(p => p.place_type===12 && /^samoa$/i.test(p.name) && !/american/i.test(p.name))
-                  || pd.results?.find(p => /^samoa$/i.test(p.name) && !/american/i.test(p.name));
-    if (!place) { samoaObsCounts={}; return; }
-    const cr = await fetch(`https://api.inaturalist.org/v1/observations/species_counts?place_id=${place.id}&iconic_taxa=Aves&quality_grade=research&per_page=500`);
-    const cd = await cr.json();
-    samoaObsCounts = {};
-    for (const item of (cd.results||[])) if(item.taxon?.name) samoaObsCounts[item.taxon.name]=item.count;
-    // Attach counts to birds and re-render if on species list
-    ALL_BIRDS.forEach(b => { b.count = samoaObsCounts[b.latin] || null; });
-    if (state.phase==='species') render();
-  } catch { samoaObsCounts={}; }
+function computeTiers(allBirds) {
+  const birds = [...allBirds].sort((a, b) => (b.count || 0) - (a.count || 0));
+  const n         = birds.length;
+  const easyCount = Math.min(25, n);
+  const hardCount = Math.min(150, Math.max(easyCount + 1, Math.floor(n * 0.9)));
+  return {
+    easy:     birds.slice(0, easyCount),
+    hard:     hardCount > easyCount ? birds.slice(0, hardCount) : null,
+    complete: n > hardCount         ? birds : null,
+  };
 }
 
-// Fetch header photo and store for re-use across renders
+async function loadBirds() {
+  const url = `https://api.inaturalist.org/v1/observations/species_counts?place_id=${SAMOA_PLACE_ID}&iconic_taxa=Aves&quality_grade=research&per_page=200&order_by=observations_count&order=desc`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('iNat API error');
+  const d = await r.json();
+  return (d.results || [])
+    .filter(item => item.taxon?.preferred_common_name && item.taxon?.rank === 'species')
+    .map(item => ({
+      name:        item.taxon.preferred_common_name,
+      latin:       item.taxon.name,
+      inatId:      item.taxon.id,
+      ancestorIds: item.taxon.ancestor_ids || [],
+      count:       item.count,
+      wikiUrl:     item.taxon.wikipedia_url || null,
+      note:        null,
+      seabird:     false,
+    }));
+}
+
+// Fetch header photo
 let headerPhotoHtml = '';
 fetch('https://api.inaturalist.org/v1/observations?taxon_name=Didunculus+strigirostris&photos=true&per_page=5&quality_grade=research&order_by=faves&iconic_taxa=Aves')
-  .then(r=>r.json()).then(d=>{
-    const url=d.results?.[0]?.photos?.[0]?.url?.replace('/square.','/medium.');
-    if(url) {
+  .then(r => r.json()).then(d => {
+    const url = d.results?.[0]?.photos?.[0]?.url?.replace('/square.', '/medium.');
+    if (url) {
       headerPhotoHtml = `<img src="${url}" alt="Manumea" style="width:100%;height:140px;object-fit:cover;object-position:center top;border-radius:12px;margin-bottom:12px;border:1.5px solid #dddbd3;">`;
       if (state.phase !== 'quiz') render();
     }
-  }).catch(()=>{});
+  }).catch(() => {});
 
-// Init engine
-initEngine({
-  placeName:       'Samoa',
-  eyebrow:         'WHATDATBIRD? - SAMOA',
-  version:         'v4.0',
-  headerPhotoHtml: () => headerPhotoHtml,
-  backUrl:         '../',
-  indigenousField: 'samoan',
-  rarity:          RARITY,
-  easyBirds:       EASY_BIRDS,
-  hardBirds:       HARD_BIRDS,
-  completeBirds:   COMPLETE_BIRDS,
-  onSpeciesPhase:  loadSamoaObsCounts,
-});
+async function boot() {
+  initEngine({
+    placeName:       'Samoa',
+    eyebrow:         'WHATDATBIRD? - SAMOA',
+    version:         'v4.1',
+    headerPhotoHtml: () => headerPhotoHtml,
+    backUrl:         '../',
+    indigenousField: 'samoan',
+    easyBirds:       [],
+  });
+
+  try {
+    const birds = await loadBirds();
+    if (birds.length < 8) throw new Error('Not enough species data from iNaturalist.');
+    const { easy, hard, complete } = computeTiers(birds);
+    CFG.easyBirds     = easy;
+    CFG.hardBirds     = hard;
+    CFG.completeBirds = complete;
+    setState({ phase: 'intro' });
+  } catch (err) {
+    setState({ phase: 'error', loadError: err.message });
+  }
+}
+
+boot();
 </script>
 </body>
 </html>

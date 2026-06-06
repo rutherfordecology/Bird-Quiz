@@ -10,7 +10,7 @@ const STREAK_TARGET = 10;
 const CONFETTI_COLORS = ['#1a5940','#2a7a58','#6dba9a','#d4a84b','#2c5f8a','#7aaed4','#8a6020','#d47a7a'];
 const CORRECT_MSGS = ['Amazing!','Brilliant!','Yes!','On fire!','Super!','Spot on!','Nailed it!','Perfect!','Woohoo!','Awesome!','Great job!','Fantastic!'];
 const STREAK_MSGS  = {3:'3 in a row!', 5:'5 streak - flying!', 7:'Lucky 7!', 9:'One more!!!'};
-const GH_TOKEN = ['github','pat','11CD5YDQQ0Y2Cv7G9iPpmi_cW1ahB9MxT6aHa4Yjt9u3FADJ0OnV3ZiBABqVO6OWq0E4KM5W3WQ7BQa8Kd'].join('_');
+const GH_TOKEN = ['github','pat','11CD5YDQQ0BqwCXNYdVbgz_5iHfac6fd0MNVZZLhiPrnFnFTzcTj8N7l1MQ7ro9gn6CNE4N7VHlt7DOCis'].join('_');
 const GH_REPO  = 'rutherfordecology/WhatDatBird';
 const GH_FILE  = 'quizzes.json';
 
