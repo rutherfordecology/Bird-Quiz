@@ -23,6 +23,18 @@
       "place_id": 8504,
       "photo_taxon": null,
       "added": "2026-06-06"
+    },
+    {
+      "name": "WhatDatBird? - Whenua Hou Nature Reserve, SO, NZ",
+      "continent": "Other",
+      "country": "Whenua Hou Nature Reserve, SO, NZ",
+      "description": "Whenua Hou Nature Reserve, SO, NZ - Whenua Hou Nature Reserve, SO, NZ",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?place_id=88743&place_name=Whenua%20Hou%20Nature%20Reserve%2C%20SO%2C%20NZ",
+      "place_id": 88743,
+      "photo_taxon": null,
+      "added": "2026-06-06"
     }
   ]
 }
