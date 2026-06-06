@@ -99,7 +99,25 @@
   }
   footer a { color: #2a7a58; text-decoration: none; }
   footer a:hover { text-decoration: underline; }
+
+  .map-btn { display:block; max-width:600px; margin:0 auto 8px; padding:10px 16px; background:transparent; border:1.5px solid #2a7a58; color:#2a7a58; border-radius:12px; font-size:0.9rem; font-weight:700; cursor:pointer; font-family:system-ui,-apple-system,sans-serif; transition:all 0.15s; text-align:center; width:calc(100% - 40px); }
+  .map-btn:hover { background:#e8f4ef; }
+
+  .map-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:1000; align-items:center; justify-content:center; padding:20px; }
+  .map-modal.open { display:flex; }
+  .map-box { background:#fff; border-radius:16px; width:100%; max-width:700px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.25); display:flex; flex-direction:column; max-height:90vh; }
+  .map-header { padding:14px 18px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #dddbd3; flex-shrink:0; }
+  .map-header h2 { font-size:1rem; font-weight:800; color:#1a5940; }
+  .map-close { background:none; border:none; font-size:1.4rem; cursor:pointer; color:#9b9890; line-height:1; padding:0 4px; }
+  .map-close:hover { color:#1c1b18; }
+  #pickMap { flex:1; min-height:380px; }
+  .map-status { padding:10px 18px; font-size:0.85rem; color:#6b6960; border-top:1px solid #dddbd3; flex-shrink:0; min-height:44px; display:flex; align-items:center; }
+  .map-status strong { color:#1a5940; }
+  .map-go { margin-left:auto; background:#1a5940; color:#fff; border:none; border-radius:8px; padding:7px 18px; font-size:0.85rem; font-weight:800; cursor:pointer; font-family:system-ui,-apple-system,sans-serif; display:none; }
+  .map-go:hover { opacity:0.85; }
 </style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
 
@@ -125,6 +143,21 @@
   <input class="search-input" id="searchInput" type="text"
     placeholder="Search any place - country, island, park..." autocomplete="off" />
   <div class="search-drop" id="searchDrop"></div>
+</div>
+<button class="map-btn" onclick="openMapPicker()">&#127758; Pick a location on the map</button>
+
+<div class="map-modal" id="mapModal">
+  <div class="map-box">
+    <div class="map-header">
+      <h2>&#127758; Pick a location</h2>
+      <button class="map-close" onclick="closeMapPicker()">&#x2715;</button>
+    </div>
+    <div id="pickMap"></div>
+    <div class="map-status" id="mapStatus">
+      <span id="mapStatusText">Click anywhere on the map to find a quiz location.</span>
+      <button class="map-go" id="mapGoBtn" onclick="goMapPlace()">Let&#x2019;s Go &#8594;</button>
+    </div>
+  </div>
 </div>
 
 <div id="quizLibrary"><div class="section-label" style="max-width:640px;margin:0 auto 14px;padding:0 20px;">Loading quiz library...</div></div>
@@ -254,6 +287,66 @@ async function doSearch(q) {
 
 function goPlace(id, name) {
   window.location.href = `quiz.html?place_id=${id}&place_name=${encodeURIComponent(name)}`;
+}
+
+// ── Map picker ────────────────────────────────────────────────────────────
+let pickMap = null, pickMarker = null, pendingPlace = null;
+
+function openMapPicker() {
+  document.getElementById('mapModal').classList.add('open');
+  if (!pickMap) {
+    pickMap = L.map('pickMap').setView([20, 0], 2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 18
+    }).addTo(pickMap);
+    pickMap.on('click', onMapClick);
+  }
+  setTimeout(() => pickMap.invalidateSize(), 50);
+}
+
+function closeMapPicker() {
+  document.getElementById('mapModal').classList.remove('open');
+}
+
+async function onMapClick(e) {
+  const { lat, lng } = e.latlng;
+  if (pickMarker) pickMarker.remove();
+  pickMarker = L.marker([lat, lng]).addTo(pickMap);
+
+  const statusText = document.getElementById('mapStatusText');
+  const goBtn = document.getElementById('mapGoBtn');
+  statusText.textContent = 'Finding location…';
+  goBtn.style.display = 'none';
+  pendingPlace = null;
+
+  try {
+    // Reverse geocode with Nominatim
+    const nomR = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`, {
+      headers: { 'Accept-Language': 'en' }
+    });
+    const nomD = await nomR.json();
+    const query = nomD.address?.country || nomD.display_name?.split(',').slice(-2).join(',').trim() || '';
+
+    // Find iNat place
+    const inatR = await fetch(`https://api.inaturalist.org/v1/places/autocomplete?q=${encodeURIComponent(query)}&geo=true`);
+    const inatD = await inatR.json();
+    const place = inatD.results?.find(p => [12,2,1].includes(p.place_type)) || inatD.results?.[0];
+
+    if (!place) { statusText.textContent = 'No quiz location found here — try another spot.'; return; }
+
+    pendingPlace = { id: place.id, name: place.display_name };
+    statusText.innerHTML = `<strong>${place.display_name}</strong>`;
+    goBtn.style.display = 'block';
+  } catch {
+    statusText.textContent = 'Could not look up this location — try again.';
+  }
+}
+
+function goMapPlace() {
+  if (!pendingPlace) return;
+  closeMapPicker();
+  goPlace(pendingPlace.id, pendingPlace.name);
 }
 </script>
 </body>
