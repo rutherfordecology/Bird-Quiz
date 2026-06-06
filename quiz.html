@@ -15,6 +15,8 @@ const PLACE_ID   = params.get('place_id');
 const PLACE_NAME = decodeURIComponent(params.get('place_name') || 'Unknown Place');
 
 let PLACE_LAT = null, PLACE_LNG = null, COUNTRY_CODE = null;
+let PLACE_BBOX = null;   // {minLat, maxLat, minLng, maxLng} from iNat bounding box
+let IS_COUNTRY = false;  // true if the searched place itself is a country
 const YEAR_FROM  = new Date().getFullYear() - 15;
 const YEAR_RANGE = `${YEAR_FROM},${new Date().getFullYear()}`;
 
@@ -54,17 +56,36 @@ async function fetchPlaceMeta(placeId) {
     const r = await fetch(`https://api.inaturalist.org/v1/places/${placeId}`);
     const d = await r.json();
     const place = d.results?.[0];
+
+    // Centroid
     const coords = place?.point_geojson?.coordinates;
     if (coords) { PLACE_LNG = coords[0]; PLACE_LAT = coords[1]; }
 
-    // Walk ancestor hierarchy to find country
-    const ancestorIds = (place?.ancestor_place_ids || []).join(',');
-    if (ancestorIds) {
-      const ar = await fetch(`https://api.inaturalist.org/v1/places?id=${ancestorIds}&per_page=100`);
-      const ad = await ar.json();
-      // Match by ISO code lookup rather than place_type (iNat place_types are inconsistent)
-      const country = (ad.results || []).find(p => toISO(p.display_name));
-      if (country) COUNTRY_CODE = toISO(country.display_name);
+    // Bounding box (used for sub-national GBIF queries)
+    const bbox = place?.bounding_box_geojson;
+    if (bbox?.coordinates?.[0]) {
+      const pts = bbox.coordinates[0];
+      const lats = pts.map(p => p[1]), lngs = pts.map(p => p[0]);
+      PLACE_BBOX = {
+        minLat: Math.min(...lats), maxLat: Math.max(...lats),
+        minLng: Math.min(...lngs), maxLng: Math.max(...lngs),
+      };
+    }
+
+    // Check if the place itself is a country
+    IS_COUNTRY = toISO(place?.display_name) !== null;
+
+    // Walk ancestor hierarchy to find country code
+    if (!IS_COUNTRY) {
+      const ancestorIds = (place?.ancestor_place_ids || []).join(',');
+      if (ancestorIds) {
+        const ar = await fetch(`https://api.inaturalist.org/v1/places?id=${ancestorIds}&per_page=100`);
+        const ad = await ar.json();
+        const country = (ad.results || []).find(p => toISO(p.display_name));
+        if (country) COUNTRY_CODE = toISO(country.display_name);
+      }
+    } else {
+      COUNTRY_CODE = toISO(place.display_name);
     }
   } catch {}
 }
@@ -133,11 +154,27 @@ function updateLoadingProgress(text) {
 }
 
 // ── GBIF-first loading ─────────────────────────────────────────────────────
+async function buildGBIFUrl() {
+  if (IS_COUNTRY && COUNTRY_CODE) {
+    // Whole-country query — use country code
+    return `https://api.gbif.org/v1/occurrence/search?country=${COUNTRY_CODE}&taxonKey=212&facet=speciesKey&facetMincount=1&facetLimit=1000&limit=0&year=${YEAR_RANGE}`;
+  }
+  if (PLACE_BBOX) {
+    // Sub-national place — use bounding box with small padding (0.2 deg ≈ 22km)
+    const PAD = 0.2;
+    const b = PLACE_BBOX;
+    return `https://api.gbif.org/v1/occurrence/search?decimalLatitude=${(b.minLat-PAD).toFixed(4)},${(b.maxLat+PAD).toFixed(4)}&decimalLongitude=${(b.minLng-PAD).toFixed(4)},${(b.maxLng+PAD).toFixed(4)}&taxonKey=212&facet=speciesKey&facetMincount=1&facetLimit=500&limit=0&year=${YEAR_RANGE}`;
+  }
+  if (COUNTRY_CODE) {
+    // Fallback: have country but no bbox — use country
+    return `https://api.gbif.org/v1/occurrence/search?country=${COUNTRY_CODE}&taxonKey=212&facet=speciesKey&facetMincount=1&facetLimit=1000&limit=0&year=${YEAR_RANGE}`;
+  }
+  throw new Error('No geographic data available for GBIF query');
+}
+
 async function loadFromGBIF() {
-  // Get occurrence facets for country (includes eBird, museum, iNat, all sources)
-  const r = await fetch(
-    `https://api.gbif.org/v1/occurrence/search?country=${COUNTRY_CODE}&taxonKey=212&facet=speciesKey&facetMincount=1&facetLimit=1000&limit=0&year=${YEAR_RANGE}`
-  );
+  const gbifUrl = await buildGBIFUrl();
+  const r = await fetch(gbifUrl);
   if (!r.ok) throw new Error('GBIF unavailable');
   const d = await r.json();
 
@@ -145,7 +182,7 @@ async function loadFromGBIF() {
     .map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }))
     .sort((a,b) => b.count - a.count);
 
-  if (speciesItems.length < 8) throw new Error('Not enough GBIF data for this country');
+  if (speciesItems.length < 8) throw new Error('Not enough GBIF data for this location');
 
   const birds  = [];
   const BATCH  = 12;
@@ -210,15 +247,15 @@ async function boot() {
     placeId:   PLACE_ID,
     backUrl:   'index.html',
     easyBirds: [],
-    version:   'v4.1',
+    version:   'v4.5',
   });
 
   // Fetch place metadata (centroid + country code) — needed before GBIF call
   updateLoadingProgress('Identifying location...');
   await fetchPlaceMeta(PLACE_ID);
 
-  if (COUNTRY_CODE) {
-    // ── GBIF-first path ────────────────────────────────────────────────────
+  if (COUNTRY_CODE || PLACE_BBOX) {
+    // ── GBIF-first path (country query for country-level, bbox query for sub-national)
     updateLoadingProgress(`Loading from GBIF + eBird for ${PLACE_NAME}...`);
     try {
       await loadFromGBIF();
