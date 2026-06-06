@@ -193,13 +193,11 @@ function getOptions(correct, pool) {
     scored.sort((a, b) => b.depth - a.depth || b.shared - a.shared);
 
     // Build distractors: at least 2 from the top 6, 1 allowed from top 12 for variety
-    const top6  = scored.slice(0, Math.min(6,  scored.length));
-    const top12 = scored.slice(6, Math.min(12, scored.length));
-    const picks = shuffle(top6).slice(0, 3);
-    if (picks.length < 3 && top12.length > 0) {
-      picks.push(...shuffle(top12).slice(0, 3 - picks.length));
-    }
-    return shuffle([correct.name, ...picks.slice(0, 3).map(s => s.b.name)]);
+    // Always include the closest relative, then pick 2 more from the next best
+    const closest = scored[0];
+    const rest    = shuffle(scored.slice(1, Math.min(7, scored.length))).slice(0, 2);
+    const picks   = [closest, ...rest];
+    return shuffle([correct.name, ...picks.map(s => s.b.name)]);
   }
 
   // Fallback: same genus first, then rest
