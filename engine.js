@@ -718,7 +718,7 @@ async function submitScore(totalSeen) {
     if (!data.boards[key]) data.boards[key] = [];
     data.boards[key].push({ name, score: totalSeen, date: new Date().toISOString().split('T')[0] });
     data.boards[key].sort((a, b) => a.score - b.score);
-    data.boards[key] = data.boards[key].slice(0, 20);
+    data.boards[key] = data.boards[key].slice(0, 10);
 
     const body = JSON.stringify({
       message: `Leaderboard: ${name} scored ${totalSeen} at ${CFG.placeName}`,
