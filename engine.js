@@ -1,7 +1,7 @@
-// WhatDatBird? Quiz Engine v5.30
+// WhatDatBird? Quiz Engine v5.31
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.30';
+const APP_VERSION = 'v5.31';
 
 // ── Config ────────────────────────────────────────────────────────────────
 let CFG = {};
@@ -91,7 +91,7 @@ async function fetchInatImage(bird) {
       // taxa photo first, then faves-sorted observations
       const photos = [...(preloaded ? [preloaded] : []), ...sorted];
 
-      // If still nothing, try taxa endpoint directly
+      // If still nothing, look up iNat taxon by name (handles genus reclassifications) and retry
       if (!photos.length) {
         const taxaUrl = inatId
           ? `https://api.inaturalist.org/v1/taxa/${inatId}`
@@ -99,9 +99,26 @@ async function fetchInatImage(bird) {
         const tr = await fetch(taxaUrl);
         if (tr.ok) {
           const td = await tr.json();
-          const taxon = inatId ? td.results?.[0] : td.results?.find(t => t.name.toLowerCase() === latin.toLowerCase());
-          const dp = taxon?.default_photo?.url?.replace('/square.', '/medium.');
-          if (dp) photos.push(dp);
+          const epithet = latin.split(' ')[1]?.toLowerCase();
+          const taxon = inatId ? td.results?.[0] : td.results?.find(t => {
+            if (t.name.toLowerCase() === latin.toLowerCase()) return true;
+            return epithet && t.name.split(' ')[1]?.toLowerCase() === epithet;
+          });
+          if (taxon) {
+            const dp = taxon.default_photo?.url?.replace('/square.', '/medium.');
+            if (dp) photos.push(dp);
+            // Also retry observations with the correct taxon_id
+            if (taxon.id && !inatId) {
+              const or2 = await fetch(`https://api.inaturalist.org/v1/observations?taxon_id=${taxon.id}&photos=true&per_page=10&quality_grade=research&order_by=faves&iconic_taxa=Aves`);
+              if (or2.ok) {
+                const od2 = await or2.json();
+                for (const o of (od2.results || [])) {
+                  const src = o.photos?.[0]?.url?.replace('/square.', '/medium.');
+                  if (src && !seen.has(src)) { seen.add(src); photos.push(src); }
+                }
+              }
+            }
+          }
         }
       }
 
