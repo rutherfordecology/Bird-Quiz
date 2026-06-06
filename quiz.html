@@ -10,21 +10,60 @@
 <div id="app"></div>
 <script src="engine.js"></script>
 <script>
-const params    = new URLSearchParams(window.location.search);
-const PLACE_ID  = params.get('place_id');
+const params     = new URLSearchParams(window.location.search);
+const PLACE_ID   = params.get('place_id');
 const PLACE_NAME = decodeURIComponent(params.get('place_name') || 'Unknown Place');
 
-// ── Species loading ────────────────────────────────────────────────────────
-let PLACE_LAT = null, PLACE_LNG = null;
+// ── iNat species loading ───────────────────────────────────────────────────
+let PLACE_LAT = null, PLACE_LNG = null, COUNTRY_CODE = null;
 const YEAR_FILTER = `&d1=${new Date().getFullYear() - 15}-01-01`;
 
 async function prefetchCentroid(placeId) {
   try {
     const r = await fetch(`https://api.inaturalist.org/v1/places/${placeId}`);
     const d = await r.json();
-    const coords = d.results?.[0]?.point_geojson?.coordinates;
+    const place = d.results?.[0];
+    const coords = place?.point_geojson?.coordinates;
     if (coords) { PLACE_LNG = coords[0]; PLACE_LAT = coords[1]; }
+    // Try to get country code from ancestor places
+    const ancestorIds = (place?.ancestor_place_ids || []).join(',');
+    if (ancestorIds) {
+      const ar = await fetch(`https://api.inaturalist.org/v1/places?id=${ancestorIds}&per_page=100`);
+      const ad = await ar.json();
+      const country = (ad.results||[]).find(p => p.place_type===12 || p.place_type===2);
+      if (country) COUNTRY_CODE = inatCountryToISO(country.display_name);
+    }
   } catch {}
+}
+
+// Map common country names to ISO 3166-1 alpha-2 codes for GBIF
+const ISO_CODES = {
+  'Afghanistan':'AF','Albania':'AL','Algeria':'DZ','Angola':'AO','Argentina':'AR',
+  'Australia':'AU','Austria':'AT','Azerbaijan':'AZ','Bangladesh':'BD','Belgium':'BE',
+  'Bhutan':'BT','Bolivia':'BO','Botswana':'BW','Brazil':'BR','Bulgaria':'BG',
+  'Cambodia':'KH','Cameroon':'CM','Canada':'CA','Chile':'CL','China':'CN',
+  'Colombia':'CO','Costa Rica':'CR','Croatia':'HR','Cuba':'CU','Czech Republic':'CZ',
+  'Denmark':'DK','Ecuador':'EC','Egypt':'EG','Ethiopia':'ET','Fiji':'FJ',
+  'Finland':'FI','France':'FR','French Polynesia':'PF','Germany':'DE','Ghana':'GH',
+  'Greece':'GR','Guatemala':'GT','Guyana':'GY','Honduras':'HN','Hungary':'HU',
+  'Iceland':'IS','India':'IN','Indonesia':'ID','Iran':'IR','Iraq':'IQ',
+  'Ireland':'IE','Israel':'IL','Italy':'IT','Jamaica':'JM','Japan':'JP',
+  'Jordan':'JO','Kazakhstan':'KZ','Kenya':'KE','Laos':'LA','Lebanon':'LB',
+  'Madagascar':'MG','Malawi':'MW','Malaysia':'MY','Mexico':'MX','Mongolia':'MN',
+  'Morocco':'MA','Mozambique':'MZ','Myanmar':'MM','Namibia':'NA','Nepal':'NP',
+  'Netherlands':'NL','New Caledonia':'NC','New Zealand':'NZ','Nicaragua':'NI',
+  'Nigeria':'NG','Norway':'NO','Pakistan':'PK','Panama':'PA','Papua New Guinea':'PG',
+  'Paraguay':'PY','Peru':'PE','Philippines':'PH','Poland':'PL','Portugal':'PT',
+  'Romania':'RO','Russia':'RU','Rwanda':'RW','Samoa':'WS','Saudi Arabia':'SA',
+  'Singapore':'SG','Solomon Islands':'SB','South Africa':'ZA','South Korea':'KR',
+  'Spain':'ES','Sri Lanka':'LK','Sudan':'SD','Sweden':'SE','Switzerland':'CH',
+  'Taiwan':'TW','Tanzania':'TZ','Thailand':'TH','Tonga':'TO','Trinidad and Tobago':'TT',
+  'Turkey':'TR','Uganda':'UG','Ukraine':'UA','United Kingdom':'GB','United States':'US',
+  'Uruguay':'UY','Vanuatu':'VU','Venezuela':'VE','Vietnam':'VN','Zambia':'ZM',
+  'Zimbabwe':'ZW',
+};
+function inatCountryToISO(name) {
+  return ISO_CODES[name] || ISO_CODES[name?.split(',')[0]?.trim()] || null;
 }
 
 async function loadSpecies(placeId, bufferKm = 0) {
@@ -44,23 +83,117 @@ async function loadSpecies(placeId, bufferKm = 0) {
       ancestorIds: item.taxon.ancestor_ids || [],
       count:       item.count,
       wikiUrl:     item.taxon.wikipedia_url || null,
-      defaultPhoto:item.taxon.default_photo?.medium_url || null,
       note:        null,
       seabird:     false,
     }));
 }
 
-function computeTiers(birds) {
-  const n = birds.length;
-  const easyCount    = Math.min(25, n);
-  const hardTarget   = Math.floor(n * 0.9);
-  const hardCount    = Math.min(150, Math.max(easyCount + 1, hardTarget));
-  const easy     = birds.slice(0, easyCount);
-  const hard     = hardCount > easyCount     ? birds.slice(0, hardCount) : null;
-  const complete = n > (hardCount||easyCount) ? birds                    : null;
+// ── GBIF enrichment ────────────────────────────────────────────────────────
+// Step 1: enrich iNat birds with GBIF taxonomy (real family/order keys as ancestorIds)
+async function enrichWithGBIFTaxonomy(birds) {
+  const BATCH = 10;
+  for (let i = 0; i < birds.length; i += BATCH) {
+    await Promise.all(birds.slice(i, i + BATCH).map(async bird => {
+      try {
+        const r = await fetch(
+          `https://api.gbif.org/v1/species/match?name=${encodeURIComponent(bird.latin)}&class=Aves&verbose=false`
+        );
+        const d = await r.json();
+        if (d.matchType !== 'NONE' && d.confidence >= 90 && d.rank === 'SPECIES') {
+          bird.family = d.family || bird.family || '';
+          bird.order  = d.order  || bird.order  || '';
+          // Use real GBIF taxon keys as ancestorIds - much better for option grouping
+          bird.ancestorIds = [d.classKey, d.orderKey, d.familyKey, d.genusKey].filter(Boolean);
+          bird.gbifKey = d.usageKey;
+        }
+      } catch {}
+    }));
+  }
+}
+
+// Step 2: fetch GBIF-only species (historical/museum records not in iNat) for Complete tier
+async function fetchGBIFOnlySpecies(countryCode, inatBirds) {
+  if (!countryCode) return [];
+  try {
+    // Get all bird species keys recorded in country from GBIF
+    const r = await fetch(
+      `https://api.gbif.org/v1/occurrence/search?country=${countryCode}&taxonKey=212&facet=speciesKey&facetMincount=1&facetLimit=1000&limit=0`
+    );
+    const d = await r.json();
+    const gbifCounts = {};
+    for (const item of (d.facets?.[0]?.counts || [])) gbifCounts[parseInt(item.name)] = parseInt(item.count);
+
+    // Find keys not already in iNat list
+    const inatGbifKeys = new Set(inatBirds.map(b => b.gbifKey).filter(Boolean));
+    const gbifOnlyKeys = Object.entries(gbifCounts)
+      .filter(([key]) => !inatGbifKeys.has(parseInt(key)))
+      .sort((a, b) => b[1] - a[1]) // most recorded first
+      .slice(0, 150)                // cap at 150 additional species
+      .map(([key]) => parseInt(key));
+
+    if (!gbifOnlyKeys.length) return [];
+
+    // Look up species details in batches of 20
+    const extra = [];
+    const BATCH = 20;
+    for (let i = 0; i < gbifOnlyKeys.length; i += BATCH) {
+      const batch = gbifOnlyKeys.slice(i, i + BATCH);
+      const details = await Promise.all(batch.map(async key => {
+        try {
+          const r = await fetch(`https://api.gbif.org/v1/species/${key}`);
+          const d = await r.json();
+          if (d.rank !== 'SPECIES' || d.class !== 'Aves') return null;
+          // Get common name if available
+          let name = d.canonicalName || d.scientificName?.split(' ').slice(0,2).join(' ');
+          try {
+            const vr = await fetch(`https://api.gbif.org/v1/species/${key}/vernacularNames?limit=20`);
+            const vd = await vr.json();
+            const eng = (vd.results||[]).find(v => v.language==='eng');
+            if (eng) name = eng.vernacularName;
+          } catch {}
+          return {
+            name,
+            latin:       d.canonicalName || d.scientificName?.split(' ').slice(0,2).join(' '),
+            gbifKey:     key,
+            ancestorIds: [d.classKey, d.orderKey, d.familyKey, d.genusKey].filter(Boolean),
+            family:      d.family || '',
+            order:       d.order  || '',
+            count:       null, // no iNat observations
+            wikiUrl:     null,
+            note:        null,
+            seabird:     false,
+            gbifOnly:    true, // flag for UI use
+          };
+        } catch { return null; }
+      }));
+      extra.push(...details.filter(Boolean));
+    }
+    return extra;
+  } catch { return []; }
+}
+
+// ── Tier computation ───────────────────────────────────────────────────────
+function computeTiers(allBirds) {
+  // iNat birds (have observation count) sorted by count descending
+  const inatBirds = allBirds.filter(b => b.count != null);
+  const gbifOnly  = allBirds.filter(b => b.gbifOnly);
+  const n = inatBirds.length;
+
+  const easyCount  = Math.min(25, n);
+  const hardTarget = Math.floor(n * 0.9);
+  const hardCount  = Math.min(150, Math.max(easyCount + 1, hardTarget));
+
+  const easy = inatBirds.slice(0, easyCount);
+  const hard = hardCount > easyCount ? inatBirds.slice(0, hardCount) : null;
+  // Complete = all iNat + GBIF-only historical records
+  const complete = gbifOnly.length > 0
+    ? [...inatBirds, ...gbifOnly]
+    : (n > (hard ? hardCount : easyCount) ? inatBirds : null);
+
   return { easy, hard, complete };
 }
 
+// ── Boot ───────────────────────────────────────────────────────────────────
 const MIN_SPECIES  = 15;
 const BUFFER_STEPS = [0, 5, 10, 25, 50];
 
@@ -71,7 +204,6 @@ async function boot() {
     return;
   }
 
-  // Show loading
   initEngine({
     placeName: PLACE_NAME,
     placeId:   PLACE_ID,
@@ -80,28 +212,49 @@ async function boot() {
     version:   'v4.0',
   });
 
-  // Pre-fetch centroid in parallel
-  prefetchCentroid(PLACE_ID);
+  // Pre-fetch centroid + country code in parallel
+  const centroidPromise = prefetchCentroid(PLACE_ID);
 
-  // Auto-escalate buffer until enough species
+  // Auto-escalate buffer until enough iNat species
+  let inatBirds = [];
+  let usedBuffer = 0;
   for (const buf of BUFFER_STEPS) {
     try {
       setState({ buffer: buf });
-      const birds = await loadSpecies(PLACE_ID, buf);
-      if (birds.length >= MIN_SPECIES || buf === BUFFER_STEPS[BUFFER_STEPS.length - 1]) {
-        if (birds.length < 8) throw new Error('Not enough species data for this location (need at least 8).');
-        const { easy, hard, complete } = computeTiers(birds);
-        CFG.easyBirds     = easy;
-        CFG.hardBirds     = hard;
-        CFG.completeBirds = complete;
-        setState({ phase: 'intro' });
-        return;
-      }
+      inatBirds = await loadSpecies(PLACE_ID, buf);
+      if (inatBirds.length >= MIN_SPECIES || buf === BUFFER_STEPS[BUFFER_STEPS.length - 1]) break;
     } catch (err) {
       setState({ phase: 'error', loadError: err.message });
       return;
     }
+    usedBuffer = buf;
   }
+
+  if (inatBirds.length < 8) {
+    setState({ phase:'error', loadError:'Not enough species data for this location (need at least 8).' });
+    return;
+  }
+
+  // Show intro with iNat-only tiers while GBIF enrichment runs in background
+  const { easy, hard, complete } = computeTiers(inatBirds);
+  CFG.easyBirds     = easy;
+  CFG.hardBirds     = hard;
+  CFG.completeBirds = complete;
+  setState({ phase: 'intro' });
+
+  // GBIF enrichment runs in background after page is shown
+  await centroidPromise;
+  enrichWithGBIFTaxonomy(inatBirds).then(async () => {
+    // After taxonomy is enriched, fetch GBIF-only species for Complete tier
+    const gbifOnly = await fetchGBIFOnlySpecies(COUNTRY_CODE, inatBirds);
+    if (gbifOnly.length > 0) {
+      const { easy, hard, complete } = computeTiers([...inatBirds, ...gbifOnly]);
+      CFG.easyBirds     = easy;
+      CFG.hardBirds     = hard;
+      CFG.completeBirds = complete;
+      if (state.phase === 'intro') render(); // refresh tier counts
+    }
+  });
 }
 
 boot();
