@@ -125,7 +125,7 @@ async function processBatch(speciesItems) {
         family:      gd.family  || '',
         order:       gd.order   || '',
         count,                          // GBIF count includes eBird records
-        wikiUrl:     inat?.wikipedia_url || null,
+        wikiUrl:     inat?.wikipedia_url || `https://en.wikipedia.org/wiki/${latin.replace(/ /g,'_')}`,
         inatId:      inat?.id || null,
         note:        null,
         seabird:     false,
