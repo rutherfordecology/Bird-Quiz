@@ -63,21 +63,12 @@ async function fetchInatImage(bird) {
 
   if (!inatPhotoCache[cacheKey]) {
     try {
-      const taxaUrl = inatId
-        ? `https://api.inaturalist.org/v1/taxa/${inatId}`
-        : `https://api.inaturalist.org/v1/taxa?q=${encodeURIComponent(latin)}&rank=species&per_page=1`;
-      const obsUrl = `https://api.inaturalist.org/v1/observations?taxon_name=${encodeURIComponent(latin)}&photos=true&per_page=20&quality_grade=research&order_by=faves&iconic_taxa=Aves`;
-
-      // Run taxa + observations in parallel
-      const [tr, or] = await Promise.all([fetch(taxaUrl), fetch(obsUrl)]);
       const photos = [];
+      const preloaded = typeof bird === 'object' ? bird.defaultPhoto : null;
+      if (preloaded) photos.push(preloaded);
 
-      if (tr.ok) {
-        const td = await tr.json();
-        const taxon = inatId ? td.results?.[0] : td.results?.find(t => t.name.toLowerCase() === latin.toLowerCase());
-        const defaultPhoto = taxon?.default_photo?.url?.replace('/square.', '/medium.');
-        if (defaultPhoto) photos.push(defaultPhoto);
-      }
+      // Fetch carousel photos from observations (single API call)
+      const or = await fetch(`https://api.inaturalist.org/v1/observations?taxon_name=${encodeURIComponent(latin)}&photos=true&per_page=20&quality_grade=research&order_by=faves&iconic_taxa=Aves`);
       if (or.ok) {
         const od = await or.json();
         for (const o of (od.results || [])) {
@@ -87,6 +78,20 @@ async function fetchInatImage(bird) {
               if (src && !photos.includes(src)) photos.push(src);
             }
           }
+        }
+      }
+
+      // If no defaultPhoto, fall back to taxa endpoint
+      if (!photos.length) {
+        const taxaUrl = inatId
+          ? `https://api.inaturalist.org/v1/taxa/${inatId}`
+          : `https://api.inaturalist.org/v1/taxa?q=${encodeURIComponent(latin)}&rank=species&per_page=1`;
+        const tr = await fetch(taxaUrl);
+        if (tr.ok) {
+          const td = await tr.json();
+          const taxon = inatId ? td.results?.[0] : td.results?.find(t => t.name.toLowerCase() === latin.toLowerCase());
+          const dp = taxon?.default_photo?.url?.replace('/square.', '/medium.');
+          if (dp) photos.push(dp);
         }
       }
 

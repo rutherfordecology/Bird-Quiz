@@ -121,15 +121,16 @@ async function processBatch(speciesItems) {
       return {
         name,
         latin,
-        gbifKey:     key,
-        ancestorIds: [gd.classKey, gd.orderKey, gd.familyKey, gd.genusKey].filter(Boolean),
-        family:      gd.family  || '',
-        order:       gd.order   || '',
-        count,                          // GBIF count includes eBird records
-        wikiUrl:     inat?.wikipedia_url || `https://en.wikipedia.org/wiki/${latin.replace(/ /g,'_')}`,
-        inatId:      inat?.id || null,
-        note:        null,
-        seabird:     false,
+        gbifKey:      key,
+        ancestorIds:  [gd.classKey, gd.orderKey, gd.familyKey, gd.genusKey].filter(Boolean),
+        family:       gd.family  || '',
+        order:        gd.order   || '',
+        count,
+        wikiUrl:      inat?.wikipedia_url || `https://en.wikipedia.org/wiki/${latin.replace(/ /g,'_')}`,
+        inatId:       inat?.id || null,
+        defaultPhoto: inat?.default_photo?.url?.replace('/square.', '/medium.') || null,
+        note:         null,
+        seabird:      false,
       };
     } catch { return null; }
   }))).filter(Boolean);
@@ -308,7 +309,8 @@ async function loadFromInat(bufferKm = 0) {
       inatId:        item.taxon.id,
       ancestorIds:   item.taxon.ancestor_ids || [],
       count:         item.count,
-      wikiUrl:       item.taxon.wikipedia_url || null,
+      wikiUrl:       item.taxon.wikipedia_url || `https://en.wikipedia.org/wiki/${item.taxon.name.replace(/ /g,'_')}`,
+      defaultPhoto:  item.taxon.default_photo?.url?.replace('/square.', '/medium.') || null,
       note:          null,
       seabird:       false,
       indigenousName: indNames[item.taxon.name] || null,
