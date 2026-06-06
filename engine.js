@@ -143,18 +143,37 @@ function shuffle(arr) {
 }
 
 function getOptions(correct, pool) {
-  const others = shuffle(pool.filter(b => b.name !== correct.name));
-  const correctSet = new Set(correct.ancestorIds || []);
-  if (correctSet.size > 0) {
-    const scored = others.map(b => ({ b, score:(b.ancestorIds||[]).filter(id=>correctSet.has(id)).length }));
-    scored.sort((a,b) => b.score-a.score);
-    const picks = shuffle(scored.slice(0, Math.min(6,scored.length))).slice(0,3).map(s=>s.b.name);
-    return shuffle([correct.name, ...picks]);
+  const others     = shuffle(pool.filter(b => b.name !== correct.name));
+  const correctIds = correct.ancestorIds || [];
+  const correctSet = new Set(correctIds);
+
+  if (correctSet.size > 0 && others.length >= 3) {
+    // Score by deepest shared ancestor position (later in the array = more specific)
+    const scored = others.map(b => {
+      const shared = (b.ancestorIds || []).filter(id => correctSet.has(id));
+      // Use the highest index of any shared ancestor in the correct bird's ancestor list
+      const depth = shared.length > 0
+        ? Math.max(...shared.map(id => correctIds.indexOf(id)))
+        : -1;
+      return { b, depth, shared: shared.length };
+    });
+    scored.sort((a, b) => b.depth - a.depth || b.shared - a.shared);
+
+    // Build distractors: at least 2 from the top 6, 1 allowed from top 12 for variety
+    const top6  = scored.slice(0, Math.min(6,  scored.length));
+    const top12 = scored.slice(6, Math.min(12, scored.length));
+    const picks = shuffle(top6).slice(0, 3);
+    if (picks.length < 3 && top12.length > 0) {
+      picks.push(...shuffle(top12).slice(0, 3 - picks.length));
+    }
+    return shuffle([correct.name, ...picks.slice(0, 3).map(s => s.b.name)]);
   }
-  const genus = correct.latin?.split(' ')[0] || '';
-  const sameGenus = others.filter(b => b.latin?.split(' ')[0]===genus);
-  const rest      = others.filter(b => b.latin?.split(' ')[0]!==genus);
-  return shuffle([correct.name, ...[...sameGenus,...rest].slice(0,3).map(b=>b.name)]);
+
+  // Fallback: same genus first, then rest
+  const genus    = correct.latin?.split(' ')[0] || '';
+  const sameGenus = others.filter(b => b.latin?.split(' ')[0] === genus);
+  const rest      = others.filter(b => b.latin?.split(' ')[0] !== genus);
+  return shuffle([correct.name, ...[...sameGenus, ...rest].slice(0, 3).map(b => b.name)]);
 }
 
 // ── State ─────────────────────────────────────────────────────────────────
