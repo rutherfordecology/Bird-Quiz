@@ -8,7 +8,7 @@ body {
 }
 #app { width: 100%; max-width: 500px; position: relative; }
 
-@keyframes fadeUp   { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeIn   { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
 @keyframes fadeIn   { from{opacity:0} to{opacity:1} }
 @keyframes pop      { 0%{transform:scale(0.7)} 60%{transform:scale(1.15)} 100%{transform:scale(1)} }
 @keyframes wiggle   { 0%{transform:rotate(0)} 25%{transform:rotate(-8deg)} 75%{transform:rotate(8deg)} 100%{transform:rotate(0)} }
@@ -132,7 +132,7 @@ body {
 .option.wrong   .opt-indigenous { color:#c47a00; }
 
 /* Field note */
-.field-note { background:#e8f4ef; border:1.5px solid #6dba9a; border-radius:12px; padding:14px 16px; animation:fadeUp 0.4s ease both; }
+.field-note { background:#e8f4ef; border:1.5px solid #6dba9a; border-radius:12px; padding:14px 16px; animation:fadeIn 0.4s ease both; }
 .fn-head { margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid rgba(109,186,154,0.3); }
 .fn-species-name    { font-size:1.15rem; font-weight:900; color:#1a5940; line-height:1.2; }
 .fn-species-samoan  { font-size:1.15rem; font-weight:900; color:#8a6020; margin-top:2px; }
@@ -146,7 +146,7 @@ body {
 .wrong-note p { color:#8a2c2c; font-size:0.8rem; font-weight:600; }
 
 /* Result */
-.result { text-align:center; animation:fadeUp 0.5s ease both; }
+.result { text-align:center; animation:fadeIn 0.5s ease both; }
 .result .trophy { font-size:5rem; margin:16px 0; animation:celebrate 0.6s ease; display:block; }
 .result h2 { font-size:2rem; font-weight:900; color:#1a5940; margin-bottom:8px; }
 .result .stat { color:#9b9890; font-size:0.9rem; margin-bottom:4px; font-weight:600; }
