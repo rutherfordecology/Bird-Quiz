@@ -298,7 +298,7 @@ async function loadSpecies(placeId) {
       seabird:      false,
     }));
   if (birds.length < 8) throw new Error('Not enough species data for this location (need at least 8).');
-  STANDARD_BIRDS = birds.slice(0, 30);
+  STANDARD_BIRDS = birds.slice(0, 20);
   EXPERT_BIRDS   = birds;
   return birds.length;
 }
@@ -412,7 +412,8 @@ function render(){
   if (state.phase === 'intro') {
     const total = EXPERT_BIRDS.length;
     const std = STANDARD_BIRDS.length;
-    app.innerHTML = header + `
+    const hasExpert = total > std;
+    const modeGrid = hasExpert ? `
       <div class="mode-grid">
         <button class="mode-btn ${state.mode==='standard'?'active':''}" onclick="setMode('standard')">
           <div class="mode-emoji">🌿</div>
@@ -426,7 +427,11 @@ function render(){
           <div class="mode-title">Expert</div>
           <div class="mode-desc">All species with iNaturalist records here.</div>
         </button>
-      </div>
+      </div>` : `
+      <div class="info-box" style="margin-bottom:12px">
+        <p>🌿 <strong>${total} species</strong> recorded at this location — all included in this quiz.</p>
+      </div>`;
+    app.innerHTML = header + modeGrid + `
       <div class="info-box">
         <p>🎯 Get <strong>${STREAK_TARGET} correct in a row</strong> to win! Miss one and the streak resets — tricky birds keep coming back. Photos are real iNaturalist observations. 🌟</p>
       </div>
