@@ -12,6 +12,14 @@
 <div id="app"></div>
 <script src="engine.js"></script>
 <script>
+window.onerror = (msg, src, line) => {
+  document.getElementById('app').innerHTML = `<div style="padding:2rem;font-family:sans-serif;color:#8a2c2c"><strong>Error loading quiz</strong><br><small>${msg}<br>${src} line ${line}</small><br><br><a href="index.html">← Back</a></div>`;
+};
+window.onunhandledrejection = e => {
+  document.getElementById('app').innerHTML = `<div style="padding:2rem;font-family:sans-serif;color:#8a2c2c"><strong>Error loading quiz</strong><br><small>${e.reason}</small><br><br><a href="index.html">← Back</a></div>`;
+};
+</script>
+<script>
 const params     = new URLSearchParams(window.location.search);
 const PLACE_ID   = params.get('place_id');
 const PLACE_NAME = decodeURIComponent(params.get('place_name') || 'Unknown Place');
