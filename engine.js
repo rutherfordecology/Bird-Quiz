@@ -1,7 +1,7 @@
-// WhatDatBird? Quiz Engine v5.43
+// WhatDatBird? Quiz Engine v5.44
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.43';
+const APP_VERSION = 'v5.44';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -399,6 +399,42 @@ function render() {
   renderQuiz(app);
 }
 
+let introLbLoaded = false;
+async function toggleIntroLeaderboard() {
+  const panel = document.getElementById('introLbPanel');
+  if (!panel) return;
+  if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+  if (introLbLoaded) return;
+  introLbLoaded = true;
+  panel.innerHTML = '<p style="text-align:center;color:#9b9890;font-size:0.85rem">Loading…</p>';
+  try {
+    const r = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${LB_FILE}`, {
+      headers: { Authorization: `token ${GH_TOKEN}`, Accept: 'application/vnd.github.v3+json' }
+    });
+    if (!r.ok) throw new Error();
+    const d = await r.json();
+    const data = JSON.parse(atob(d.content.replace(/\n/g,'')));
+    const MODES = [{key:'easy',label:'Common'},{key:'hard',label:'Birder'},{key:'complete',label:'Complete'},{key:'rarity',label:'Rarity'}];
+    const html = MODES.map(({key, label}) => {
+      const entries = data.boards?.[`${CFG.placeId}_${key}`] || [];
+      if (!entries.length) return '';
+      return `<div style="margin-bottom:14px">
+        <div class="lb-title" style="margin-bottom:6px">&#127942; ${label}</div>
+        ${entries.map((e,i) => `<div class="lb-row-item">
+          <span class="lb-rank">${i+1}</span>
+          <span class="lb-name">${e.name}</span>
+          <span class="lb-score">${e.score} birds</span>
+          <span class="lb-date">${e.date}</span>
+        </div>`).join('')}
+      </div>`;
+    }).join('');
+    panel.innerHTML = html || '<p style="text-align:center;color:#9b9890;font-size:0.85rem">No scores yet for this place.</p>';
+  } catch {
+    panel.innerHTML = '<p style="text-align:center;color:#9b9890;font-size:0.85rem">Could not load leaderboards.</p>';
+  }
+}
+
 function renderIntro(app, header) {
   const easy     = CFG.easyBirds;
   const hard     = CFG.hardBirds;
@@ -449,6 +485,8 @@ function renderIntro(app, header) {
     ${bufferNote}
     <button class="btn-primary" onclick="startQuiz()">Let's Go! &#128640;</button>
     <button class="btn-secondary" onclick="setState({phase:'species'})">&#128203; Species List</button>
+    <button class="btn-secondary" onclick="toggleIntroLeaderboard()">&#127942; Leaderboards</button>
+    <div id="introLbPanel" style="display:none;margin-top:12px"></div>
     <button class="btn-back" onclick="setState({phase:'about'})">&#8505; About WhatDatBird?</button>
     <button class="btn-back" onclick="window.location.href='${CFG.backUrl}'">&#8592; All Quizzes</button>`;
 }
