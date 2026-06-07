@@ -107,6 +107,18 @@
       "place_id": 13186,
       "photo_taxon": null,
       "added": "2026-06-07"
+    },
+    {
+      "name": "WhatDatBird? - Mpigi, UG",
+      "continent": "Other",
+      "country": "Mpigi, UG",
+      "description": "Mpigi, UG",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?place_id=12359&place_name=Mpigi%2C%20UG",
+      "place_id": 12359,
+      "photo_taxon": null,
+      "added": "2026-06-07"
     }
   ]
 }
