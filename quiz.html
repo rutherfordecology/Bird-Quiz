@@ -395,7 +395,11 @@ async function boot() {
   }
 }
 
-boot();
+if (!window.__engineLoaded) {
+  document.getElementById('app').innerHTML = '<div style="padding:2rem;font-family:sans-serif;color:#8a2c2c"><strong>engine.js did not load</strong><br><br><a href="index.html">← Back</a></div>';
+} else {
+  boot();
+}
 </script>
 </body>
 </html>
