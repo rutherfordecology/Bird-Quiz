@@ -93,7 +93,7 @@ const inatIdCache = {};
 async function lookupInatId(latin, commonName) {
   if (inatIdCache[latin] !== undefined) return inatIdCache[latin];
   try {
-    const r = await fetch(`https://api.inaturalist.org/v1/taxa?q=${encodeURIComponent(latin)}&rank=species&per_page=3`);
+    const r = await fetch(`https://api.inaturalist.org/v1/taxa?q=${encodeURIComponent(latin)}&rank=species&per_page=5`);
     if (!r.ok) { inatIdCache[latin] = null; return null; }
     const d = await r.json();
     const epithet = latin.split(' ')[1]?.toLowerCase();
