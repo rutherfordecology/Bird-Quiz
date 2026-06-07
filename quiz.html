@@ -116,9 +116,9 @@ async function processBatch(speciesItems) {
       const inat = (!gd.vernacularName) ? await fetch(
         `https://api.inaturalist.org/v1/taxa?q=${encodeURIComponent(latin)}&rank=species&per_page=5`
       ).then(r => r.json()).then(d => {
-        const t = d.results?.[0];
-        if (!t) return null;
-        if (t.name.toLowerCase() === latin.toLowerCase()) return t;
+        const t = d.results?.find(r => r.name.toLowerCase() === latin.toLowerCase()) || d.results?.[0];
+if (!t) return null;
+if (t.name.toLowerCase() === latin.toLowerCase()) return t;
         // Epithet match is only accepted if common names also share a word (guards against e.g. multiple novaeseelandiae species)
         const epithet = latin.split(' ')[1]?.toLowerCase();
         const tEpithet = t.name.split(' ')[1]?.toLowerCase();
