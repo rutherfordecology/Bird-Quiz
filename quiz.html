@@ -18,7 +18,7 @@ window.onunhandledrejection = e => {
 };
 </script>
 <div id="app"></div>
-<script src="engine.js?v=5.46" onerror="document.getElementById('app').innerHTML='<div style=padding:2rem;font-family:sans-serif;color:#8a2c2c>Failed to fetch engine.js — check network connection.<br><br><a href=index.html>← Back</a></div>'"></script>
+<script src="engine.js?v=5.47" onerror="document.getElementById('app').innerHTML='<div style=padding:2rem;font-family:sans-serif;color:#8a2c2c>Failed to fetch engine.js — check network connection.<br><br><a href=index.html>← Back</a></div>'"></script>
 <script>
 const params     = new URLSearchParams(window.location.search);
 const PLACE_ID   = params.get('place_id');
@@ -269,6 +269,20 @@ async function loadFromGBIF() {
   }
 
   if (!introShown) throw new Error('Could not find enough bird species with English names.');
+
+  // Attach locale-based indigenous names (e.g. Māori for NZ) if available
+  const locale = COUNTRY_CODE ? COUNTRY_LOCALE[COUNTRY_CODE] : null;
+  if (locale) {
+    const baseUrl = COUNTRY_CODE
+      ? `https://api.inaturalist.org/v1/observations/species_counts?country_code=${COUNTRY_CODE}&iconic_taxa=Aves&quality_grade=research&per_page=200&order_by=observations_count&order=desc&d1=${YEAR_FROM}-01-01`
+      : `https://api.inaturalist.org/v1/observations/species_counts?place_id=${PLACE_ID}&iconic_taxa=Aves&quality_grade=research&per_page=200&order_by=observations_count&order=desc&d1=${YEAR_FROM}-01-01`;
+    const indNames = await fetchIndigenousNames(baseUrl, locale);
+    for (const bird of birds) {
+      if (!bird.indigenousName && indNames[bird.latin]) bird.indigenousName = indNames[bird.latin];
+    }
+    if (Object.keys(indNames).length > 0) setTiers(birds); // re-tier with names attached
+  }
+
   return birds;
 }
 
