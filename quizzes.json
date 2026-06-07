@@ -95,6 +95,18 @@
       "place_id": 184909,
       "photo_taxon": null,
       "added": "2026-06-06"
+    },
+    {
+      "name": "WhatDatBird? - Milne Bay, PG",
+      "continent": "Other",
+      "country": "Milne Bay, PG",
+      "description": "Milne Bay, PG",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?place_id=13186&place_name=Milne%20Bay%2C%20PG",
+      "place_id": 13186,
+      "photo_taxon": null,
+      "added": "2026-06-07"
     }
   ]
 }
