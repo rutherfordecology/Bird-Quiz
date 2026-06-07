@@ -1,7 +1,7 @@
-// WhatDatBird? Quiz Engine v5.41
+// WhatDatBird? Quiz Engine v5.42
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.41';
+const APP_VERSION = 'v5.42';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -16,6 +16,37 @@ const GH_TOKEN = ['github','pat','11CD5YDQQ0BqwCXNYdVbgz_5iHfac6fd0MNVZZLhiPrnFn
 const GH_REPO  = 'rutherfordecology/WhatDatBird';
 const GH_FILE  = 'quizzes.json';
 const LB_FILE  = 'leaderboard.json';
+
+// Expand ISO country codes in iNat place names e.g. "Milne Bay, PG" → "Milne Bay, Papua New Guinea"
+const ISO_TO_COUNTRY = {
+  'AF':'Afghanistan','AL':'Albania','DZ':'Algeria','AO':'Angola','AR':'Argentina',
+  'AU':'Australia','AT':'Austria','BD':'Bangladesh','BE':'Belgium','BO':'Bolivia',
+  'BW':'Botswana','BR':'Brazil','BG':'Bulgaria','CA':'Canada','CL':'Chile',
+  'CN':'China','CO':'Colombia','CR':'Costa Rica','HR':'Croatia','CU':'Cuba',
+  'CZ':'Czech Republic','DK':'Denmark','DO':'Dominican Republic','EC':'Ecuador',
+  'EG':'Egypt','SV':'El Salvador','ET':'Ethiopia','FI':'Finland','FR':'France',
+  'DE':'Germany','GH':'Ghana','GR':'Greece','GT':'Guatemala','HT':'Haiti',
+  'HN':'Honduras','HU':'Hungary','IS':'Iceland','IN':'India','ID':'Indonesia',
+  'IE':'Ireland','IT':'Italy','JP':'Japan','KE':'Kenya','MY':'Malaysia',
+  'MG':'Madagascar','MX':'Mexico','MN':'Mongolia','MA':'Morocco','MZ':'Mozambique',
+  'MM':'Myanmar','NP':'Nepal','NL':'Netherlands','NZ':'New Zealand','NI':'Nicaragua',
+  'NG':'Nigeria','NO':'Norway','PK':'Pakistan','PA':'Panama','PY':'Paraguay',
+  'PE':'Peru','PH':'Philippines','PL':'Poland','PT':'Portugal','RO':'Romania',
+  'RU':'Russia','WS':'Samoa','SN':'Senegal','RS':'Serbia','SG':'Singapore',
+  'SK':'Slovakia','ZA':'South Africa','KR':'South Korea','ES':'Spain','LK':'Sri Lanka',
+  'SE':'Sweden','CH':'Switzerland','TW':'Taiwan','TZ':'Tanzania','TH':'Thailand',
+  'TT':'Trinidad and Tobago','UG':'Uganda','UA':'Ukraine','GB':'United Kingdom',
+  'US':'United States','UY':'Uruguay','VE':'Venezuela','VN':'Vietnam','ZM':'Zambia',
+  'ZW':'Zimbabwe','FJ':'Fiji','PG':'Papua New Guinea','SB':'Solomon Islands',
+  'TO':'Tonga','VU':'Vanuatu','KI':'Kiribati','MH':'Marshall Islands',
+  'FM':'Micronesia','NR':'Nauru','PW':'Palau','TV':'Tuvalu',
+};
+function expandPlaceName(name) {
+  // Replace trailing ISO code(s): "Nakaseke, LW, UG" → "Nakaseke, Uganda"
+  return name.replace(/(,\s*[A-Z]{2,3})*,\s*([A-Z]{2})$/, (m, _states, code) =>
+    ISO_TO_COUNTRY[code] ? `, ${ISO_TO_COUNTRY[code]}` : m
+  );
+}
 
 // ── Image fetching ────────────────────────────────────────────────────────
 const inatPhotoCache    = {};
@@ -439,12 +470,15 @@ function renderResult(app, header) {
 
   const lbSection = CFG.placeId ? `
     <div class="lb-entry" id="lbEntry">
-      <div class="lb-label">&#127942; Add your score to the leaderboard</div>
-      <div class="lb-row">
-        <input class="lb-input" id="lbName" type="text" maxlength="24" placeholder="Your name" autocomplete="off">
-        <button class="lb-submit" onclick="submitScore(${state.totalSeen})">Submit</button>
+      <div id="lbLocked" style="text-align:center;color:#9b9890;font-size:0.85rem;padding:8px 0">&#128274; Add this quiz to the library to unlock the leaderboard</div>
+      <div id="lbUnlocked" style="display:none">
+        <div class="lb-label">&#127942; Add your score to the leaderboard</div>
+        <div class="lb-row">
+          <input class="lb-input" id="lbName" type="text" maxlength="24" placeholder="Your name" autocomplete="off">
+          <button class="lb-submit" onclick="submitScore(${state.totalSeen})">Submit</button>
+        </div>
+        <div id="lbMsg" style="font-size:0.78rem;color:#2a7a58;margin-top:6px;min-height:1em;text-align:center;font-weight:700;"></div>
       </div>
-      <div id="lbMsg" style="font-size:0.78rem;color:#2a7a58;margin-top:6px;min-height:1em;text-align:center;font-weight:700;"></div>
     </div>
     <div class="lb-board" id="lbBoard"></div>` : '';
 
@@ -467,6 +501,13 @@ function renderResult(app, header) {
   }
 }
 
+function unlockLeaderboard() {
+  const locked   = document.getElementById('lbLocked');
+  const unlocked = document.getElementById('lbUnlocked');
+  if (locked)   locked.style.display   = 'none';
+  if (unlocked) unlocked.style.display = 'block';
+}
+
 async function checkInLibrary() {
   try {
     const r = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`, {
@@ -480,6 +521,7 @@ async function checkInLibrary() {
       const msg = document.getElementById('saveLibMsg');
       if (btn) btn.style.display = 'none';
       if (msg) msg.style.display = 'none';
+      unlockLeaderboard();
     }
   } catch {}
 }
@@ -960,7 +1002,7 @@ async function saveToLibrary() {
   // 3. Write updated quizzes.json to GitHub
   msg.textContent = 'Saving...';
   data.quizzes.push({
-    name:        `WhatDatBird? - ${CFG.placeName}`,
+    name:        `WhatDatBird? - ${expandPlaceName(CFG.placeName)}`,
     continent,
     country,
     description: country === CFG.placeName ? CFG.placeName : `${CFG.placeName}, ${country}`,
@@ -988,6 +1030,7 @@ async function saveToLibrary() {
     }
     msg.textContent = 'Added! Will appear in ~1 minute.';
     btn.style.display = 'none';
+    unlockLeaderboard();
   } catch (e) {
     msg.style.color = '#8a2c2c';
     msg.textContent = `Save failed: ${e.message}`;

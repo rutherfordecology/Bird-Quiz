@@ -1,7 +1,7 @@
 {
   "quizzes": [
     {
-      "name": "WhatDatBird? - Gisborne, NZ",
+      "name": "WhatDatBird? - Gisborne, New Zealand",
       "continent": "Oceania",
       "country": "New Zealand",
       "description": "Gisborne, New Zealand",
@@ -25,10 +25,10 @@
       "added": "2026-06-06"
     },
     {
-      "name": "WhatDatBird? - Whenua Hou Nature Reserve",
+      "name": "WhatDatBird? - Whenua Hou Nature Reserve, New Zealand",
       "continent": "Oceania",
       "country": "New Zealand",
-      "description": "Whenua Hou Nature Reserve, Southland",
+      "description": "Whenua Hou Nature Reserve, New Zealand",
       "species": null,
       "type": "dynamic",
       "url": "quiz.html?place_id=88743&place_name=Whenua%20Hou%20Nature%20Reserve%2C%20SO%2C%20NZ",
@@ -37,7 +37,7 @@
       "added": "2026-06-06"
     },
     {
-      "name": "WhatDatBird? - Nakaseke, LW, UG",
+      "name": "WhatDatBird? - Nakaseke, Uganda",
       "continent": "Africa",
       "country": "Uganda",
       "description": "Nakaseke, Uganda",
@@ -49,7 +49,7 @@
       "added": "2026-06-06"
     },
     {
-      "name": "WhatDatBird? - Brisbane, AU",
+      "name": "WhatDatBird? - Brisbane, Australia",
       "continent": "Oceania",
       "country": "Australia",
       "description": "Brisbane, Australia",
@@ -61,7 +61,7 @@
       "added": "2026-06-06"
     },
     {
-      "name": "WhatDatBird? - Sackville Waterfowl Park, CA, NB",
+      "name": "WhatDatBird? - Sackville Waterfowl Park, Canada",
       "continent": "North America",
       "country": "Canada",
       "description": "Sackville Waterfowl Park, Canada",
@@ -73,7 +73,7 @@
       "added": "2026-06-06"
     },
     {
-      "name": "WhatDatBird? - Thun, BE, CH",
+      "name": "WhatDatBird? - Thun, Switzerland",
       "continent": "Europe",
       "country": "Switzerland",
       "description": "Thun, Switzerland",
@@ -85,7 +85,7 @@
       "added": "2026-06-06"
     },
     {
-      "name": "WhatDatBird? - Chao Phraya River (Bangkok Zone), Bangkok, Thailand",
+      "name": "WhatDatBird? - Chao Phraya River, Bangkok, Thailand",
       "continent": "Asia",
       "country": "Thailand",
       "description": "Chao Phraya River, Bangkok, Thailand",
@@ -97,7 +97,7 @@
       "added": "2026-06-06"
     },
     {
-      "name": "WhatDatBird? - Milne Bay, PG",
+      "name": "WhatDatBird? - Milne Bay, Papua New Guinea",
       "continent": "Oceania",
       "country": "Papua New Guinea",
       "description": "Milne Bay, Papua New Guinea",
