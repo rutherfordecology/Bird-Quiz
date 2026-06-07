@@ -1,7 +1,7 @@
-// WhatDatBird? Quiz Engine v5.39
+// WhatDatBird? Quiz Engine v5.40
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.39';
+const APP_VERSION = 'v5.40';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -204,6 +204,7 @@ function scoreByAncestry(candidates, correctIds, correctSet) {
 }
 
 function getOptions(correct, pool) {
+  if (!correct) return [];
   const correctIds = correct.ancestorIds || [];
   const correctSet = new Set(correctIds);
   // Always draw distractors from the full species list so choices aren't limited to the active tier
