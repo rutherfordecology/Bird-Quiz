@@ -371,6 +371,15 @@ async function boot() {
   updateLoadingProgress('Identifying location...');
   await fetchPlaceMeta(PLACE_ID);
 
+  // Fallback: extract country code from place name (e.g. "Gisborne, NZ" or "Gisborne, New Zealand")
+  // iNat's ancestor hierarchy sometimes skips the country level (e.g. Oceania → Gisborne Region → Gisborne)
+  if (!COUNTRY_CODE) {
+    const parts = PLACE_NAME.split(',').map(s => s.trim());
+    const lastPart = parts[parts.length - 1];
+    if (/^[A-Z]{2}$/.test(lastPart)) COUNTRY_CODE = lastPart;
+    else COUNTRY_CODE = toISO(lastPart);
+  }
+
   // Load country-level indigenous names after country code is known
   if (!placeNames && COUNTRY_CODE) {
     try {
