@@ -119,6 +119,18 @@
       "place_id": 12359,
       "photo_taxon": null,
       "added": "2026-06-07"
+    },
+    {
+      "name": "WhatDatBird? - Rotorua, BP, NZ",
+      "continent": "Other",
+      "country": "Rotorua, BP, NZ",
+      "description": "Rotorua, BP, NZ",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?place_id=40463&place_name=Rotorua%2C%20BP%2C%20NZ",
+      "place_id": 40463,
+      "photo_taxon": null,
+      "added": "2026-06-07"
     }
   ]
 }
