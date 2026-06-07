@@ -1,7 +1,7 @@
-// WhatDatBird? Quiz Engine v5.38
+// WhatDatBird? Quiz Engine v5.39
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.38';
+const APP_VERSION = 'v5.39';
 window.__engineStage = 1;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -176,10 +176,10 @@ async function fetchIDNote(wikiUrl) {
     const sectionMatch = extract.match(/\n=+\s*(description|identification|appearance|plumage)\s*=+\s*\n([\s\S]+?)(?=\n=+\s|\s*$)/i);
     let text;
     if (sectionMatch) {
-      text = sectionMatch[2].replace(/\n+/g,' ').trim().split(/(?<=[.!?])\s+/).slice(0,3).join(' ').trim();
+      text = sectionMatch[2].replace(/\n+/g,' ').trim().replace(/([.!?])\s+/g,'$1\n').split('\n').slice(0,3).join(' ').trim();
     } else {
       const intro = extract.split('\n').find(l => l.trim().length > 40) || '';
-      text = intro.split(/(?<=[.!?])\s+/).slice(0,2).join(' ').trim();
+      text = intro.replace(/([.!?])\s+/g,'$1\n').split('\n').slice(0,2).join(' ').trim();
     }
     wikiSummaryCache[wikiUrl] = text || null;
     return wikiSummaryCache[wikiUrl];
