@@ -98,9 +98,9 @@
     },
     {
       "name": "WhatDatBird? - Milne Bay, PG",
-      "continent": "Other",
-      "country": "Milne Bay, PG",
-      "description": "Milne Bay, PG",
+      "continent": "Oceania",
+      "country": "Papua New Guinea",
+      "description": "Milne Bay, Papua New Guinea",
       "species": null,
       "type": "dynamic",
       "url": "quiz.html?place_id=13186&place_name=Milne%20Bay%2C%20PG",

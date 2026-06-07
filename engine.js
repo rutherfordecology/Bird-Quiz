@@ -1,7 +1,7 @@
-// WhatDatBird? Quiz Engine v5.40
+// WhatDatBird? Quiz Engine v5.41
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.40';
+const APP_VERSION = 'v5.41';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -932,8 +932,11 @@ async function saveToLibrary() {
           'Croatia':'Europe','Slovakia':'Europe','Bulgaria':'Europe','Serbia':'Europe',
           'Russia':'Europe','Ukraine':'Europe','Iceland':'Europe',
           'Australia':'Oceania','New Zealand':'Oceania','Papua New Guinea':'Oceania',
-          'Fiji':'Oceania','Samoa':'Oceania','Tonga':'Oceania','Vanuatu':'Oceania',
-          'Solomon Islands':'Oceania','Palau':'Oceania',
+          'Fiji':'Oceania','Samoa':'Oceania','American Samoa':'Oceania','Tonga':'Oceania',
+          'Vanuatu':'Oceania','Solomon Islands':'Oceania','Palau':'Oceania',
+          'Kiribati':'Oceania','Micronesia':'Oceania','Marshall Islands':'Oceania',
+          'Nauru':'Oceania','Tuvalu':'Oceania','New Caledonia':'Oceania',
+          'French Polynesia':'Oceania','Hawaii':'North America',
           'China':'Asia','Japan':'Asia','India':'Asia','Indonesia':'Asia','Philippines':'Asia',
           'Vietnam':'Asia','Thailand':'Asia','Malaysia':'Asia','South Korea':'Asia',
           'Taiwan':'Asia','Myanmar':'Asia','Cambodia':'Asia','Nepal':'Asia','Sri Lanka':'Asia',
