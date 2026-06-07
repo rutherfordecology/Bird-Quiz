@@ -1,7 +1,7 @@
-// WhatDatBird? Quiz Engine v5.44
+// WhatDatBird? Quiz Engine v5.45
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.44';
+const APP_VERSION = 'v5.45';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -88,14 +88,42 @@ function checkColorVariance(url) {
   });
 }
 
+// Cache of latin name → iNat taxon ID (looked up lazily per bird shown)
+const inatIdCache = {};
+async function lookupInatId(latin, commonName) {
+  if (inatIdCache[latin] !== undefined) return inatIdCache[latin];
+  try {
+    const r = await fetch(`https://api.inaturalist.org/v1/taxa?q=${encodeURIComponent(latin)}&rank=species&per_page=3`);
+    if (!r.ok) { inatIdCache[latin] = null; return null; }
+    const d = await r.json();
+    const epithet = latin.split(' ')[1]?.toLowerCase();
+    const commonWords = new Set((commonName||'').toLowerCase().split(/\s+/).filter(w => w.length > 2));
+    const taxon = d.results?.find(t => {
+      if (t.name.toLowerCase() === latin.toLowerCase()) return true;
+      const tEpi = t.name.split(' ')[1]?.toLowerCase();
+      if (epithet && tEpi === epithet) return true;
+      if (commonWords.size && t.preferred_common_name)
+        return t.preferred_common_name.toLowerCase().split(/\s+/).some(w => commonWords.has(w));
+      return false;
+    });
+    inatIdCache[latin] = taxon?.id || null;
+  } catch { inatIdCache[latin] = null; }
+  return inatIdCache[latin];
+}
+
 async function fetchInatImage(bird) {
   const latin = typeof bird === 'string' ? bird : (bird.latin || bird.name);
-  const inatId = typeof bird === 'object' ? bird.inatId : null;
+  const commonName = typeof bird === 'object' ? bird.name : null;
   const cacheKey = latin;
 
   if (!inatPhotoCache[cacheKey]) {
     try {
       const preloaded = typeof bird === 'object' ? bird.defaultPhoto : null;
+
+      // Look up inatId lazily (cached) for exact taxon_id queries — prevents same-genus photo bleed
+      const inatId = (typeof bird === 'object' && bird.inatId)
+        ? bird.inatId
+        : await lookupInatId(latin, commonName);
 
       // One photo per observation (the first/best), sorted by faves — avoids multi-photo same-bird runs
       const obsPhotos = [];
