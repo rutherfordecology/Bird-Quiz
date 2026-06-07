@@ -177,6 +177,7 @@ body {
 .sp-name:hover { color:#2a7a58; text-decoration:underline; }
 .sp-latin { font-size:0.75rem; color:#9b9890; font-style:italic; }
 .sp-samoan { font-size:0.92rem; color:#8a6020; font-weight:800; margin-bottom:4px; }
+.sp-samoan-inline { font-size:0.92rem; font-weight:800; color:#8a6020; }
 .sp-note { font-size:0.78rem; color:#6b6960; line-height:1.5; margin-top:4px; }
 .sp-badges { display:flex; gap:5px; flex-wrap:wrap; margin-top:6px; }
 .sp-meta-row { display:flex; align-items:center; gap:10px; margin:5px 0 3px; }

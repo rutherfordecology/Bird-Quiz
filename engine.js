@@ -1,7 +1,7 @@
-// WhatDatBird? Quiz Engine v5.45
+// WhatDatBird? Quiz Engine v5.46
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.45';
+const APP_VERSION = 'v5.46';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -693,15 +693,15 @@ function renderSpeciesList(app, header) {
     const rarity = CFG.rarity?.[bird.name];
     const rarityPill = rarity ? `<span class="rarity-pill rarity-${rarity}">${rarity.charAt(0).toUpperCase()+rarity.slice(1)}</span>` : '';
     const countBadge = bird.count ? `<span class="obs-count">${bird.count.toLocaleString()} iNat obs</span>` : '';
-    const samoanRow = bird[CFG.indigenousField] ? `<div class="sp-samoan">${bird[CFG.indigenousField]}</div>` : '';
+    const samoanInline = bird[CFG.indigenousField] ? `<span class="sp-samoan-inline">${bird[CFG.indigenousField]}</span>` : '';
     const noteRow = bird.note ? `<div class="sp-note">${bird.note}</div>` : '';
     const badges = birdBadges(bird);
     return `<div class="sp-item">
       <div class="sp-name-row">
         <span class="sp-name">${bird.name}</span>
+        ${samoanInline}
         <span class="sp-latin">${bird.latin||''}</span>
       </div>
-      ${samoanRow}
       <div class="sp-meta-row">${rarityPill}${countBadge}<a href="${inatUrl}" target="_blank" style="font-size:0.7rem;color:#9b9890;">iNat &#8594;</a></div>
       ${noteRow}
       ${badges?`<div class="sp-badges">${badges}</div>`:''}
