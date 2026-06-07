@@ -18,7 +18,7 @@ window.onunhandledrejection = e => {
 };
 </script>
 <div id="app"></div>
-<script src="engine.js?v=5.51" onerror="document.getElementById('app').innerHTML='<div style=padding:2rem;font-family:sans-serif;color:#8a2c2c>Failed to fetch engine.js — check network connection.<br><br><a href=index.html>← Back</a></div>'"></script>
+<script src="engine.js?v=5.52" onerror="document.getElementById('app').innerHTML='<div style=padding:2rem;font-family:sans-serif;color:#8a2c2c>Failed to fetch engine.js — check network connection.<br><br><a href=index.html>← Back</a></div>'"></script>
 <script>
 const params     = new URLSearchParams(window.location.search);
 const PLACE_ID   = params.get('place_id');
@@ -30,6 +30,11 @@ let PLACE_BBOX = null;   // {minLat, maxLat, minLng, maxLng} from iNat bounding 
 let IS_COUNTRY = false;  // true if the searched place itself is a country
 const YEAR_FROM  = new Date().getFullYear() - 15;
 const YEAR_RANGE = `${YEAR_FROM},${new Date().getFullYear()}`;
+
+// ── Species blocklist (GBIF data quality issues) ───────────────────────────
+const BLOCKLIST = new Set([
+  'Porphyrio porphyrio', // Western Swamphen — misidentifications in NZ GBIF data
+]);
 
 // ── ISO country code lookup ────────────────────────────────────────────────
 const ISO_CODES = {
@@ -111,14 +116,15 @@ async function processBatch(speciesItems) {
       if (gd.rank !== 'SPECIES' || gd.class !== 'Aves') return null;
       const latin = gd.canonicalName;
       if (!latin) return null;
+      if (BLOCKLIST.has(latin)) return null; // skip blocklisted species
 
       // 2. iNat: fetch when GBIF lacks a vernacular name, or when names may differ due to taxonomy revisions
       const inat = (!gd.vernacularName) ? await fetch(
         `https://api.inaturalist.org/v1/taxa?q=${encodeURIComponent(latin)}&rank=species&per_page=5`
       ).then(r => r.json()).then(d => {
         const t = d.results?.find(r => r.name.toLowerCase() === latin.toLowerCase()) || d.results?.[0];
-if (!t) return null;
-if (t.name.toLowerCase() === latin.toLowerCase()) return t;
+        if (!t) return null;
+        if (t.name.toLowerCase() === latin.toLowerCase()) return t;
         // Epithet match is only accepted if common names also share a word (guards against e.g. multiple novaeseelandiae species)
         const epithet = latin.split(' ')[1]?.toLowerCase();
         const tEpithet = t.name.split(' ')[1]?.toLowerCase();
@@ -330,6 +336,7 @@ async function loadFromInat(bufferKm = 0) {
   const d = await r.json();
   return (d.results || [])
     .filter(item => item.taxon?.preferred_common_name && item.taxon?.rank === 'species')
+    .filter(item => !BLOCKLIST.has(item.taxon.name))
     .map(item => ({
       name:          item.taxon.preferred_common_name,
       latin:         item.taxon.name,
