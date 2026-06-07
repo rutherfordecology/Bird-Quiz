@@ -1,7 +1,7 @@
-// WhatDatBird? Quiz Engine v5.51
+// WhatDatBird? Quiz Engine v5.52
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.51';
+const APP_VERSION = 'v5.52';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -97,15 +97,18 @@ async function lookupInatId(latin, commonName) {
     if (!r.ok) { inatIdCache[latin] = null; return null; }
     const d = await r.json();
     const epithet = latin.split(' ')[1]?.toLowerCase();
-    const commonWords = new Set((commonName||'').toLowerCase().split(/\s+/).filter(w => w.length > 2));
-    const taxon = d.results?.find(t => {
-      if (t.name.toLowerCase() === latin.toLowerCase()) return true;
-      const tEpi = t.name.split(' ')[1]?.toLowerCase();
-      if (epithet && tEpi === epithet) return true;
-      if (commonWords.size && t.preferred_common_name)
-        return t.preferred_common_name.toLowerCase().split(/\s+/).some(w => commonWords.has(w));
-      return false;
-    });
+
+    // Exact latin name match first (highest priority)
+    let taxon = d.results?.find(t => t.name.toLowerCase() === latin.toLowerCase());
+
+    // Fall back to epithet match only (covers taxonomy revision synonyms)
+    if (!taxon) {
+      taxon = d.results?.find(t => {
+        const tEpi = t.name.split(' ')[1]?.toLowerCase();
+        return epithet && tEpi === epithet;
+      });
+    }
+
     inatIdCache[latin] = taxon?.id || null;
   } catch { inatIdCache[latin] = null; }
   return inatIdCache[latin];
