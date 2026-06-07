@@ -2,7 +2,7 @@
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
 const APP_VERSION = 'v5.38';
-window.__engineLoaded = true;
+window.__engineStage = 1;
 
 // ── Config ────────────────────────────────────────────────────────────────
 let CFG = {};
@@ -499,6 +499,7 @@ function renderQuiz(app) {
   else if(state.imgUrl) imgContent=`<img src="${state.imgUrl}" alt="mystery bird" onerror="imgFailed()" onload="adjustImgPosition(this)"/>`;
   else imgContent=`<div class="img-placeholder"><div class="icon">&#128247;</div><span>No photo available</span></div>`;
 
+  window.__engineStage = 2;
   const multi = state.photoUrls.length>1 && !state.imgLoading;
   const carousel = multi ? `
     <button class="carousel-btn carousel-prev" onclick="prevPhoto()">&#8249;</button>
@@ -997,6 +998,7 @@ function initEngine(config) {
   CFG.indigenousField = config.indigenousField || 'samoan';
   CFG.easyUseWiki = config.easyUseWiki || false;
 
+  window.__engineStage = 3;
   // Compute tiers if not provided
   if (!CFG.easyBirds) CFG.easyBirds = [];
 
