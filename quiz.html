@@ -9,8 +9,6 @@
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-HBJSECY37S');</script>
 </head>
 <body>
-<div id="app"></div>
-<script src="engine.js"></script>
 <script>
 window.onerror = (msg, src, line) => {
   document.getElementById('app').innerHTML = `<div style="padding:2rem;font-family:sans-serif;color:#8a2c2c"><strong>Error loading quiz</strong><br><small>${msg}<br>${src} line ${line}</small><br><br><a href="index.html">← Back</a></div>`;
@@ -19,6 +17,8 @@ window.onunhandledrejection = e => {
   document.getElementById('app').innerHTML = `<div style="padding:2rem;font-family:sans-serif;color:#8a2c2c"><strong>Error loading quiz</strong><br><small>${e.reason}</small><br><br><a href="index.html">← Back</a></div>`;
 };
 </script>
+<div id="app"></div>
+<script src="engine.js"></script>
 <script>
 const params     = new URLSearchParams(window.location.search);
 const PLACE_ID   = params.get('place_id');
