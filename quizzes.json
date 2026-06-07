@@ -109,10 +109,10 @@
       "added": "2026-06-07"
     },
     {
-      "name": "WhatDatBird? - Mpigi, UG",
-      "continent": "Other",
-      "country": "Mpigi, UG",
-      "description": "Mpigi, UG",
+      "name": "WhatDatBird? - Mpigi, Uganda",
+      "continent": "Africa",
+      "country": "Uganda",
+      "description": "Mpigi, Uganda",
       "species": null,
       "type": "dynamic",
       "url": "quiz.html?place_id=12359&place_name=Mpigi%2C%20UG",
