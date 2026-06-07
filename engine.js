@@ -1,7 +1,7 @@
-// WhatDatBird? Quiz Engine v5.37
+// WhatDatBird? Quiz Engine v5.38
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.37';
+const APP_VERSION = 'v5.38';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -302,18 +302,19 @@ function render() {
   const app = document.getElementById('app');
   const isQuiz = state.phase==='quiz';
 
+  const brandBtn = `<div class="header-brand"><a href="https://www.rutherfordecology.co.nz/" target="_blank"><span class="by-word">by </span><span class="re-bold">Rutherford</span> <span class="re-light">ecology</span></a></div>`;
   const header = isQuiz ? '' : state.phase === 'about' ? `
     <div class="header fade">
       <div class="eyebrow">WHATDATBIRD?</div>
       <h1>WhatDatBird?</h1>
-      <div class="header-brand"><a href="https://www.rutherfordecology.co.nz/" target="_blank"><span class="by-word">by </span><span class="re-bold">Rutherford</span> <span class="re-light">ecology</span></a></div>
+      ${brandBtn}
     </div>` : `
     <div class="header fade">
       ${CFG.headerPhotoHtml ? CFG.headerPhotoHtml() : ''}
-      <div class="eyebrow">${CFG.eyebrow || CFG.placeName.toUpperCase() + ' - FIELD GUIDE'} <span style="opacity:0.5;font-weight:400;letter-spacing:0.05em;">${APP_VERSION}</span></div>
+      <div class="eyebrow">${CFG.eyebrow || CFG.placeName.toUpperCase()}</div>
       <h1>${CFG.title || 'WhatDatBird?<br><span style="font-size:1.3rem;font-weight:700;color:#2a7a58;">' + CFG.placeName + '</span>'}</h1>
       <p>Can you get ${STREAK_TARGET} in a row?</p>
-      <div class="header-brand"><a href="https://www.rutherfordecology.co.nz/" target="_blank"><span class="by-word">by </span><span class="re-bold">Rutherford</span> <span class="re-light">ecology</span></a></div>
+      ${brandBtn}
     </div>`;
 
   // Loading
@@ -1005,7 +1006,7 @@ function initEngine(config) {
   // Footer bar
   const footer = document.createElement('div');
   footer.className = 'footer-bar';
-  footer.innerHTML = `<a href="${CFG.backUrl}" style="color:#2a7a58;font-weight:700;">WhatDatBird?</a> - by <a href="https://www.rutherfordecology.co.nz/" target="_blank" style="color:#9b9890;">Rutherford Ecology</a> - <a href="https://buymeacoffee.com/rutherfordecology" target="_blank" style="color:#d4a84b;font-weight:700;">&#x2615; Buy me a coffee</a>`;
+  footer.innerHTML = `<a href="${CFG.backUrl}" style="color:#2a7a58;font-weight:700;">WhatDatBird?</a> - by <a href="https://www.rutherfordecology.co.nz/" target="_blank" style="color:#9b9890;">Rutherford Ecology</a> - <a href="https://buymeacoffee.com/rutherfordecology" target="_blank" style="color:#d4a84b;font-weight:700;">&#x2615; Buy me a coffee</a> <span style="opacity:0.4;font-size:0.75em">${APP_VERSION}</span>`;
   document.body.appendChild(footer);
 
   render();
