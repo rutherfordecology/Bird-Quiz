@@ -365,21 +365,25 @@ async function onMapClick(e) {
       headers: { 'Accept-Language': 'en' }
     });
     const nomD = await nomR.json();
-    const localName = nomD.address?.city || nomD.address?.town || nomD.address?.village
-                   || nomD.address?.suburb || nomD.address?.county || '';
+    const addr = nomD.address || {};
+    // Search multiple address levels so clicking a suburb still surfaces the city
+    const searchTerms = [...new Set([
+      addr.city, addr.town, addr.village, addr.county
+    ].filter(Boolean))].slice(0, 3);
 
-    // 2. iNat nearby (small pad) + iNat autocomplete for local name — in parallel
+    // 2. iNat nearby + autocomplete for each address level — all in parallel
     const pad = 0.2;
-    const [nearbyR, autoR] = await Promise.all([
+    const [nearbyR, ...autoRs] = await Promise.all([
       fetch(`https://api.inaturalist.org/v1/places/nearby?nelat=${lat+pad}&nelng=${lng+pad}&swlat=${lat-pad}&swlng=${lng-pad}&per_page=20`),
-      localName ? fetch(`https://api.inaturalist.org/v1/places/autocomplete?q=${encodeURIComponent(localName)}&per_page=10`) : Promise.resolve(null),
+      ...searchTerms.map(q => fetch(`https://api.inaturalist.org/v1/places/autocomplete?q=${encodeURIComponent(q)}&per_page=5`)),
     ]);
 
     const nearbyD = await nearbyR.json();
     const PRIORITY = { 6:0, 100:1, 5:2, 4:3, 10:4, 3:5, 9:6, 13:7, 2:8, 12:9, 1:10 };
 
     const nearby = [...(nearbyD.results?.standard || []), ...(nearbyD.results?.community || [])];
-    const autoRaw = autoR?.ok ? (await autoR.json()).results || [] : [];
+    const autoResults = await Promise.all(autoRs.map(r => r?.ok ? r.json().then(d => d.results || []) : []));
+    const autoRaw = autoResults.flat();
     const auto = autoRaw.filter(p => { if (!p.location) return true; const [a,b] = p.location.split(',').map(Number); return Math.abs(a-lat) <= 2 && Math.abs(b-lng) <= 2; });
 
     // Merge, dedupe by id, drop continents
