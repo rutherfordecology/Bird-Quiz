@@ -18,7 +18,7 @@ window.onunhandledrejection = e => {
 };
 </script>
 <div id="app"></div>
-<script src="engine.js?v=5.49" onerror="document.getElementById('app').innerHTML='<div style=padding:2rem;font-family:sans-serif;color:#8a2c2c>Failed to fetch engine.js — check network connection.<br><br><a href=index.html>← Back</a></div>'"></script>
+<script src="engine.js?v=5.50" onerror="document.getElementById('app').innerHTML='<div style=padding:2rem;font-family:sans-serif;color:#8a2c2c>Failed to fetch engine.js — check network connection.<br><br><a href=index.html>← Back</a></div>'"></script>
 <script>
 const params     = new URLSearchParams(window.location.search);
 const PLACE_ID   = params.get('place_id');
@@ -360,14 +360,18 @@ async function boot() {
     easyBirds:      [],
   });
 
-  // Load place-specific indigenous names (await so names are ready before setTiers)
+  // Load indigenous names — place-specific first, then country-level fallback
   try {
     const pnr = await fetch(`place-names/${PLACE_ID}.json`);
-    if (pnr.ok) {
-      placeNames = await pnr.json();
-      CFG.indigenousField = 'indigenousName'; // always use indigenousName field
-    }
+    if (pnr.ok) { placeNames = await pnr.json(); }
   } catch {}
+  if (!placeNames && COUNTRY_CODE) {
+    try {
+      const cnr = await fetch(`place-names/${COUNTRY_CODE}.json`);
+      if (cnr.ok) { placeNames = await cnr.json(); }
+    } catch {}
+  }
+  CFG.indigenousField = 'indigenousName';
 
   // Fetch place metadata (centroid + country code) — needed before GBIF call
   updateLoadingProgress('Identifying location...');
