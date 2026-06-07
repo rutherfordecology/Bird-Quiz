@@ -1,7 +1,7 @@
-// WhatDatBird? Quiz Engine v5.48
+// WhatDatBird? Quiz Engine v5.49
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.48';
+const APP_VERSION = 'v5.49';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -1113,7 +1113,7 @@ async function saveToLibrary() {
 // ── Init ──────────────────────────────────────────────────────────────────
 function initEngine(config) {
   CFG = config;
-  CFG.indigenousField = config.indigenousField || 'samoan';
+  CFG.indigenousField = config.indigenousField || 'indigenousName';
   CFG.easyUseWiki = config.easyUseWiki || false;
 
   // Compute tiers if not provided

@@ -18,7 +18,7 @@ window.onunhandledrejection = e => {
 };
 </script>
 <div id="app"></div>
-<script src="engine.js?v=5.48" onerror="document.getElementById('app').innerHTML='<div style=padding:2rem;font-family:sans-serif;color:#8a2c2c>Failed to fetch engine.js — check network connection.<br><br><a href=index.html>← Back</a></div>'"></script>
+<script src="engine.js?v=5.49" onerror="document.getElementById('app').innerHTML='<div style=padding:2rem;font-family:sans-serif;color:#8a2c2c>Failed to fetch engine.js — check network connection.<br><br><a href=index.html>← Back</a></div>'"></script>
 <script>
 const params     = new URLSearchParams(window.location.search);
 const PLACE_ID   = params.get('place_id');
@@ -153,10 +153,9 @@ async function processBatch(speciesItems) {
 
 function applyPlaceNames(birds) {
   if (!placeNames?.names) return;
-  const field = placeNames.field || 'indigenousName';
   for (const bird of birds) {
     const indName = placeNames.names[bird.latin];
-    if (indName) { bird[field] = indName; bird.indigenousName = indName; }
+    if (indName) bird.indigenousName = indName;
   }
 }
 
@@ -366,7 +365,7 @@ async function boot() {
     const pnr = await fetch(`place-names/${PLACE_ID}.json`);
     if (pnr.ok) {
       placeNames = await pnr.json();
-      CFG.indigenousField = placeNames.field || 'indigenousName';
+      CFG.indigenousField = 'indigenousName'; // always use indigenousName field
     }
   } catch {}
 
