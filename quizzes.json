@@ -131,6 +131,18 @@
       "place_id": 40463,
       "photo_taxon": null,
       "added": "2026-06-07"
+    },
+    {
+      "name": "WhatDatBird? - New York City, US, NY",
+      "continent": "Other",
+      "country": "New York City, US, NY",
+      "description": "New York City, US, NY",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?place_id=674&place_name=New%20York%20City%2C%20US%2C%20NY",
+      "place_id": 674,
+      "photo_taxon": null,
+      "added": "2026-06-07"
     }
   ]
 }
