@@ -1,7 +1,7 @@
-// WhatDatBird? Quiz Engine v5.42
+// WhatDatBird? Quiz Engine v5.43
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.42';
+const APP_VERSION = 'v5.43';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -953,6 +953,12 @@ async function saveToLibrary() {
       country   = ancs.find(a => a.place_type === 12)?.display_name
                || ancs.find(a => a.place_type === 2)?.display_name
                || CFG.placeName;
+      // If country detection failed, extract ISO code from place name e.g. "Rotorua, BP, NZ" → "New Zealand"
+      if (country === CFG.placeName) {
+        const isoMatch = CFG.placeName.match(/,\s*([A-Z]{2,3})(?:,\s*[A-Z]{2})?$/);
+        const code = isoMatch?.[1];
+        if (code && ISO_TO_COUNTRY[code]) country = ISO_TO_COUNTRY[code];
+      }
       // Fallback: derive continent from country if iNat ancestor missing
       if (!continent) {
         const COUNTRY_CONTINENT = {
@@ -1005,7 +1011,7 @@ async function saveToLibrary() {
     name:        `WhatDatBird? - ${expandPlaceName(CFG.placeName)}`,
     continent,
     country,
-    description: country === CFG.placeName ? CFG.placeName : `${CFG.placeName}, ${country}`,
+    description: expandPlaceName(CFG.placeName),
     species:     null,
     type:        'dynamic',
     url:         `quiz.html?place_id=${CFG.placeId}&place_name=${encodeURIComponent(CFG.placeName)}`,
