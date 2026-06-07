@@ -121,10 +121,10 @@
       "added": "2026-06-07"
     },
     {
-      "name": "WhatDatBird? - Rotorua, BP, NZ",
-      "continent": "Other",
-      "country": "Rotorua, BP, NZ",
-      "description": "Rotorua, BP, NZ",
+      "name": "WhatDatBird? - Rotorua, New Zealand",
+      "continent": "Oceania",
+      "country": "New Zealand",
+      "description": "Rotorua, New Zealand",
       "species": null,
       "type": "dynamic",
       "url": "quiz.html?place_id=40463&place_name=Rotorua%2C%20BP%2C%20NZ",
@@ -133,10 +133,10 @@
       "added": "2026-06-07"
     },
     {
-      "name": "WhatDatBird? - New York City, US, NY",
-      "continent": "Other",
-      "country": "New York City, US, NY",
-      "description": "New York City, US, NY",
+      "name": "WhatDatBird? - New York City, United States",
+      "continent": "North America",
+      "country": "United States",
+      "description": "New York City, United States",
       "species": null,
       "type": "dynamic",
       "url": "quiz.html?place_id=674&place_name=New%20York%20City%2C%20US%2C%20NY",
