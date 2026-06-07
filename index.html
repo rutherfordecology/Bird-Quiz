@@ -15,14 +15,16 @@
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-HBJSECY37S');</script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
+  html, body {
     min-height: 100vh; background: #f3f2ee;
     font-family: system-ui, -apple-system, sans-serif; color: #1c1b18;
+    overflow-x: hidden; max-width: 100%;
   }
 
   .topbar {
     background: #1a5940; padding: 12px 24px;
     display: flex; align-items: center; justify-content: space-between;
+    width: 100%; box-sizing: border-box;
   }
   .topbar-left { display: flex; align-items: center; gap: 10px; }
   .topbar-title { font-size: 1.1rem; font-weight: 900; color: #fff; }
