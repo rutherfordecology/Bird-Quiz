@@ -307,7 +307,7 @@ async function searchMapLocation() {
   if (pickMarker) { pickMarker.remove(); pickMarker = null; }
   _nomResults = [];
   try {
-    const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&addressdetails=1`, { headers: { 'Accept-Language': 'en' } });
+    const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&addressdetails=1&polygon_geojson=1`, { headers: { 'Accept-Language': 'en' } });
     _nomResults = await r.json();
     if (!_nomResults.length) { statusText.textContent = 'No results found — try a different name.'; return; }
     statusText.textContent = 'Select a location:';
@@ -336,10 +336,16 @@ function selectNomResult(i) {
   if (pickMarker) pickMarker.remove();
   pickMarker = L.marker([lat, lon]).addTo(pickMap);
 
-  boundaryLayer = L.rectangle([[s, w], [n, e]], {
-    color: '#1a5940', weight: 2.5, fillColor: '#2a7a58', fillOpacity: 0.15
-  }).addTo(pickMap);
-  try { pickMap.flyToBounds([[s, w], [n, e]], { duration: 0.6, maxZoom: 13 }); } catch {}
+  if (p.geojson) {
+    boundaryLayer = L.geoJSON(p.geojson, {
+      style: { color: '#1a5940', weight: 2.5, fillColor: '#2a7a58', fillOpacity: 0.15 }
+    }).addTo(pickMap);
+  } else {
+    boundaryLayer = L.rectangle([[s, w], [n, e]], {
+      color: '#1a5940', weight: 2.5, fillColor: '#2a7a58', fillOpacity: 0.15
+    }).addTo(pickMap);
+  }
+  try { pickMap.flyToBounds(boundaryLayer.getBounds(), { duration: 0.6, maxZoom: 13 }); } catch {}
 
   const shortName = p.display_name.split(',').slice(0, 2).join(',').trim();
   const fullName  = p.display_name;
@@ -520,7 +526,7 @@ async function onMapClick(e) {
   }
 }
 </script>
-<script src="engine.js?v=5.71"></script>
+<script src="engine.js?v=5.72"></script>
 <script>document.getElementById('appVersion').textContent = typeof APP_VERSION !== 'undefined' ? APP_VERSION : '';</script>
 </body>
 </html>
