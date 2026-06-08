@@ -182,6 +182,19 @@
       "coord_lng": 167.63523,
       "photo_taxon": "Strigops habroptila",
       "added": "2026-06-08"
+    },
+    {
+      "name": "WhatDatBird? - Kruger National Park, South Africa",
+      "continent": "Africa",
+      "country": "South Africa",
+      "description": "Kruger National Park, South Africa",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=-23.92916565&lng=31.460623050000002&place_name=Kruger%20National%20Park%2C%20South%20Africa&country_code=ZA",
+      "coord_lat": -23.92916565,
+      "coord_lng": 31.460623050000002,
+      "photo_taxon": "Coracias caudatus",
+      "added": "2026-06-08"
     }
   ]
 }
