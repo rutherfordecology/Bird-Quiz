@@ -1,7 +1,7 @@
 // WhatDatBird? Quiz Engine v5.63
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.80';
+const APP_VERSION = 'v5.82';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -262,6 +262,70 @@ async function fetchIDNote(wikiUrl) {
   } catch { wikiSummaryCache[wikiUrl]=null; return null; }
 }
 
+// ── Xeno-canto bird calls (via Cloudflare Worker proxy — keeps API key secret) ──
+const XC_PROXY = 'https://whatdatbird-xc-proxy.rutherfordecology.workers.dev';
+const xenoCantoCache = {}; // latin → array of {file, recordist, url} or null
+async function fetchXenoCanto(latin) {
+  if (!latin) return null;
+  if (xenoCantoCache[latin] !== undefined) return xenoCantoCache[latin]?.[0] || null;
+  try {
+    const [gen, sp] = latin.trim().split(/\s+/);
+    if (!gen || !sp) { xenoCantoCache[latin]=null; return null; }
+    const r = await fetch(`${XC_PROXY}/?gen=${encodeURIComponent(gen)}&sp=${encodeURIComponent(sp)}`);
+    if (!r.ok) throw new Error();
+    const d = await r.json();
+    const proto = u => u && (u.startsWith('//') ? 'https:'+u : u);
+    const pool = (d.recordings||[])
+      .filter(rec => rec.file)
+      .map(rec => ({ file: proto(rec.file), recordist: rec.rec || 'Unknown', url: proto(rec.url) || 'https://xeno-canto.org' }));
+    xenoCantoCache[latin] = pool.length ? pool : null;
+    return xenoCantoCache[latin]?.[0] || null;
+  } catch { xenoCantoCache[latin]=null; return null; }
+}
+function randomXenoRec(latin, currentFile) {
+  const pool = xenoCantoCache[latin];
+  if (!pool?.length) return null;
+  const others = pool.filter(r => r.file !== currentFile);
+  const pick = others.length ? others : pool;
+  return pick[Math.floor(Math.random() * pick.length)];
+}
+
+let currentAudio = null;
+function stopAudio() {
+  if (currentAudio) { currentAudio.pause(); currentAudio.onended=null; currentAudio=null; }
+}
+function playRecording(rec) {
+  stopAudio();
+  currentAudio = new Audio(rec.file);
+  currentAudio.onended = () => setState({audioPlaying:false, audioRec:null});
+  currentAudio.play().catch(() => setState({audioPlaying:false, audioRec:null}));
+  setState({audioPlaying:true, audioLoading:false, audioRec:rec});
+}
+function toggleAudio() {
+  const bird = state.current;
+  if (!bird) return;
+  if (state.audioPlaying) { stopAudio(); setState({audioPlaying:false, audioRec:null}); return; }
+  const latin = bird.latin || bird.name;
+  const cached = xenoCantoCache[latin];
+  if (cached === undefined) {
+    setState({audioLoading:true});
+    fetchXenoCanto(latin).then(rec => {
+      if (state.current !== bird) return;
+      if (rec) playRecording(rec);
+      else setState({audioLoading:false});
+    });
+    return;
+  }
+  if (cached) playRecording(randomXenoRec(latin, null));
+}
+function nextAudio() {
+  const bird = state.current;
+  if (!bird) return;
+  const latin = bird.latin || bird.name;
+  const rec = randomXenoRec(latin, state.audioRec?.file);
+  if (rec) playRecording(rec);
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────
 function shuffle(arr) {
   const a = [...arr];
@@ -322,6 +386,7 @@ let state = {
   streak:0, streakHistory:[], totalSeen:0, totalCorrect:0,
   selected:null, options:[], imgUrl:null, imgLoading:false,
   photoUrls:[], photoIdx:0,
+  audioPlaying:false, audioLoading:false, audioRec:null,
 };
 function setState(p) { Object.assign(state,p); render(); }
 
@@ -508,13 +573,13 @@ function renderIntro(app, header) {
       <div class="mode-emoji">&#128247;</div>
       <div class="mode-count" id="mc-hard">${hasHard?hard.length+' SPECIES':'Loading...'}</div>
       <div class="mode-title">Birder</div>
-      <div class="mode-desc">Most of the list - dedicated trip territory.</div>
+      <div class="mode-desc">The 90% of species you're likely to encounter here.</div>
     </button>
     <button class="mode-btn ${state.mode==='complete'?'active':''}" ${hasComplete?'':'disabled'} onclick="setMode('complete')">
       <div class="mode-emoji">&#128301;</div>
       <div class="mode-count" id="mc-complete">${hasComplete?complete.length+' SPECIES':'Loading...'}</div>
       <div class="mode-title">Complete</div>
-      <div class="mode-desc">Everything ever recorded - including vagrants.</div>
+      <div class="mode-desc">Everything ever recorded. Gets progressively harder.</div>
     </button>
     <button class="mode-btn ${state.mode==='rarity'?'active':''}" ${hasRarity?'':'disabled'} ${hasRarity?`onclick="setMode('rarity')"`:''}>
       <div class="mode-emoji">&#128269;</div>
@@ -532,11 +597,11 @@ function renderIntro(app, header) {
   const bufferNote = state.buffer>0 ? `<p class="note-text">&#x1F4E1; Area expanded to ${state.buffer}km radius to find enough species</p>` : '';
 
   app.innerHTML = header + modeGrid + rarityNote + `
-    <div class="info-box">
-      <p>&#127919; Get your score to <strong>${STREAK_TARGET} to win!</strong> Each correct answer scores +1, wrong answers cost -2. Tricky birds keep coming back. Photos are real iNaturalist observations. &#127775;</p>
-    </div>
-    ${bufferNote}
     <button class="btn-primary" onclick="startQuiz()">Let's Go! &#128640;</button>
+    ${bufferNote}
+    <div class="info-box" style="margin-top:12px;">
+      <p>&#127919; Get your score to <strong>${STREAK_TARGET} to win!</strong> Each correct answer scores +1, wrong answers cost -2. Tricky birds keep coming back.</p>
+    </div>
     <button class="btn-secondary" onclick="setState({phase:'species'})">&#128203; Species List</button>
     <button class="btn-secondary" onclick="toggleIntroLeaderboard()">&#127942; Leaderboards</button>
     <div id="introLbPanel" style="display:none;margin-top:12px"></div>
@@ -743,6 +808,19 @@ function renderQuiz(app) {
     }
   }
 
+  let audioBtnHtml='', audioCreditHtml='';
+  const audioLatin = bird.latin || bird.name;
+  const audioRecAvailable = audioLatin ? xenoCantoCache[audioLatin] : null;
+  if (audioRecAvailable) {
+    const icon = state.audioPlaying ? '&#9208;&#65039;' : '&#128266;';
+    const hasMultiple = xenoCantoCache[audioLatin]?.length > 1;
+    const nextBtn = (state.audioPlaying && hasMultiple) ? `<button class="audio-btn" onclick="nextAudio()" title="Different recording" aria-label="Next recording" style="margin-left:4px;font-size:0.75rem;">&#8635;</button>` : '';
+    audioBtnHtml = `<button class="audio-btn${state.audioPlaying?' playing':''}" onclick="toggleAudio()" title="${state.audioPlaying?'Stop call':'Play call'}" aria-label="Play bird call">${icon}</button>${nextBtn}`;
+    if (state.audioPlaying && state.audioRec) {
+      audioCreditHtml = `<p class="audio-credit">&#127925; Recording by <a href="${state.audioRec.url}" target="_blank">${state.audioRec.recordist}</a> via <a href="https://xeno-canto.org" target="_blank">xeno-canto.org</a></p>`;
+    }
+  }
+
   app.innerHTML = `
     <div>
       <div class="meta-row">
@@ -756,7 +834,8 @@ function renderQuiz(app) {
         <span class="streak-label">&#128293; ${state.streak}/${STREAK_TARGET}</span>
       </div>
       <div class="img-box" id="imgBox" ontouchstart="_swipeX=event.touches[0].clientX" ontouchend="if(Math.abs(event.changedTouches[0].clientX-_swipeX)>40){event.changedTouches[0].clientX<_swipeX?nextPhoto():prevPhoto()}">${imgContent}${overlay}${carousel}</div>
-      <p class="question-text">&#128269; Which bird is this?</p>
+      <p class="question-text">&#128269; Which bird is this?${audioBtnHtml}</p>
+      ${audioCreditHtml}
       <div class="options">${optionsHtml}</div>
       ${fieldNote}
     </div>`;
@@ -813,7 +892,7 @@ function renderAbout(app, header) {
       <div class="field-note" style="margin-bottom:12px">
         <div class="fn-label">DIFFICULTY TIERS</div>
         <p class="fn-main"><strong>Common</strong> - the top 25 most-observed species. Birds you'd expect to see on a casual walk.</p>
-        <p class="fn-main" style="margin-top:6px"><strong>Birder</strong> - 90% of the species list (max 150). Requires a dedicated trip. For megadiverse places like Colombia this is genuinely hard.</p>
+        <p class="fn-main" style="margin-top:6px"><strong>Birder</strong> - the 90% of species you're likely to encounter. Requires a dedicated trip. For megadiverse places like Colombia this is genuinely hard.</p>
         <p class="fn-main" style="margin-top:6px"><strong>Complete</strong> - every species with a record in the last 15 years, including rare vagrants.</p>
         <p class="fn-main" style="margin-top:6px"><strong>Rarity</strong> - the bottom 15% of species by observation count. These are the birds that make listers nervous.</p>
       </div>
@@ -873,9 +952,41 @@ function imgFailed() {
   const box=document.getElementById('imgBox');
   if(box) box.innerHTML=`<div class="img-placeholder"><div class="icon">&#128247;</div><span>No photo available</span></div>`;
 }
-function prevPhoto() { const i=(state.photoIdx-1+state.photoUrls.length)%state.photoUrls.length; setState({photoIdx:i,imgUrl:state.photoUrls[i]}); }
-function nextPhoto() { const i=(state.photoIdx+1)%state.photoUrls.length; setState({photoIdx:i,imgUrl:state.photoUrls[i]}); }
-function goPhoto(i)  { setState({photoIdx:i,imgUrl:state.photoUrls[i]}); }
+let _photoSliding = false;
+function slidePhoto(newIdx, dir) {
+  if (_photoSliding || state.photoUrls.length <= 1) return;
+  const box = document.getElementById('imgBox');
+  const curImg = box?.querySelector('img:not(.slide-in)');
+  if (!box || !curImg) { setState({photoIdx:newIdx, imgUrl:state.photoUrls[newIdx]}); return; }
+
+  _photoSliding = true;
+  box.style.height = box.offsetHeight + 'px';
+
+  const newImg = document.createElement('img');
+  newImg.src = state.photoUrls[newIdx];
+  newImg.className = 'slide-in';
+  newImg.style.cssText = `position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;object-position:center top;transform:translateX(${dir>0?'100%':'-100%'});`;
+  curImg.style.cssText = `position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;object-position:center top;`;
+  box.appendChild(newImg);
+  newImg.getBoundingClientRect(); // force reflow so initial transform is established
+  newImg.style.transition = curImg.style.transition = 'transform 0.28s ease';
+  newImg.style.transform = 'translateX(0)';
+  curImg.style.transform = `translateX(${dir>0?'-100%':'100%'})`;
+
+  setTimeout(() => {
+    curImg.remove();
+    newImg.style.cssText = '';
+    newImg.className = '';
+    box.style.height = '';
+    state.photoIdx = newIdx;
+    state.imgUrl = state.photoUrls[newIdx];
+    box.querySelectorAll('.carousel-dot').forEach((d,i) => d.classList.toggle('active', i===newIdx));
+    _photoSliding = false;
+  }, 300);
+}
+function prevPhoto() { slidePhoto((state.photoIdx-1+state.photoUrls.length)%state.photoUrls.length, -1); }
+function nextPhoto() { slidePhoto((state.photoIdx+1)%state.photoUrls.length, 1); }
+function goPhoto(i)  { slidePhoto(i, i>=state.photoIdx?1:-1); }
 function setMode(m)  { setState({mode:m}); }
 function goIntro()   { setState({phase:'intro'}); }
 
@@ -902,9 +1013,20 @@ async function logNoPhoto(bird) {
   } catch {}
 }
 
+function buildQueue(pool) {
+  if (state.mode !== 'complete') return shuffle([...pool]);
+  // Sort by obs count desc, then shuffle within each chunk of 10
+  const sorted = [...pool].sort((a,b) => (b.count||0)-(a.count||0));
+  const queue = [];
+  for (let i = 0; i < sorted.length; i += 10) {
+    queue.push(...shuffle(sorted.slice(i, i+10)));
+  }
+  return queue;
+}
+
 function startQuiz() {
   const pool=getPool();
-  const queue=shuffle([...pool]);
+  const queue=buildQueue(pool);
   const first=queue.shift();
   setState({phase:'quiz',queue,wrongBin:[],current:first,streak:0,streakHistory:[],totalSeen:0,totalCorrect:0,selected:null,imgUrl:null,imgLoading:true,photoUrls:[],photoIdx:0,options:getOptions(first,pool)});
   fetchImage(first, state.mode).then(url => {
@@ -947,6 +1069,7 @@ function _advance() {
   const eligible = wrongBin.filter(w => state.totalSeen - w.wrongAt >= WRONG_GAP);
   const insertWrong = eligible.length > 0 && (queue.length === 0 || state.totalSeen % 3 === 0);
 
+  stopAudio();
   let next;
   if(insertWrong) {
     const pick = eligible[Math.floor(Math.random()*eligible.length)];
@@ -960,7 +1083,7 @@ function _advance() {
       queue.splice(Math.min(Math.floor(Math.random()*4)+1,queue.length),0,pick.bird);
     }
   }
-  setState({current:next,queue,wrongBin,selected:null,imgUrl:null,imgLoading:true,photoUrls:[],photoIdx:0,options:getOptions(next,pool)});
+  setState({current:next,queue,wrongBin,selected:null,imgUrl:null,imgLoading:true,photoUrls:[],photoIdx:0,options:getOptions(next,pool),audioPlaying:false,audioLoading:false,audioRec:null});
   fetchImage(next, state.mode).then(url => {
     const all=(inatPhotoCache[next.latin||next.name]||[]).slice(0,5);
     const photoUrls=url?[url,...all.filter(u=>u!==url)].slice(0,5):all;
@@ -971,12 +1094,14 @@ function _advance() {
     }
     setState({imgUrl:url,imgLoading:false,photoUrls,photoIdx:0});
   });
-  // Prefetch current bird's field note and next bird's photos + note
+  // Prefetch current bird's field note + call audio, and next bird's photos + note + audio
   if (next.wikiUrl && !next.note) fetchIDNote(next.wikiUrl).catch(() => {});
+  fetchXenoCanto(next.latin || next.name).then(rec => { if (rec && state.current === next) render(); }).catch(() => {});
   const prefetchBird = queue[0] || wrongBin[0]?.bird;
   if (prefetchBird) {
     fetchInatImage(prefetchBird).catch(() => {});
     if (prefetchBird.wikiUrl && !prefetchBird.note) fetchIDNote(prefetchBird.wikiUrl).catch(() => {});
+    fetchXenoCanto(prefetchBird.latin || prefetchBird.name).catch(() => {});
   }
 }
 
@@ -1088,10 +1213,12 @@ async function saveToLibrary() {
 
   // 2. Fetch place metadata
   msg.textContent = 'Fetching place info...';
-  let continent = 'Other', country = CFG.placeName, photoTaxon = null;
+  let continent = 'Other', country = CFG.placeName, photoTaxon = null, lat = null, lng = null;
 
   // Coord mode: derive country/continent from country code, no iNat place lookup needed
   if (CFG.coordLat && !CFG.placeId) {
+    lat = CFG.coordLat;
+    lng = CFG.coordLng;
     if (CFG.coordCC && ISO_TO_COUNTRY[CFG.coordCC]) {
       country = ISO_TO_COUNTRY[CFG.coordCC];
     }
@@ -1115,6 +1242,10 @@ async function saveToLibrary() {
     const placeR = await fetch(`https://api.inaturalist.org/v1/places/${CFG.placeId}`);
     const placeD = await placeR.json();
     const place  = placeD.results?.[0];
+    if (place?.location) {
+      const [pLat, pLng] = place.location.split(',').map(Number);
+      if (!isNaN(pLat) && !isNaN(pLng)) { lat = pLat; lng = pLng; }
+    }
     const ancestorIds = (place?.ancestor_place_ids || []).join(',');
     if (ancestorIds) {
       const ancR = await fetch(`https://api.inaturalist.org/v1/places?id=${ancestorIds}&per_page=100`);
@@ -1192,6 +1323,8 @@ async function saveToLibrary() {
     url:         `quiz.html?place_id=${CFG.placeId}&place_name=${encodeURIComponent(CFG.placeName)}`,
     place_id:    Number(CFG.placeId),
     photo_taxon: photoTaxon,
+    lat,
+    lng,
     added:       new Date().toISOString().split('T')[0],
   } : {
     name:        `WhatDatBird? - ${quizLabel}`,
@@ -1204,6 +1337,8 @@ async function saveToLibrary() {
     coord_lat:   CFG.coordLat,
     coord_lng:   CFG.coordLng,
     photo_taxon: photoTaxon,
+    lat,
+    lng,
     added:       new Date().toISOString().split('T')[0],
   };
   data.quizzes.push(quizEntry);

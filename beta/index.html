@@ -46,6 +46,13 @@
   .hero h1 { font-size: 2.6rem; font-weight: 900; color: #1a5940; margin-bottom: 10px; line-height: 1.1; }
   .hero p { font-size: 0.95rem; color: #6b6960; line-height: 1.6; max-width: 400px; margin: 0 auto; }
 
+.lib-map-toggle { display:inline-block; margin:0 auto 16px; padding:9px 18px; background:#fff; border:1.5px solid #dddbd3; color:#1a5940; border-radius:10px; font-weight:800; font-size:0.78rem; cursor:pointer; font-family:inherit; transition:all 0.15s; }
+.lib-map-toggle:hover { border-color:#2a7a58; background:#e8f4ef; }
+.lib-map { display:none; max-width:900px; height:380px; margin:0 auto 28px; border-radius:14px; overflow:hidden; border:1px solid #dddbd3; }
+.lib-map.open { display:block; }
+.lib-map-popup { font-family:system-ui,-apple-system,sans-serif; text-align:center; }
+.lib-map-popup a { color:#1a5940; font-weight:800; text-decoration:none; }
+.lib-map-popup a:hover { text-decoration:underline; }
 .section-label {
     max-width: 640px; margin: 0 auto 14px; padding: 0 20px;
     font-size: 0.68rem; font-weight: 800; letter-spacing: 0.12em;
@@ -152,6 +159,11 @@
   </div>
 </div>
 
+<div style="text-align:center;">
+  <button class="lib-map-toggle" id="libMapToggle" onclick="toggleLibraryMap()" style="display:none;">&#128506; View quiz map</button>
+</div>
+<div id="libraryMap" class="lib-map"></div>
+
 <div id="quizLibrary"><div class="section-label" style="max-width:640px;margin:0 auto 14px;padding:0 20px;">Loading quiz library...</div></div>
 
 <footer>
@@ -165,10 +177,37 @@
 <script>
 // Quiz library
 const CONTINENT_ORDER = ['Africa','Antarctica','Asia','Europe','North America','Oceania','South America','Other'];
+let _libraryQuizzes = [];
+let _libraryMap = null;
+
+function toggleLibraryMap() {
+  const box = document.getElementById('libraryMap');
+  const open = box.classList.toggle('open');
+  document.getElementById('libMapToggle').textContent = open ? '✕ Hide quiz map' : '🗺️ View quiz map';
+  if (open) {
+    if (!_libraryMap) {
+      _libraryMap = L.map('libraryMap');
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 18
+      }).addTo(_libraryMap);
+      const pts = [];
+      for (const q of _libraryQuizzes) {
+        if (q.lat == null || q.lng == null) continue;
+        pts.push([q.lat, q.lng]);
+        L.marker([q.lat, q.lng]).addTo(_libraryMap)
+          .bindPopup(`<div class="lib-map-popup"><div>${q.description || q.name}</div><a href="${q.url}">Play this quiz &#8594;</a></div>`);
+      }
+      if (pts.length) _libraryMap.fitBounds(pts, { padding: [30,30], maxZoom: 6 });
+      else _libraryMap.setView([20,0], 2);
+    }
+    setTimeout(() => _libraryMap.invalidateSize(), 80);
+  }
+}
 
 async function loadLibrary() {
   try {
-    const r = await fetch(`quizzes.json?_=${Date.now()}`);
+    const r = await fetch(`../quizzes.json?_=${Date.now()}`);
     const d = await r.json();
     const quizzes = d.quizzes || [];
 
@@ -207,6 +246,10 @@ async function loadLibrary() {
       }
     }
     lib.innerHTML = html;
+
+    _libraryQuizzes = quizzes;
+    const mapToggle = document.getElementById('libMapToggle');
+    if (mapToggle && quizzes.some(q => q.lat != null && q.lng != null)) mapToggle.style.display = 'inline-block';
 
     function cardHtml(q) {
       const count = q.species ? `<span class="card-count">${q.species} species</span>` : '';
