@@ -392,47 +392,29 @@ async function onMapClick(e) {
     // Build a human-readable "near X" label from the most specific Nominatim name
     const nearLabel = addr.city || addr.town || addr.village || addr.hamlet || addr.suburb || addr.municipality || nomD.name || 'this location';
 
-    // Cast a wide net over Nominatim address fields
-    const searchTerms = [...new Set([
-      nomD.name, addr.city, addr.town, addr.village, addr.hamlet,
-      addr.suburb, addr.municipality, addr.county
-    ].filter(Boolean))].slice(0, 5);
-
-    const pad = 0.2;
-    const [nearbyR, ...autoRs] = await Promise.all([
-      fetch(`https://api.inaturalist.org/v1/places/nearby?nelat=${lat+pad}&nelng=${lng+pad}&swlat=${lat-pad}&swlng=${lng-pad}&per_page=20`),
-      ...searchTerms.map(q => fetch(`https://api.inaturalist.org/v1/places/autocomplete?q=${encodeURIComponent(q)}&per_page=5`)),
-    ]);
-
+    // Small pad — only returns places whose bounding box actually contains the clicked point
+    const pad = 0.05;
+    const nearbyR = await fetch(`https://api.inaturalist.org/v1/places/nearby?nelat=${lat+pad}&nelng=${lng+pad}&swlat=${lat-pad}&swlng=${lng-pad}&per_page=30`);
     const nearbyD = await nearbyR.json();
-    // Admin priority — lower = higher priority; community (100) excluded entirely
-    const PRIORITY = { 6:0, 5:1, 4:2, 10:3, 3:4, 9:5, 13:6, 2:7, 12:8, 7:9 };
+
+    // Sort smallest geographic area first: site → park → town → county → urban → open-space → state → country → region → water
+    const PRIORITY = { 13:0, 6:1, 5:2, 4:3, 10:4, 9:5, 3:6, 2:7, 12:8, 7:9 };
     const ADMIN_TYPES = new Set(Object.keys(PRIORITY).map(Number));
 
-    // Only standard places, no community places
-    const nearby = (nearbyD.results?.standard || []).filter(p => ADMIN_TYPES.has(p.place_type));
-    const autoResults = await Promise.all(autoRs.map(r => r?.ok ? r.json().then(d => d.results || []) : []));
-    const auto = autoResults.flat().filter(p => {
-      if (!ADMIN_TYPES.has(p.place_type)) return false;
-      if (!p.location) return true;
-      const [a,b] = p.location.split(',').map(Number);
-      return Math.abs(a-lat) <= 3 && Math.abs(b-lng) <= 3;
-    });
-
-    const dist = p => { if (!p.location) return 999; const [a,b] = p.location.split(',').map(Number); return Math.max(Math.abs(a-lat), Math.abs(b-lng)); };
     const seen = new Set();
-    const adminPlaces = [...auto, ...nearby]
-      .filter(p => { if (seen.has(p.id) || p.place_type === 1) return false; seen.add(p.id); return true; })
-      .sort((a, b) => {
-        const pa = PRIORITY[a.place_type] ?? 99, pb = PRIORITY[b.place_type] ?? 99;
-        if (pa !== pb) return pa - pb;
-        return dist(a) - dist(b); // tie-break by proximity
+    const adminPlaces = (nearbyD.results?.standard || [])
+      .filter(p => {
+        if (!ADMIN_TYPES.has(p.place_type) || p.place_type === 1) return false;
+        if (seen.has(p.id)) return false;
+        seen.add(p.id);
+        return true;
       })
+      .sort((a, b) => (PRIORITY[a.place_type] ?? 99) - (PRIORITY[b.place_type] ?? 99))
       .slice(0, 7);
 
     statusText.textContent = 'Hover a location to preview its area, then click to play:';
 
-    // Build list: admin places first, then coordinate fallback at bottom
+    // Coord fallback goes first — most specific (6km radius around cursor)
     const coordOption = {
       id: null,
       display_name: `Birds near ${nearLabel}`,
@@ -446,7 +428,7 @@ async function onMapClick(e) {
   }
 }
 </script>
-<script src="engine.js?v=5.59"></script>
+<script src="engine.js?v=5.64"></script>
 <script>document.getElementById('appVersion').textContent = typeof APP_VERSION !== 'undefined' ? APP_VERSION : '';</script>
 </body>
 </html>
