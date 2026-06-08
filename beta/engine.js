@@ -1,7 +1,7 @@
 // WhatDatBird? Quiz Engine v5.63
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.63';
+const APP_VERSION = 'v5.71';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -145,39 +145,52 @@ async function fetchInatImage(bird) {
       const seen = new Set(preloaded ? [preloaded] : []);
       const sorted = obsPhotos.map(p => p.src).filter(src => { if (seen.has(src)) return false; seen.add(src); return true; });
 
-      // taxa photo first, then faves-sorted observations
-      const photos = [...(preloaded ? [preloaded] : []), ...sorted];
-
-      // If still nothing, look up iNat taxon — match by exact latin name or common name word overlap
-      if (!photos.length) {
+      // Always try to get taxa default_photo if not already preloaded
+      let taxonPhoto = preloaded;
+      if (!taxonPhoto) {
         const taxaUrl = inatId
           ? `https://api.inaturalist.org/v1/taxa/${inatId}`
           : `https://api.inaturalist.org/v1/taxa?q=${encodeURIComponent(latin)}&rank=species&per_page=3`;
-        const tr = await fetch(taxaUrl);
-        if (tr.ok) {
-          const td = await tr.json();
-          const commonName = typeof bird === 'object' ? bird.name : null;
-          const commonWords = new Set((commonName||'').toLowerCase().split(/\s+/).filter(w => w.length > 2));
-          const taxon = inatId ? td.results?.[0] : td.results?.find(t => {
-            if (t.name.toLowerCase() === latin.toLowerCase()) return true;
-            if (!commonWords.size || !t.preferred_common_name) return false;
-            return t.preferred_common_name.toLowerCase().split(/\s+/).some(w => commonWords.has(w));
-          });
-          if (taxon) {
-            const dp = taxon.default_photo?.url?.replace('/square.', '/medium.');
-            if (dp) photos.push(dp);
-            if (taxon.id && !inatId) {
-              const or2 = await fetch(`https://api.inaturalist.org/v1/observations?taxon_id=${taxon.id}&photos=true&per_page=10&quality_grade=research&order_by=faves&iconic_taxa=Aves`);
-              if (or2.ok) {
-                const od2 = await or2.json();
-                for (const o of (od2.results || [])) {
-                  const src = o.photos?.[0]?.url?.replace('/square.', '/medium.');
-                  if (src && !seen.has(src)) { seen.add(src); photos.push(src); }
+        try {
+          const tr = await fetch(taxaUrl);
+          if (tr.ok) {
+            const td = await tr.json();
+            const commonName = typeof bird === 'object' ? bird.name : null;
+            const commonWords = new Set((commonName||'').toLowerCase().split(/\s+/).filter(w => w.length > 2));
+            const taxon = inatId ? td.results?.[0] : td.results?.find(t => {
+              if (t.name.toLowerCase() === latin.toLowerCase()) return true;
+              if (!commonWords.size || !t.preferred_common_name) return false;
+              return t.preferred_common_name.toLowerCase().split(/\s+/).some(w => commonWords.has(w));
+            });
+            if (taxon) {
+              const dp = taxon.default_photo?.url?.replace('/square.', '/medium.');
+              if (dp) taxonPhoto = dp;
+              if (taxon.id && !inatId && !sorted.length) {
+                const or2 = await fetch(`https://api.inaturalist.org/v1/observations?taxon_id=${taxon.id}&photos=true&per_page=10&quality_grade=research&order_by=faves&iconic_taxa=Aves`);
+                if (or2.ok) {
+                  const od2 = await or2.json();
+                  for (const o of (od2.results || [])) {
+                    const src = o.photos?.[0]?.url?.replace('/square.', '/medium.');
+                    if (src && !seen.has(src)) { seen.add(src); sorted.push(src); }
+                  }
                 }
               }
             }
           }
+        } catch {}
+      }
+
+      // Build carousel: taxon photo always in first 3 positions
+      const photos = [...sorted];
+      if (taxonPhoto) {
+        const existingIdx = photos.indexOf(taxonPhoto);
+        if (existingIdx > 2) {
+          photos.splice(existingIdx, 1);
+          photos.splice(1, 0, taxonPhoto); // second slot — best obs first, then curated
+        } else if (existingIdx === -1) {
+          photos.unshift(taxonPhoto); // not in list at all — put it first
         }
+        // if already in positions 0-2, leave it there
       }
 
       inatPhotoCache[cacheKey] = photos;
@@ -368,6 +381,7 @@ function render() {
   const brandBtn = `<div class="header-brand"><a href="https://www.rutherfordecology.co.nz/" target="_blank"><span class="by-word">by </span><span class="re-bold">Rutherford</span> <span class="re-light">ecology</span></a></div>`;
   const header = isQuiz ? '' : state.phase === 'about' ? `
     <div class="header fade">
+      <img src="logo-transparent.png" alt="WhatDatBird logo" style="height:80px;width:auto;margin:0 auto 8px;display:block;">
       <div class="eyebrow">WHATDATBIRD?</div>
       <h1>WhatDatBird?</h1>
       ${brandBtn}
@@ -1158,6 +1172,8 @@ async function saveToLibrary() {
     url:         `quiz.html?lat=${CFG.coordLat}&lng=${CFG.coordLng}&place_name=${encodeURIComponent(CFG.placeName)}${CFG.coordCC ? '&country_code='+CFG.coordCC : ''}`,
     coord_lat:   CFG.coordLat,
     coord_lng:   CFG.coordLng,
+    photo_taxon: photoTaxon,
+    added:       new Date().toISOString().split('T')[0],
   };
   data.quizzes.push(quizEntry);
   try {

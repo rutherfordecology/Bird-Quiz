@@ -22,15 +22,20 @@
   }
 
   .topbar {
-    background: #1a5940; padding: 12px 24px;
+    background: #1a5940; padding: 10px 16px;
     display: flex; align-items: center; justify-content: space-between;
-    width: 100%; box-sizing: border-box;
+    width: 100%; box-sizing: border-box; gap: 8px;
   }
-  .topbar-left { display: flex; align-items: center; gap: 10px; }
-  .topbar-title { font-size: 1.1rem; font-weight: 900; color: #fff; }
-  .topbar-re { font-size: 0.8rem; color: rgba(255,255,255,0.5); }
+  .topbar-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .topbar-logo { height: 44px; width: auto; display: block; flex-shrink: 0; }
+  @media (max-width: 480px) { .topbar-logo { display: none; } }
+  .topbar-title { font-size: 1.05rem; font-weight: 900; color: #fff; white-space: nowrap; }
+  .topbar-version { font-size: 0.65rem; font-weight: 400; color: rgba(255,255,255,0.35); letter-spacing: 0.04em; white-space: nowrap; }
+  .topbar-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  .topbar-re { font-size: 0.75rem; color: rgba(255,255,255,0.5); white-space: nowrap; }
   .topbar-re a { color: rgba(255,255,255,0.75); text-decoration: none; font-weight: 600; }
   .topbar-re a:hover { color: #fff; }
+  @media (max-width: 380px) { .topbar-re { display: none; } }
 
   .hero {
     text-align: center; padding: 40px 20px 36px;
@@ -86,7 +91,12 @@
   .map-header h2 { font-size:1rem; font-weight:800; color:#1a5940; }
   .map-close { background:none; border:none; font-size:1.4rem; cursor:pointer; color:#9b9890; line-height:1; padding:0 4px; }
   .map-close:hover { color:#1c1b18; }
-#pickMap { flex:1; min-height:320px; }
+  .map-search-row { padding:8px 12px; border-bottom:1px solid #dddbd3; display:flex; gap:6px; flex-shrink:0; }
+  .map-search-row input { flex:1; padding:7px 11px; border:1px solid #ccc; border-radius:8px; font-size:0.88rem; font-family:inherit; outline:none; }
+  .map-search-row input:focus { border-color:#1a5940; }
+  .map-search-row button { padding:7px 13px; background:#1a5940; color:#fff; border:none; border-radius:8px; font-size:0.85rem; font-weight:700; cursor:pointer; white-space:nowrap; }
+  .map-search-row button:hover { background:#226b4d; }
+#pickMap { flex:1; min-height:280px; }
   .map-status { padding:10px 18px; font-size:0.85rem; color:#6b6960; border-top:1px solid #dddbd3; flex-shrink:0; min-height:44px; display:flex; align-items:center; }
   .map-status strong { color:#1a5940; }
   .map-places { border-top:1px solid #dddbd3; flex-shrink:0; overflow-y:auto; max-height:200px; }
@@ -104,14 +114,13 @@
 
 <div class="topbar">
   <div class="topbar-left">
-    <img src="../logo-transparent.png" alt="WhatDatBird logo" style="height:54px;width:auto;display:block;">
+    <img src="logo-transparent.png" alt="WhatDatBird logo" class="topbar-logo">
     <span class="topbar-title">WhatDatBird?</span>
-    <span style="font-size:0.68rem;font-weight:800;background:#d4a84b;color:#1c1b18;border-radius:4px;padding:2px 7px;letter-spacing:0.06em;">BETA</span>
-    <span id="appVersion" style="font-size:0.7rem;font-weight:400;color:rgba(255,255,255,0.35);letter-spacing:0.04em;"></span>
+    <span id="appVersion" class="topbar-version"></span>
   </div>
-  <div style="display:flex;align-items:center;gap:16px;">
-    <a href="about.html" style="font-size:0.8rem;color:rgba(255,255,255,0.6);text-decoration:none;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.6)'">&#8505; About</a>
+  <div class="topbar-right">
     <span class="topbar-re">by <a href="https://www.rutherfordecology.co.nz/" target="_blank"><strong>Rutherford</strong> ecology</a></span>
+    <a href="about.html" style="font-size:0.8rem;color:rgba(255,255,255,0.6);text-decoration:none;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.6)'">&#8505; About</a>
   </div>
 </div>
 
@@ -132,6 +141,10 @@
       <button class="map-close" onclick="closeMapPicker()">&#x2715;</button>
     </div>
     <div id="pickMap"></div>
+    <div class="map-search-row">
+      <input id="modalSearchInput" type="text" placeholder="Search for a place, park, or reserve…" onkeydown="if(event.key==='Enter')searchMapLocation()">
+      <button onclick="searchMapLocation()">Search</button>
+    </div>
     <div class="map-status" id="mapStatus">
       <span id="mapStatusText">Click anywhere on the map to find a location.</span>
     </div>
@@ -155,7 +168,7 @@ const CONTINENT_ORDER = ['Africa','Antarctica','Asia','Europe','North America','
 
 async function loadLibrary() {
   try {
-    const r = await fetch(`../quizzes.json?_=${Date.now()}`);
+    const r = await fetch(`quizzes.json?_=${Date.now()}`);
     const d = await r.json();
     const quizzes = d.quizzes || [];
 
@@ -253,10 +266,10 @@ async function loadPlacePhoto(placeId, el) {
 loadLibrary();
 
 function goPlace(id, name) {
-  window.location.href = `quiz.html?place_id=${id}&place_name=${encodeURIComponent(name)}&beta=1`;
+  window.location.href = `quiz.html?place_id=${id}&place_name=${encodeURIComponent(name)}`;
 }
 function goCoords(lat, lng, name, countryCode) {
-  let url = `quiz.html?lat=${lat.toFixed(5)}&lng=${lng.toFixed(5)}&place_name=${encodeURIComponent(name)}&beta=1`;
+  let url = `quiz.html?lat=${lat.toFixed(5)}&lng=${lng.toFixed(5)}&place_name=${encodeURIComponent(name)}`;
   if (countryCode) url += `&country_code=${countryCode}`;
   window.location.href = url;
 }
@@ -264,11 +277,12 @@ function goCoords(lat, lng, name, countryCode) {
 // ── Map picker ────────────────────────────────────────────────────────────
 let pickMap = null, pickMarker = null, boundaryLayer = null;
 const boundaryCache = {};
+let _nomResults = [];
 
 const TYPE_LABEL = {
-  1:'Continent', 2:'Country', 3:'State / Region', 4:'County / District',
-  5:'Town / City', 6:'Park / Reserve', 7:'Marine Area', 9:'State',
-  10:'County', 12:'Country', 13:'State', 100:'Community', 102:'Country'
+  2:'Country', 3:'State / Region', 4:'County / District', 5:'Town / City',
+  6:'Park / Reserve', 7:'Water Body', 9:'Open Space / Reserve', 11:'Village',
+  12:'Region', 14:'Island', 17:'Marine Reserve',
 };
 
 function openMapPicker() {
@@ -282,6 +296,70 @@ function openMapPicker() {
     pickMap.on('click', onMapClick);
   }
   setTimeout(() => pickMap.invalidateSize(), 80);
+}
+
+async function searchMapLocation() {
+  const q = document.getElementById('modalSearchInput').value.trim();
+  if (!q) return;
+  statusText.textContent = 'Searching…';
+  placesEl.innerHTML = '';
+  clearBoundary();
+  if (pickMarker) { pickMarker.remove(); pickMarker = null; }
+  _nomResults = [];
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&addressdetails=1`, { headers: { 'Accept-Language': 'en' } });
+    _nomResults = await r.json();
+    if (!_nomResults.length) { statusText.textContent = 'No results found — try a different name.'; return; }
+    statusText.textContent = 'Select a location:';
+    placesEl.innerHTML = _nomResults.map((p, i) => `
+      <div class="map-place-item" onclick="selectNomResult(${i})">
+        <div>
+          <div class="map-place-name">${p.display_name.split(',').slice(0,2).join(',')}</div>
+          <div class="map-place-type">${p.type || p.class || ''}</div>
+        </div>
+        <span class="map-place-go">&#8594;</span>
+      </div>`).join('');
+  } catch {
+    statusText.textContent = 'Search failed — try again.';
+  }
+}
+
+function selectNomResult(i) {
+  const p = _nomResults[i];
+  if (!p) return;
+  const bb = p.boundingbox; // [south, north, west, east] as strings
+  const s = Number(bb[0]), n = Number(bb[1]), w = Number(bb[2]), e = Number(bb[3]);
+  const lat = Number(p.lat), lon = Number(p.lon);
+  const cc = p.address?.country_code?.toUpperCase() || '';
+
+  clearBoundary();
+  if (pickMarker) pickMarker.remove();
+  pickMarker = L.marker([lat, lon]).addTo(pickMap);
+
+  boundaryLayer = L.rectangle([[s, w], [n, e]], {
+    color: '#1a5940', weight: 2.5, fillColor: '#2a7a58', fillOpacity: 0.15
+  }).addTo(pickMap);
+  try { pickMap.flyToBounds([[s, w], [n, e]], { duration: 0.6, maxZoom: 13 }); } catch {}
+
+  const shortName = p.display_name.split(',').slice(0, 2).join(',').trim();
+  const fullName  = p.display_name;
+
+  statusText.textContent = 'Ready to play:';
+  placesEl.innerHTML = `
+    <div class="map-place-item" onclick="goBbox(${s},${n},${w},${e},${JSON.stringify(fullName)},${JSON.stringify(cc)})">
+      <div>
+        <div class="map-place-name">&#x2b50; ${shortName}</div>
+        <div class="map-place-type">${p.type || p.class || ''}</div>
+      </div>
+      <span class="map-place-go">Let&#x2019;s Go &#8594;</span>
+    </div>`;
+}
+
+function goBbox(s, n, w, e, name, cc) {
+  let url = `quiz.html?swlat=${s}&nelat=${n}&swlng=${w}&nelng=${e}&place_name=${encodeURIComponent(name)}`;
+  if (cc) url += `&country_code=${encodeURIComponent(cc)}`;
+  window.location.href = url;
+  closeMapPicker();
 }
 
 function closeMapPicker() {
@@ -342,12 +420,19 @@ function renderPlaceList(places, coordOption) {
     </div>` : '';
 
   placesEl.innerHTML = coordHtml + adminHtml;
+  attachPlaceListeners();
+}
 
+function attachPlaceListeners() {
+  const firstNamed = placesEl.querySelector('.map-place-item:not(.map-place-coord)[data-id]');
   placesEl.querySelectorAll('.map-place-item:not(.map-place-coord)').forEach(el => {
     el.addEventListener('mouseenter', () => {
       placesEl.querySelectorAll('.map-place-item').forEach(x => x.classList.remove('active'));
       el.classList.add('active');
       showBoundary(el.dataset.id);
+    });
+    el.addEventListener('mouseleave', () => {
+      if (firstNamed && el !== firstNamed) showBoundary(firstNamed.dataset.id);
     });
     el.addEventListener('click', () => goPlace(el.dataset.id, el.dataset.name));
   });
@@ -393,47 +478,35 @@ async function onMapClick(e) {
     // Build a human-readable "near X" label from the most specific Nominatim name
     const nearLabel = addr.city || addr.town || addr.village || addr.hamlet || addr.suburb || addr.municipality || nomD.name || 'this location';
 
-    // Cast a wide net over Nominatim address fields
-    const searchTerms = [...new Set([
-      nomD.name, addr.city, addr.town, addr.village, addr.hamlet,
-      addr.suburb, addr.municipality, addr.county
-    ].filter(Boolean))].slice(0, 5);
-
-    const pad = 0.2;
-    const [nearbyR, ...autoRs] = await Promise.all([
-      fetch(`https://api.inaturalist.org/v1/places/nearby?nelat=${lat+pad}&nelng=${lng+pad}&swlat=${lat-pad}&swlng=${lng-pad}&per_page=20`),
-      ...searchTerms.map(q => fetch(`https://api.inaturalist.org/v1/places/autocomplete?q=${encodeURIComponent(q)}&per_page=5`)),
-    ]);
-
+    // Small pad — only returns places whose bounding box actually contains the clicked point
+    const pad = 0.05;
+    const nearbyR = await fetch(`https://api.inaturalist.org/v1/places/nearby?nelat=${lat+pad}&nelng=${lng+pad}&swlat=${lat-pad}&swlng=${lng-pad}&per_page=30`);
     const nearbyD = await nearbyR.json();
-    // Admin priority — lower = higher priority; community (100) excluded entirely
-    const PRIORITY = { 6:0, 5:1, 4:2, 10:3, 3:4, 9:5, 13:6, 2:7, 12:8, 7:9 };
+
+    // Sort smallest → largest: marine reserve, island, park, open space, village, town, county, region, state, water, country
+    const PRIORITY = { 17:0, 14:1, 6:2, 9:3, 11:4, 5:5, 4:6, 12:7, 3:8, 7:9, 2:10 };
     const ADMIN_TYPES = new Set(Object.keys(PRIORITY).map(Number));
 
-    // Only standard places, no community places
-    const nearby = (nearbyD.results?.standard || []).filter(p => ADMIN_TYPES.has(p.place_type));
-    const autoResults = await Promise.all(autoRs.map(r => r?.ok ? r.json().then(d => d.results || []) : []));
-    const auto = autoResults.flat().filter(p => {
-      if (!ADMIN_TYPES.has(p.place_type)) return false;
-      if (!p.location) return true;
-      const [a,b] = p.location.split(',').map(Number);
-      return Math.abs(a-lat) <= 3 && Math.abs(b-lng) <= 3;
-    });
-
-    const dist = p => { if (!p.location) return 999; const [a,b] = p.location.split(',').map(Number); return Math.max(Math.abs(a-lat), Math.abs(b-lng)); };
+    const PARK_TYPES = new Set([6, 9, 14, 17]);
     const seen = new Set();
-    const adminPlaces = [...auto, ...nearby]
-      .filter(p => { if (seen.has(p.id) || p.place_type === 1) return false; seen.add(p.id); return true; })
-      .sort((a, b) => {
-        const pa = PRIORITY[a.place_type] ?? 99, pb = PRIORITY[b.place_type] ?? 99;
-        if (pa !== pb) return pa - pb;
-        return dist(a) - dist(b); // tie-break by proximity
+    // Standard places + community parks/reserves (national parks are often community places on iNat)
+    const candidates = [
+      ...(nearbyD.results?.standard || []),
+      ...(nearbyD.results?.community || []).filter(p => PARK_TYPES.has(p.place_type)),
+    ];
+    const adminPlaces = candidates
+      .filter(p => {
+        if (!ADMIN_TYPES.has(p.place_type) || p.place_type === 1) return false;
+        if (seen.has(p.id)) return false;
+        seen.add(p.id);
+        return true;
       })
-      .slice(0, 7);
+      .sort((a, b) => (PRIORITY[a.place_type] ?? 99) - (PRIORITY[b.place_type] ?? 99))
+      .slice(0, 8);
 
     statusText.textContent = 'Hover a location to preview its area, then click to play:';
 
-    // Build list: admin places first, then coordinate fallback at bottom
+    // Coord fallback goes first — most specific (6km radius around cursor)
     const coordOption = {
       id: null,
       display_name: `Birds near ${nearLabel}`,
@@ -447,7 +520,7 @@ async function onMapClick(e) {
   }
 }
 </script>
-<script src="engine.js?v=5.63"></script>
+<script src="engine.js?v=5.71"></script>
 <script>document.getElementById('appVersion').textContent = typeof APP_VERSION !== 'undefined' ? APP_VERSION : '';</script>
 </body>
 </html>
