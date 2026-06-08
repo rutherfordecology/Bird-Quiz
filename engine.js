@@ -1,7 +1,7 @@
 // WhatDatBird? Quiz Engine v5.63
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.84';
+const APP_VERSION = 'v5.85';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -878,27 +878,28 @@ function renderAbout(app, header) {
 
       <div class="field-note" style="margin-bottom:12px">
         <div class="fn-label">WHAT IS THIS?</div>
-        <p class="fn-main">WhatDatBird? is a photo identification quiz for birds. Pick a location, get 10 correct in a row to win. Wrong answers keep coming back until you nail them. Photos are real observations from iNaturalist contributors worldwide.</p>
+        <p class="fn-main">WhatDatBird? is a photo identification quiz for birds. Pick any location in the world, get 10 points to win. Correct answers score +1, wrong answers cost -2, and tricky birds keep coming back until you nail them.</p>
       </div>
 
       <div class="field-note" style="margin-bottom:12px">
         <div class="fn-label">THE DATA</div>
         <p class="fn-main"><strong>Species lists</strong> come from GBIF occurrence data (which includes eBird), filtered to the last 15 years and ordered by observation count. This means you see the birds people actually encounter, not historical-only records. iNaturalist is used as a fallback for places where GBIF has insufficient coverage.</p>
-        <p class="fn-main" style="margin-top:8px"><strong>Photos</strong> come from iNaturalist research-grade observations, fetched by exact taxon ID and sorted by community faves. One photo per observation is used to avoid repetitive shots of the same individual. The carousel shows up to 5 photos per species from different observers.</p>
+        <p class="fn-main" style="margin-top:8px"><strong>Photos</strong> come from iNaturalist research-grade observations, fetched by exact taxon ID and sorted by community faves. One photo per observation is used to avoid repetitive shots of the same individual. The carousel shows up to 5 photos per species from different observers — swipe left or right to browse.</p>
         <p class="fn-main" style="margin-top:8px"><strong>Field notes</strong> are pulled from the Wikipedia article for each species — specifically the identification or description section rather than the intro, which tends to be general facts rather than ID tips.</p>
+        <p class="fn-main" style="margin-top:8px"><strong>Bird calls</strong> are streamed from Xeno-canto, filtered to quality A and B recordings under 10 seconds. Tap 🔊 to hear a call, ↻ to cycle to a different recording. Attribution is shown for every recording.</p>
       </div>
 
       <div class="field-note" style="margin-bottom:12px">
-        <div class="fn-label">DIFFICULTY TIERS</div>
+        <div class="fn-label">DIFFICULTY MODES</div>
         <p class="fn-main"><strong>Common</strong> - the top 25 most-observed species. Birds you'd expect to see on a casual walk.</p>
         <p class="fn-main" style="margin-top:6px"><strong>Birder</strong> - the 90% of species you're likely to encounter. Requires a dedicated trip. For megadiverse places like Colombia this is genuinely hard.</p>
-        <p class="fn-main" style="margin-top:6px"><strong>Complete</strong> - every species with a record in the last 15 years, including rare vagrants.</p>
-        <p class="fn-main" style="margin-top:6px"><strong>Rarity</strong> - the bottom 15% of species by observation count. These are the birds that make listers nervous.</p>
+        <p class="fn-main" style="margin-top:6px"><strong>Complete</strong> - every species recorded in the last 15 years, including rare vagrants. Starts with the most common birds and gets progressively harder as you go.</p>
+        <p class="fn-main" style="margin-top:6px"><strong>Rarity</strong> - the least-recorded 15% of species. These are the birds that make listers nervous.</p>
       </div>
 
       <div class="field-note" style="margin-bottom:12px">
         <div class="fn-label">WRONG ANSWERS</div>
-        <p class="fn-main">Distractor options are chosen by taxonomic relatedness using GBIF taxonomy keys (class, order, family, genus). The closest relative in the full species list for that location is always included, with two more picked randomly from the next closest. This means you're distinguishing a Chatham Albatross from a Buller's Albatross, not an albatross from a kiwi.</p>
+        <p class="fn-main">Distractor options are chosen by taxonomic relatedness using GBIF taxonomy keys (class, order, family, genus). The closest relative in the full species list for that location is always included, with two more picked from the next closest. This means you're distinguishing a Chatham Albatross from a Buller's Albatross, not an albatross from a kiwi.</p>
       </div>
 
       <div class="field-note" style="margin-bottom:12px">
@@ -908,12 +909,12 @@ function renderAbout(app, header) {
 
       <div class="field-note" style="margin-bottom:12px">
         <div class="fn-label">THE QUIZ LIBRARY</div>
-        <p class="fn-main">When you complete a dynamic quiz, you can add it to the shared library. The app writes directly to a JSON file in the GitHub repository using the GitHub Contents API — no server required. Continent and country are detected automatically from the iNaturalist place hierarchy, with a country-to-continent fallback map for places that don't have that data. Changes appear within about a minute after GitHub Pages redeploys.</p>
+        <p class="fn-main">When you finish a quiz you can add it to the shared library. The app writes directly to a JSON file in the GitHub repository using the GitHub Contents API — no server required. The library map shows all saved quizzes as pins — tap any pin to play. Changes appear within about a minute after GitHub Pages redeploys.</p>
       </div>
 
       <div class="field-note" style="margin-bottom:12px">
         <div class="fn-label">WHAT ABOUT INDIGENOUS NAMES?</div>
-        <p class="fn-main">Species names come from GBIF, which uses latin names and the most widely-used common name for each species globally. Tui is Tui — but Pūkeko comes up as Australasian Swamphen. The pipeline doesn't currently support dual names or regional overrides.</p>
+        <p class="fn-main">Species names come from GBIF, which uses the most widely-used common name globally. Tui is Tui — but Pūkeko comes up as Australasian Swamphen. For some places, local names are shown alongside the English name — currently Māori names for New Zealand quizzes and Samoan names for Samoa.</p>
         <p class="fn-main" style="margin-top:8px">The right solution would link indigenous and common names to the geographic origin of each record — so the name you see reflects where the bird actually is. There are over 7,000 languages in the world. That's a problem worth solving.</p>
       </div>
 
@@ -923,6 +924,8 @@ function renderAbout(app, header) {
           <a href="https://www.gbif.org" target="_blank" style="color:#2a7a58">GBIF</a> - species lists and occurrence data<br>
           <a href="https://www.inaturalist.org" target="_blank" style="color:#2a7a58">iNaturalist</a> - photos, taxon IDs, and common names (CC licensed)<br>
           <a href="https://en.wikipedia.org" target="_blank" style="color:#2a7a58">Wikipedia</a> - field notes<br>
+          <a href="https://xeno-canto.org" target="_blank" style="color:#2a7a58">Xeno-canto</a> - bird call recordings (CC licensed)<br>
+          <a href="https://leafletjs.com" target="_blank" style="color:#2a7a58">Leaflet</a> + OpenStreetMap - quiz library map<br>
           GitHub Pages - free static hosting<br>
           No backend, no database, no login.
         </p>
@@ -930,7 +933,7 @@ function renderAbout(app, header) {
 
       <div class="field-note" style="margin-bottom:12px">
         <div class="fn-label">KNOWN LIMITATIONS</div>
-        <p class="fn-main">GBIF and iNaturalist coverage varies enormously by region — well-studied areas have rich data, remote areas may have very few records. GBIF and iNaturalist sometimes use different latin names for the same species due to taxonomy revisions; the app tries to reconcile these but will occasionally miss a match. Photo quality depends entirely on what iNaturalist contributors have uploaded for that species.</p>
+        <p class="fn-main">GBIF and iNaturalist coverage varies enormously by region — well-studied areas have rich data, remote areas may have very few records. GBIF and iNaturalist sometimes use different latin names for the same species due to taxonomy revisions; the app tries to reconcile these but will occasionally miss a match. Photo quality depends entirely on what iNaturalist contributors have uploaded for that species. Not all species have Xeno-canto recordings that meet the quality and length criteria, so the audio button won't appear for every bird.</p>
       </div>
 
       <button class="btn-back" onclick="window.location.href='${CFG.backUrl}'">&#8592; All Quizzes</button>
