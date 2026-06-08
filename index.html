@@ -401,8 +401,14 @@ async function onMapClick(e) {
     const PRIORITY = { 13:0, 6:1, 5:2, 4:3, 10:4, 9:5, 3:6, 2:7, 12:8, 7:9 };
     const ADMIN_TYPES = new Set(Object.keys(PRIORITY).map(Number));
 
+    const PARK_TYPES = new Set([6, 9]);
     const seen = new Set();
-    const adminPlaces = (nearbyD.results?.standard || [])
+    // Standard places + community parks/reserves (national parks are often community places on iNat)
+    const candidates = [
+      ...(nearbyD.results?.standard || []),
+      ...(nearbyD.results?.community || []).filter(p => PARK_TYPES.has(p.place_type)),
+    ];
+    const adminPlaces = candidates
       .filter(p => {
         if (!ADMIN_TYPES.has(p.place_type) || p.place_type === 1) return false;
         if (seen.has(p.id)) return false;
@@ -410,7 +416,7 @@ async function onMapClick(e) {
         return true;
       })
       .sort((a, b) => (PRIORITY[a.place_type] ?? 99) - (PRIORITY[b.place_type] ?? 99))
-      .slice(0, 7);
+      .slice(0, 8);
 
     statusText.textContent = 'Hover a location to preview its area, then click to play:';
 
@@ -428,7 +434,7 @@ async function onMapClick(e) {
   }
 }
 </script>
-<script src="engine.js?v=5.64"></script>
+<script src="engine.js?v=5.65"></script>
 <script>document.getElementById('appVersion').textContent = typeof APP_VERSION !== 'undefined' ? APP_VERSION : '';</script>
 </body>
 </html>
