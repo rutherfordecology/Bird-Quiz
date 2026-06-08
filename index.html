@@ -41,33 +41,7 @@
   .hero h1 { font-size: 2.6rem; font-weight: 900; color: #1a5940; margin-bottom: 10px; line-height: 1.1; }
   .hero p { font-size: 0.95rem; color: #6b6960; line-height: 1.6; max-width: 400px; margin: 0 auto; }
 
-  .search-section { max-width: 480px; margin: 0 auto 44px; padding: 0 20px; position: relative; }
-  .search-input {
-    width: 100%; padding: 14px 18px; font-size: 1rem;
-    font-family: system-ui, -apple-system, sans-serif;
-    border: 2px solid #dddbd3; border-radius: 12px;
-    background: #fff; color: #1c1b18; outline: none;
-    transition: border-color 0.15s; box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-  }
-  .search-input:focus { border-color: #2a7a58; box-shadow: 0 2px 10px rgba(42,122,88,0.15); }
-  .search-input::placeholder { color: #9b9890; }
-  .search-drop {
-    display: none; position: absolute; top: calc(100% + 6px); left: 20px; right: 20px;
-    background: #fff; border: 1.5px solid #dddbd3; border-radius: 12px;
-    box-shadow: 0 8px 28px rgba(0,0,0,0.1); z-index: 100; overflow: hidden;
-  }
-  .search-drop.open { display: block; }
-  .search-item {
-    padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px;
-    border-bottom: 1px solid #f3f2ee; transition: background 0.1s;
-  }
-  .search-item:last-child { border-bottom: none; }
-  .search-item:hover { background: #e8f4ef; }
-  .search-item-name { font-size: 0.9rem; font-weight: 700; color: #1c1b18; }
-  .search-item-type { font-size: 0.72rem; color: #9b9890; margin-top: 1px; }
-  .search-msg { padding: 14px 16px; color: #9b9890; font-size: 0.85rem; font-style: italic; }
-
-  .section-label {
+.section-label {
     max-width: 640px; margin: 0 auto 14px; padding: 0 20px;
     font-size: 0.68rem; font-weight: 800; letter-spacing: 0.12em;
     text-transform: uppercase; color: #9b9890;
@@ -102,8 +76,8 @@
   footer a { color: #2a7a58; text-decoration: none; }
   footer a:hover { text-decoration: underline; }
 
-  .map-btn { display:block; max-width:480px; margin:0 auto 8px; padding:10px 16px; background:transparent; border:1.5px solid #2a7a58; color:#2a7a58; border-radius:12px; font-size:0.9rem; font-weight:700; cursor:pointer; font-family:system-ui,-apple-system,sans-serif; transition:all 0.15s; text-align:center; width:calc(100% - 40px); }
-  .map-btn:hover { background:#e8f4ef; }
+  .pick-btn { display:block; max-width:480px; margin:0 auto 0; padding:15px 24px; background:#1a5940; border:none; color:#fff; border-radius:14px; font-size:1.05rem; font-weight:800; cursor:pointer; font-family:system-ui,-apple-system,sans-serif; transition:all 0.15s; text-align:center; width:calc(100% - 40px); box-shadow:0 4px 16px rgba(26,89,64,0.25); letter-spacing:0.01em; }
+  .pick-btn:hover { background:#226b4d; box-shadow:0 6px 20px rgba(26,89,64,0.35); transform:translateY(-1px); }
 
   .map-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:1000; align-items:center; justify-content:center; padding:20px; }
   .map-modal.open { display:flex; }
@@ -112,13 +86,25 @@
   .map-header h2 { font-size:1rem; font-weight:800; color:#1a5940; }
   .map-close { background:none; border:none; font-size:1.4rem; cursor:pointer; color:#9b9890; line-height:1; padding:0 4px; }
   .map-close:hover { color:#1c1b18; }
-  #pickMap { flex:1; min-height:380px; }
+  .map-search-wrap { padding:10px 14px; border-bottom:1px solid #dddbd3; flex-shrink:0; position:relative; }
+  .map-search-input { width:100%; padding:9px 14px; font-size:0.92rem; font-family:system-ui,-apple-system,sans-serif; border:1.5px solid #dddbd3; border-radius:10px; background:#f8f7f4; color:#1c1b18; outline:none; transition:border-color 0.15s; }
+  .map-search-input:focus { border-color:#2a7a58; background:#fff; }
+  .map-search-input::placeholder { color:#b0aea6; }
+  .map-search-drop { display:none; position:absolute; top:calc(100% - 2px); left:14px; right:14px; background:#fff; border:1.5px solid #dddbd3; border-top:none; border-radius:0 0 10px 10px; box-shadow:0 8px 24px rgba(0,0,0,0.1); z-index:200; overflow:hidden; }
+  .map-search-drop.open { display:block; }
+  .map-search-item { padding:10px 14px; cursor:pointer; display:flex; align-items:center; gap:10px; border-bottom:1px solid #f3f2ee; transition:background 0.1s; }
+  .map-search-item:last-child { border-bottom:none; }
+  .map-search-item:hover, .map-search-item.active { background:#e8f4ef; }
+  .map-search-item-name { font-size:0.88rem; font-weight:700; color:#1c1b18; }
+  .map-search-item-type { font-size:0.7rem; color:#9b9890; margin-top:1px; }
+  .map-search-msg { padding:12px 14px; color:#9b9890; font-size:0.83rem; font-style:italic; }
+  #pickMap { flex:1; min-height:320px; }
   .map-status { padding:10px 18px; font-size:0.85rem; color:#6b6960; border-top:1px solid #dddbd3; flex-shrink:0; min-height:44px; display:flex; align-items:center; }
   .map-status strong { color:#1a5940; }
-  .map-places { border-top:1px solid #dddbd3; flex-shrink:0; overflow-y:auto; max-height:220px; }
+  .map-places { border-top:1px solid #dddbd3; flex-shrink:0; overflow-y:auto; max-height:200px; }
   .map-place-item { padding:11px 18px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #f3f2ee; transition:background 0.1s; }
   .map-place-item:last-child { border-bottom:none; }
-  .map-place-item:hover { background:#e8f4ef; }
+  .map-place-item:hover, .map-place-item.active { background:#e8f4ef; }
   .map-place-name { font-size:0.9rem; font-weight:700; color:#1c1b18; }
   .map-place-type { font-size:0.72rem; color:#9b9890; margin-top:1px; }
   .map-place-go { font-size:0.75rem; font-weight:800; color:#2a7a58; white-space:nowrap; }
@@ -143,25 +129,27 @@
 <div class="hero">
   <div class="eyebrow">BIRD PHOTO IDENTIFICATION - WORLDWIDE</div>
   <h1>WhatDatBird?</h1>
-  <p>Test your bird ID skills. Pick a preset location or search anywhere in the world.</p>
+  <p>Test your bird ID skills. Pick any location in the world.</p>
 </div>
 
-<div class="search-section">
-  <input class="search-input" id="searchInput" type="text"
-    placeholder="Search any place - country, island, park..." autocomplete="off" />
-  <div class="search-drop" id="searchDrop"></div>
+<div style="max-width:480px;margin:0 auto 44px;padding:0 20px;">
+  <button class="pick-btn" onclick="openMapPicker()">&#127758; Choose a location to play</button>
 </div>
-<button class="map-btn" onclick="openMapPicker()">&#127758; Pick a location on the map</button>
 
 <div class="map-modal" id="mapModal">
   <div class="map-box">
     <div class="map-header">
-      <h2>&#127758; Pick a location</h2>
+      <h2>&#127758; Choose a location</h2>
       <button class="map-close" onclick="closeMapPicker()">&#x2715;</button>
+    </div>
+    <div class="map-search-wrap">
+      <input class="map-search-input" id="modalSearchInput" type="text"
+        placeholder="Search a place, park, island, country…" autocomplete="off" />
+      <div class="map-search-drop" id="modalSearchDrop"></div>
     </div>
     <div id="pickMap"></div>
     <div class="map-status" id="mapStatus">
-      <span id="mapStatusText">Click anywhere on the map to choose a location.</span>
+      <span id="mapStatusText">Search above or click the map to choose a location.</span>
     </div>
     <div class="map-places" id="mapPlaces"></div>
   </div>
@@ -280,53 +268,15 @@ async function loadPlacePhoto(placeId, el) {
 
 loadLibrary();
 
-// Search
-const inp = document.getElementById('searchInput');
-const drop = document.getElementById('searchDrop');
-let timer;
-
-inp.addEventListener('input', () => {
-  clearTimeout(timer);
-  const q = inp.value.trim();
-  if (q.length < 2) { drop.classList.remove('open'); return; }
-  drop.innerHTML = '<div class="search-msg">Searching...</div>';
-  drop.classList.add('open');
-  timer = setTimeout(() => doSearch(q), 350);
-});
-inp.addEventListener('blur', () => setTimeout(() => drop.classList.remove('open'), 200));
-inp.addEventListener('focus', () => { if (inp.value.trim().length >= 2) drop.classList.add('open'); });
-
-const TYPE_LABEL = {1:'Continent',2:'Country',3:'State / Region',4:'County / District',
-  6:'Park / Reserve',7:'Marine Area',8:'Country',9:'State',10:'County',12:'Country',13:'State'};
-
-async function doSearch(q) {
-  try {
-    const r = await fetch(`https://api.inaturalist.org/v1/places/autocomplete?q=${encodeURIComponent(q)}&geo=true`);
-    const d = await r.json();
-    const results = (d.results || []).slice(0, 7);
-    if (!results.length) { drop.innerHTML = '<div class="search-msg">No places found.</div>'; return; }
-    drop.innerHTML = results.map(p => `
-      <div class="search-item" data-id="${p.id}" data-name="${p.display_name.replace(/"/g,'&quot;')}">
-        <span style="font-size:1.1rem">&#x1F4CD;</span>
-        <div>
-          <div class="search-item-name">${p.display_name}</div>
-          <div class="search-item-type">${TYPE_LABEL[p.place_type] || 'Place'}</div>
-        </div>
-      </div>`).join('');
-    drop.querySelectorAll('.search-item').forEach(el =>
-      el.addEventListener('mousedown', () => goPlace(el.dataset.id, el.dataset.name))
-    );
-  } catch { drop.innerHTML = '<div class="search-msg">Search failed - try again.</div>'; }
-}
-
 function goPlace(id, name) {
   window.location.href = `quiz.html?place_id=${id}&place_name=${encodeURIComponent(name)}`;
 }
 
 // ── Map picker ────────────────────────────────────────────────────────────
-let pickMap = null, pickMarker = null;
+let pickMap = null, pickMarker = null, boundaryLayer = null;
+const boundaryCache = {};
 
-const MAP_TYPE_LABEL = {
+const TYPE_LABEL = {
   1:'Continent', 2:'Country', 3:'State / Region', 4:'County / District',
   5:'Town / City', 6:'Park / Reserve', 7:'Marine Area', 9:'State',
   10:'County', 12:'Country', 13:'State', 100:'Community', 102:'Country'
@@ -342,19 +292,98 @@ function openMapPicker() {
     }).addTo(pickMap);
     pickMap.on('click', onMapClick);
   }
-  setTimeout(() => pickMap.invalidateSize(), 50);
+  setTimeout(() => { pickMap.invalidateSize(); document.getElementById('modalSearchInput').focus(); }, 80);
 }
 
 function closeMapPicker() {
   document.getElementById('mapModal').classList.remove('open');
   document.getElementById('mapPlaces').innerHTML = '';
-  document.getElementById('mapStatusText').textContent = 'Click anywhere on the map to choose a location.';
+  document.getElementById('mapStatusText').textContent = 'Search above or click the map to choose a location.';
+  document.getElementById('modalSearchInput').value = '';
+  document.getElementById('modalSearchDrop').classList.remove('open');
+  clearBoundary();
 }
 
+function clearBoundary() {
+  if (boundaryLayer) { boundaryLayer.remove(); boundaryLayer = null; }
+}
+
+async function fetchBoundary(id) {
+  if (boundaryCache[id] === null) return null; // known to have no geometry
+  if (boundaryCache[id]) return boundaryCache[id];
+  try {
+    const r = await fetch(`https://api.inaturalist.org/v1/places/${id}`);
+    const d = await r.json();
+    const place = d.results?.[0];
+    const geo = place?.geometry_geojson || place?.bounding_box_geojson || null;
+    boundaryCache[id] = geo;
+    return geo;
+  } catch { return null; }
+}
+
+async function showBoundary(id) {
+  clearBoundary();
+  const geo = await fetchBoundary(id);
+  if (!geo || !pickMap) return;
+  boundaryLayer = L.geoJSON(geo, {
+    style: { color: '#1a5940', weight: 2.5, fillColor: '#2a7a58', fillOpacity: 0.15 }
+  }).addTo(pickMap);
+  try { pickMap.flyToBounds(boundaryLayer.getBounds(), { duration: 0.6, maxZoom: 13 }); } catch {}
+}
+
+// ── Modal search ──────────────────────────────────────────────────────────
+const modalInp  = document.getElementById('modalSearchInput');
+const modalDrop = document.getElementById('modalSearchDrop');
+let modalTimer;
+
+modalInp.addEventListener('input', () => {
+  clearTimeout(modalTimer);
+  const q = modalInp.value.trim();
+  if (q.length < 2) { modalDrop.classList.remove('open'); clearBoundary(); return; }
+  modalDrop.innerHTML = '<div class="map-search-msg">Searching…</div>';
+  modalDrop.classList.add('open');
+  modalTimer = setTimeout(() => doModalSearch(q), 350);
+});
+modalInp.addEventListener('blur', () => setTimeout(() => modalDrop.classList.remove('open'), 200));
+modalInp.addEventListener('focus', () => { if (modalInp.value.trim().length >= 2) modalDrop.classList.add('open'); });
+
+async function doModalSearch(q) {
+  try {
+    const r = await fetch(`https://api.inaturalist.org/v1/places/autocomplete?q=${encodeURIComponent(q)}&geo=true`);
+    const d = await r.json();
+    const results = (d.results || []).slice(0, 7);
+    if (!results.length) { modalDrop.innerHTML = '<div class="map-search-msg">No places found.</div>'; return; }
+    modalDrop.innerHTML = results.map(p => `
+      <div class="map-search-item" data-id="${p.id}" data-name="${p.display_name.replace(/"/g,'&quot;')}">
+        <span style="font-size:1rem">&#x1F4CD;</span>
+        <div>
+          <div class="map-search-item-name">${p.display_name}</div>
+          <div class="map-search-item-type">${TYPE_LABEL[p.place_type] || 'Place'}</div>
+        </div>
+      </div>`).join('');
+    modalDrop.querySelectorAll('.map-search-item').forEach(el => {
+      el.addEventListener('mouseenter', () => {
+        modalDrop.querySelectorAll('.map-search-item').forEach(x => x.classList.remove('active'));
+        el.classList.add('active');
+        showBoundary(el.dataset.id);
+      });
+      el.addEventListener('mousedown', () => {
+        modalDrop.classList.remove('open');
+        goPlace(el.dataset.id, el.dataset.name);
+      });
+    });
+    // Preview boundary for first result automatically
+    showBoundary(results[0].id);
+  } catch { modalDrop.innerHTML = '<div class="map-search-msg">Search failed — try again.</div>'; }
+}
+
+// ── Map click ─────────────────────────────────────────────────────────────
 async function onMapClick(e) {
   const { lat, lng } = e.latlng;
+  modalDrop.classList.remove('open');
   if (pickMarker) pickMarker.remove();
   pickMarker = L.marker([lat, lng]).addTo(pickMap);
+  clearBoundary();
 
   const statusText = document.getElementById('mapStatusText');
   const placesEl   = document.getElementById('mapPlaces');
@@ -362,18 +391,13 @@ async function onMapClick(e) {
   placesEl.innerHTML = '';
 
   try {
-    // 1. Reverse geocode to get local place name
     const nomR = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`, {
       headers: { 'Accept-Language': 'en' }
     });
     const nomD = await nomR.json();
     const addr = nomD.address || {};
-    // Search multiple address levels so clicking a suburb still surfaces the city
-    const searchTerms = [...new Set([
-      addr.city, addr.town, addr.village, addr.county
-    ].filter(Boolean))].slice(0, 3);
+    const searchTerms = [...new Set([addr.city, addr.town, addr.village, addr.county].filter(Boolean))].slice(0, 3);
 
-    // 2. iNat nearby + autocomplete for each address level — all in parallel
     const pad = 0.2;
     const [nearbyR, ...autoRs] = await Promise.all([
       fetch(`https://api.inaturalist.org/v1/places/nearby?nelat=${lat+pad}&nelng=${lng+pad}&swlat=${lat-pad}&swlng=${lng-pad}&per_page=20`),
@@ -382,14 +406,10 @@ async function onMapClick(e) {
 
     const nearbyD = await nearbyR.json();
     const PRIORITY = { 6:0, 100:1, 5:2, 4:3, 10:4, 3:5, 9:6, 13:7, 2:8, 12:9, 1:10 };
-
     const nearby = [...(nearbyD.results?.standard || []), ...(nearbyD.results?.community || [])];
     const autoResults = await Promise.all(autoRs.map(r => r?.ok ? r.json().then(d => d.results || []) : []));
-    const autoRaw = autoResults.flat();
-    const auto = autoRaw.filter(p => { if (!p.location) return true; const [a,b] = p.location.split(',').map(Number); return Math.abs(a-lat) <= 2 && Math.abs(b-lng) <= 2; });
+    const auto = autoResults.flat().filter(p => { if (!p.location) return true; const [a,b] = p.location.split(',').map(Number); return Math.abs(a-lat) <= 2 && Math.abs(b-lng) <= 2; });
 
-    // Merge, dedupe by id, drop continents
-    // Cities/towns (type 6) within 0.1 deg of click float to top, rest sorted specific → broad
     const CITY_TYPES = new Set([5]);
     const dist = p => { if (!p.location) return 999; const [a,b] = p.location.split(',').map(Number); return Math.max(Math.abs(a-lat), Math.abs(b-lng)); };
     const seen = new Set();
@@ -403,31 +423,36 @@ async function onMapClick(e) {
       })
       .slice(0, 8);
 
-    if (!all.length) {
-      statusText.textContent = 'No locations found here — try another spot.';
-      return;
-    }
+    if (!all.length) { statusText.textContent = 'No locations found here — try another spot.'; return; }
 
-    statusText.textContent = 'Choose a location:';
+    statusText.textContent = 'Hover a location to preview its area, then click to play:';
     placesEl.innerHTML = all.map(p => `
-      <div class="map-place-item" onclick="pickMapPlace(${p.id}, '${p.display_name.replace(/'/g,"\\'")}')">
+      <div class="map-place-item" data-id="${p.id}" data-name="${p.display_name.replace(/'/g,"\\'")}">
         <div>
           <div class="map-place-name">${p.display_name}</div>
-          <div class="map-place-type">${MAP_TYPE_LABEL[p.place_type] || 'Place'}</div>
+          <div class="map-place-type">${TYPE_LABEL[p.place_type] || 'Place'}</div>
         </div>
         <span class="map-place-go">Let&#x2019;s Go &#8594;</span>
       </div>`).join('');
+
+    placesEl.querySelectorAll('.map-place-item').forEach(el => {
+      el.addEventListener('mouseenter', () => {
+        placesEl.querySelectorAll('.map-place-item').forEach(x => x.classList.remove('active'));
+        el.classList.add('active');
+        showBoundary(el.dataset.id);
+      });
+      el.addEventListener('click', () => goPlace(el.dataset.id, el.dataset.name));
+    });
+
+    // Auto-preview boundary for first result
+    showBoundary(all[0].id);
+
   } catch {
     statusText.textContent = 'Could not look up this location — try again.';
   }
 }
-
-function pickMapPlace(id, name) {
-  closeMapPicker();
-  goPlace(id, name);
-}
 </script>
-<script src="engine.js?v=5.51"></script>
+<script src="engine.js?v=5.53"></script>
 <script>document.getElementById('appVersion').textContent = typeof APP_VERSION !== 'undefined' ? APP_VERSION : '';</script>
 </body>
 </html>
