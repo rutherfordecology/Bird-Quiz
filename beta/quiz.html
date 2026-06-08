@@ -215,18 +215,11 @@ async function getGBIFSpeciesKeys() {
     return (d.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
   }
   if (PLACE_BBOX) {
-    // Coord mode: bbox already sized by expansion loop — no extra padding, no country fallback
+    // Coord mode: no extra padding; normal mode: 0.2 deg buffer around iNat boundary
     const extraPad = COORD_MODE ? 0 : 0.2;
     const r = await fetch(bboxUrl(PLACE_BBOX, extraPad));
     const d = await r.json();
-    const items = (d.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
-    // Normal mode only: fall back to country if too few local records
-    if (!COORD_MODE && items.length < 15 && COUNTRY_CODE) {
-      const cr = await fetch(countryUrl());
-      const cd = await cr.json();
-      return (cd.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
-    }
-    return items;
+    return (d.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
   }
   if (COUNTRY_CODE) {
     const r = await fetch(countryUrl());

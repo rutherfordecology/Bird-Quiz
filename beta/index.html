@@ -86,11 +86,7 @@
   .map-header h2 { font-size:1rem; font-weight:800; color:#1a5940; }
   .map-close { background:none; border:none; font-size:1.4rem; cursor:pointer; color:#9b9890; line-height:1; padding:0 4px; }
   .map-close:hover { color:#1c1b18; }
-  .map-search-wrap { padding:10px 14px; border-bottom:1px solid #dddbd3; flex-shrink:0; }
-  .map-search-input { width:100%; padding:9px 14px; font-size:0.92rem; font-family:system-ui,-apple-system,sans-serif; border:1.5px solid #dddbd3; border-radius:10px; background:#f8f7f4; color:#1c1b18; outline:none; transition:border-color 0.15s; }
-  .map-search-input:focus { border-color:#2a7a58; background:#fff; }
-  .map-search-input::placeholder { color:#b0aea6; }
-  #pickMap { flex:1; min-height:320px; }
+#pickMap { flex:1; min-height:320px; }
   .map-status { padding:10px 18px; font-size:0.85rem; color:#6b6960; border-top:1px solid #dddbd3; flex-shrink:0; min-height:44px; display:flex; align-items:center; }
   .map-status strong { color:#1a5940; }
   .map-places { border-top:1px solid #dddbd3; flex-shrink:0; overflow-y:auto; max-height:200px; }
@@ -136,12 +132,8 @@
       <button class="map-close" onclick="closeMapPicker()">&#x2715;</button>
     </div>
     <div id="pickMap"></div>
-    <div class="map-search-wrap">
-      <input class="map-search-input" id="modalSearchInput" type="text"
-        placeholder="Search a place, park, island, country…" autocomplete="off" />
-    </div>
     <div class="map-status" id="mapStatus">
-      <span id="mapStatusText">Search above or click the map to find a location.</span>
+      <span id="mapStatusText">Click anywhere on the map to find a location.</span>
     </div>
     <div class="map-places" id="mapPlaces"></div>
   </div>
@@ -295,7 +287,7 @@ function openMapPicker() {
 function closeMapPicker() {
   document.getElementById('mapModal').classList.remove('open');
   document.getElementById('mapPlaces').innerHTML = '';
-  document.getElementById('mapStatusText').textContent = 'Search below or click the map to find a location.';
+  document.getElementById('mapStatusText').textContent = 'Click anywhere on the map to find a location.';
   document.getElementById('modalSearchInput').value = '';
   clearBoundary();
 }
@@ -327,35 +319,8 @@ async function showBoundary(id) {
   try { pickMap.flyToBounds(boundaryLayer.getBounds(), { duration: 0.6, maxZoom: 13 }); } catch {}
 }
 
-// ── Modal search ──────────────────────────────────────────────────────────
-const modalInp = document.getElementById('modalSearchInput');
 const statusText = document.getElementById('mapStatusText');
 const placesEl  = document.getElementById('mapPlaces');
-let modalTimer;
-
-modalInp.addEventListener('input', () => {
-  clearTimeout(modalTimer);
-  const q = modalInp.value.trim();
-  if (q.length < 2) {
-    if (!q) { placesEl.innerHTML = ''; statusText.textContent = 'Search below or click the map to find a location.'; clearBoundary(); }
-    return;
-  }
-  statusText.textContent = 'Searching…';
-  placesEl.innerHTML = '';
-  modalTimer = setTimeout(() => doModalSearch(q), 350);
-});
-
-async function doModalSearch(q) {
-  try {
-    const r = await fetch(`https://api.inaturalist.org/v1/places/autocomplete?q=${encodeURIComponent(q)}&geo=true`);
-    const d = await r.json();
-    const results = (d.results || []).slice(0, 7);
-    if (!results.length) { statusText.textContent = 'No places found.'; return; }
-    statusText.textContent = 'Hover a location to preview its area, then click to play:';
-    renderPlaceList(results);
-    showBoundary(results[0].id);
-  } catch { statusText.textContent = 'Search failed — try again.'; }
-}
 
 function renderPlaceList(places, coordOption) {
   const adminHtml = places.map(p => `
@@ -414,7 +379,6 @@ async function onMapClick(e) {
   if (pickMarker) pickMarker.remove();
   pickMarker = L.marker([lat, lng]).addTo(pickMap);
   clearBoundary();
-  modalInp.value = '';
   statusText.textContent = 'Finding nearby locations…';
   placesEl.innerHTML = '';
 
