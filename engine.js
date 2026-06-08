@@ -1,7 +1,7 @@
 // WhatDatBird? Quiz Engine v5.63
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.79';
+const APP_VERSION = 'v5.80';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -1022,7 +1022,7 @@ async function submitScore() {
     if (!data.boards) data.boards = {};
     const key = CFG.placeId ? `${CFG.placeId}_${state.mode}` : `coord_${CFG.coordLat.toFixed(3)}_${CFG.coordLng.toFixed(3)}_${state.mode}`;
     if (!data.boards[key]) data.boards[key] = [];
-    data.boards[key].push({ name, score: totalSeen, pts: state.totalCorrect, date: new Date().toISOString().split('T')[0] });
+    data.boards[key].push({ name, score: state.totalSeen, pts: state.totalCorrect, date: new Date().toISOString().split('T')[0] });
     data.boards[key].sort((a, b) => (b.pts ?? 0) - (a.pts ?? 0) || (a.score ?? 0) - (b.score ?? 0));
     data.boards[key] = data.boards[key].slice(0, 10);
 
