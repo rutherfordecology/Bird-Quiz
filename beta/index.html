@@ -387,7 +387,11 @@ async function onMapClick(e) {
     });
     const nomD = await nomR.json();
     const addr = nomD.address || {};
-    const searchTerms = [...new Set([addr.city, addr.town, addr.village, addr.county].filter(Boolean))].slice(0, 3);
+    // Cast a wide net over Nominatim address fields — small cities often come back as hamlet/suburb/municipality
+    const searchTerms = [...new Set([
+      nomD.name, addr.city, addr.town, addr.village, addr.hamlet,
+      addr.suburb, addr.municipality, addr.county
+    ].filter(Boolean))].slice(0, 5);
 
     const pad = 0.2;
     const [nearbyR, ...autoRs] = await Promise.all([
@@ -399,7 +403,8 @@ async function onMapClick(e) {
     const PRIORITY = { 6:0, 100:1, 5:2, 4:3, 10:4, 3:5, 9:6, 13:7, 2:8, 12:9, 1:10 };
     const nearby = [...(nearbyD.results?.standard || []), ...(nearbyD.results?.community || [])];
     const autoResults = await Promise.all(autoRs.map(r => r?.ok ? r.json().then(d => d.results || []) : []));
-    const auto = autoResults.flat().filter(p => { if (!p.location) return true; const [a,b] = p.location.split(',').map(Number); return Math.abs(a-lat) <= 2 && Math.abs(b-lng) <= 2; });
+    // Widen geo filter slightly — 3 deg instead of 2 to catch places whose centroid is offset from the click
+    const auto = autoResults.flat().filter(p => { if (!p.location) return true; const [a,b] = p.location.split(',').map(Number); return Math.abs(a-lat) <= 3 && Math.abs(b-lng) <= 3; });
 
     const CITY_TYPES = new Set([5]);
     const dist = p => { if (!p.location) return 999; const [a,b] = p.location.split(',').map(Number); return Math.max(Math.abs(a-lat), Math.abs(b-lng)); };
