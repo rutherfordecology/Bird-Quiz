@@ -380,7 +380,7 @@ async function boot() {
     COUNTRY_CODE = COORD_CC;
 
     // Build a bbox (~25km pad ≈ 0.25 deg) for GBIF
-    const pad = 0.25;
+    const pad = 0.2;
     PLACE_BBOX = { minLat: COORD_LAT - pad, maxLat: COORD_LAT + pad, minLng: COORD_LNG - pad, maxLng: COORD_LNG + pad };
 
     if (COUNTRY_CODE) {

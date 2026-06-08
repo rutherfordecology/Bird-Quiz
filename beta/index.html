@@ -392,7 +392,7 @@ function renderPlaceList(places, coordOption) {
       placesEl.querySelectorAll('.map-place-item').forEach(x => x.classList.remove('active'));
       el.classList.add('active');
       const clat = parseFloat(el.dataset.lat), clng = parseFloat(el.dataset.lng);
-      const pad = 0.25;
+      const pad = 0.2;
       clearBoundary();
       if (pickMap) {
         boundaryLayer = L.rectangle([[clat - pad, clng - pad],[clat + pad, clng + pad]], {
