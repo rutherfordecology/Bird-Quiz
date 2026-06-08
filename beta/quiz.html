@@ -388,7 +388,7 @@ async function boot() {
 
     // Expand bbox until we find enough species
     const PAD_STEPS = [0.05, 0.1, 0.2, 0.5, 1.0, 2.0];
-    const MIN_SPECIES = 15;
+    const MIN_SPECIES = 25;
     for (const pad of PAD_STEPS) {
       PLACE_BBOX = { minLat: COORD_LAT - pad, maxLat: COORD_LAT + pad, minLng: COORD_LNG - pad, maxLng: COORD_LNG + pad };
       const approxKm = Math.round(pad * 111);
