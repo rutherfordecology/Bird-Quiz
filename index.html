@@ -265,9 +265,9 @@ let pickMap = null, pickMarker = null, boundaryLayer = null;
 const boundaryCache = {};
 
 const TYPE_LABEL = {
-  1:'Continent', 2:'Country', 3:'State / Region', 4:'County / District',
-  5:'Town / City', 6:'Park / Reserve', 7:'Marine Area', 9:'State',
-  10:'County', 12:'Country', 13:'State', 100:'Community', 102:'Country'
+  2:'Country', 3:'State / Region', 4:'County / District', 5:'Town / City',
+  6:'Park / Reserve', 7:'Water Body', 9:'Open Space / Reserve', 11:'Village',
+  12:'Region', 14:'Island', 17:'Marine Reserve',
 };
 
 function openMapPicker() {
@@ -397,11 +397,11 @@ async function onMapClick(e) {
     const nearbyR = await fetch(`https://api.inaturalist.org/v1/places/nearby?nelat=${lat+pad}&nelng=${lng+pad}&swlat=${lat-pad}&swlng=${lng-pad}&per_page=30`);
     const nearbyD = await nearbyR.json();
 
-    // Sort smallest geographic area first: site → park → town → county → urban → open-space → state → country → region → water
-    const PRIORITY = { 13:0, 6:1, 5:2, 4:3, 10:4, 9:5, 3:6, 2:7, 12:8, 7:9 };
+    // Sort smallest → largest: marine reserve, island, park, open space, village, town, county, region, state, water, country
+    const PRIORITY = { 17:0, 14:1, 6:2, 9:3, 11:4, 5:5, 4:6, 12:7, 3:8, 7:9, 2:10 };
     const ADMIN_TYPES = new Set(Object.keys(PRIORITY).map(Number));
 
-    const PARK_TYPES = new Set([6, 9]);
+    const PARK_TYPES = new Set([6, 9, 14, 17]);
     const seen = new Set();
     // Standard places + community parks/reserves (national parks are often community places on iNat)
     const candidates = [
@@ -434,7 +434,7 @@ async function onMapClick(e) {
   }
 }
 </script>
-<script src="engine.js?v=5.65"></script>
+<script src="engine.js?v=5.66"></script>
 <script>document.getElementById('appVersion').textContent = typeof APP_VERSION !== 'undefined' ? APP_VERSION : '';</script>
 </body>
 </html>
