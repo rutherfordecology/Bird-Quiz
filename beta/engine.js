@@ -1,7 +1,7 @@
 // WhatDatBird? Quiz Engine v5.63
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.73';
+const APP_VERSION = 'v5.74';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -434,6 +434,12 @@ function render() {
     return;
   }
 
+  // Celebrate (win — choose to finish or keep going)
+  if (state.phase==='celebrate') {
+    renderCelebrate(app, header);
+    return;
+  }
+
   // Result
   if (state.phase==='result') {
     renderResult(app, header);
@@ -535,6 +541,30 @@ function renderIntro(app, header) {
     <div id="introLbPanel" style="display:none;margin-top:12px"></div>
     <button class="btn-back" onclick="setState({phase:'about'})">&#8505; About WhatDatBird?</button>
     <button class="btn-back" onclick="window.location.href='${CFG.backUrl}'">&#8592; All Quizzes</button>`;
+}
+
+function renderCelebrate(app, header) {
+  launchConfetti();
+  const birdsLeft = state.queue.length + state.wrongBin.length;
+  const canContinue = birdsLeft > 0;
+  app.innerHTML = header + `
+    <div class="fade" style="text-align:center;padding:32px 20px;">
+      <div style="font-size:3rem;margin-bottom:12px;">🎉</div>
+      <h2 style="font-size:1.8rem;font-weight:900;color:#1a5940;margin-bottom:8px;">10 points!</h2>
+      <p style="color:#6b6960;margin-bottom:28px;">Amazing work — you nailed it!</p>
+      ${canContinue ? `
+        <button class="btn-primary" onclick="keepPlaying()" style="margin-bottom:12px;">Keep going for 10 more! 🚀</button>
+        <br>` : ''}
+      <button class="btn-secondary" onclick="setState({phase:'result'})">Save score &amp; see results</button>
+    </div>`;
+}
+
+function keepPlaying() {
+  // Reset streak but keep queue and wrongBin — birds already mastered won't repeat
+  // since they've been removed from queue naturally
+  setState({ phase: 'quiz', streak: 0, streakHistory: [], selected: null, imgUrl: null, imgLoading: true, photoUrls: [], photoIdx: 0 });
+  // Advance to next bird
+  _advance();
 }
 
 function renderResult(app, header) {
@@ -898,7 +928,7 @@ function selectAnswer(opt, event) {
     if(event) burstStars(event.clientX,event.clientY);
     setTimeout(()=>showEncouragement(STREAK_MSGS[newStreak]||CORRECT_MSGS[Math.floor(Math.random()*CORRECT_MSGS.length)]),150);
   }
-  if(newStreak>=STREAK_TARGET) setTimeout(()=>setState({phase:'result'}),2000);
+  if(newStreak>=STREAK_TARGET) setTimeout(()=>setState({phase:'celebrate'}),2000);
 }
 
 function advance() {
