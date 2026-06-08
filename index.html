@@ -135,11 +135,11 @@
       <h2>&#127758; Choose a location</h2>
       <button class="map-close" onclick="closeMapPicker()">&#x2715;</button>
     </div>
+    <div id="pickMap"></div>
     <div class="map-search-row">
       <input id="modalSearchInput" type="text" placeholder="Search for a place, park, or reserve…" onkeydown="if(event.key==='Enter')searchMapLocation()">
       <button onclick="searchMapLocation()">Search</button>
     </div>
-    <div id="pickMap"></div>
     <div class="map-status" id="mapStatus">
       <span id="mapStatusText">Click anywhere on the map to find a location.</span>
     </div>
@@ -460,7 +460,7 @@ async function onMapClick(e) {
   }
 }
 </script>
-<script src="engine.js?v=5.67"></script>
+<script src="engine.js?v=5.68"></script>
 <script>document.getElementById('appVersion').textContent = typeof APP_VERSION !== 'undefined' ? APP_VERSION : '';</script>
 </body>
 </html>
