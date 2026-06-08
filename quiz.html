@@ -18,11 +18,15 @@ window.onunhandledrejection = e => {
 };
 </script>
 <div id="app"></div>
-<script src="engine.js?v=5.52" onerror="document.getElementById('app').innerHTML='<div style=padding:2rem;font-family:sans-serif;color:#8a2c2c>Failed to fetch engine.js — check network connection.<br><br><a href=index.html>← Back</a></div>'"></script>
+<script src="engine.js?v=5.59" onerror="document.getElementById('app').innerHTML='<div style=padding:2rem;font-family:sans-serif;color:#8a2c2c>Failed to fetch engine.js — check network connection.<br><br><a href=index.html>← Back</a></div>'"></script>
 <script>
 const params     = new URLSearchParams(window.location.search);
 const PLACE_ID   = params.get('place_id');
 const PLACE_NAME = decodeURIComponent(params.get('place_name') || 'Unknown Place');
+const COORD_LAT  = params.get('lat')  ? parseFloat(params.get('lat'))  : null;
+const COORD_LNG  = params.get('lng')  ? parseFloat(params.get('lng'))  : null;
+const COORD_CC   = params.get('country_code') || null;
+const COORD_MODE = !PLACE_ID && COORD_LAT !== null && COORD_LNG !== null;
 
 let PLACE_LAT = null, PLACE_LNG = null, COUNTRY_CODE = null;
 let placeNames = null;
@@ -210,17 +214,11 @@ async function getGBIFSpeciesKeys() {
     return (d.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
   }
   if (PLACE_BBOX) {
-    // Use 0.2 deg (~22km) padding for sub-national places
-    const r = await fetch(bboxUrl(PLACE_BBOX, 0.2));
+    // Coord mode: no extra padding; normal mode: 0.2 deg buffer around iNat boundary
+    const extraPad = COORD_MODE ? 0 : 0.2;
+    const r = await fetch(bboxUrl(PLACE_BBOX, extraPad));
     const d = await r.json();
-    const items = (d.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
-    // Fall back to country if too few local records
-    if (items.length < 15 && COUNTRY_CODE) {
-      const cr = await fetch(countryUrl());
-      const cd = await cr.json();
-      return (cd.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
-    }
-    return items;
+    return (d.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
   }
   if (COUNTRY_CODE) {
     const r = await fetch(countryUrl());
@@ -353,7 +351,7 @@ async function loadFromInat(bufferKm = 0) {
 
 // ── Boot ───────────────────────────────────────────────────────────────────
 async function boot() {
-  if (!PLACE_ID) {
+  if (!PLACE_ID && !COORD_MODE) {
     initEngine({ placeName:'Error', backUrl:'index.html', easyBirds:[] });
     setState({ phase:'error', loadError:'No place specified. Go back and search for a location.' });
     return;
@@ -361,25 +359,69 @@ async function boot() {
 
   initEngine({
     placeName:      PLACE_NAME,
-    placeId:        PLACE_ID,
+    placeId:        PLACE_ID || null,
     backUrl:        'index.html',
     indigenousField:'indigenousName',
     easyBirds:      [],
   });
 
-  // Load indigenous names — place-specific first, then country-level fallback
+  // ── Coordinate mode (no iNat place_id — use lat/lng directly) ────────────
+  if (COORD_MODE) {
+    PLACE_LAT = COORD_LAT;
+    PLACE_LNG = COORD_LNG;
+    COUNTRY_CODE = COORD_CC;
+
+    if (COUNTRY_CODE) {
+      try {
+        const cnr = await fetch(`place-names/${COUNTRY_CODE}.json`);
+        if (cnr.ok) { placeNames = await cnr.json(); }
+      } catch {}
+    }
+
+    // Expand bbox until we find enough species
+    const PAD_STEPS = [0.05, 0.1, 0.2, 0.5, 1.0, 2.0];
+    const MIN_SPECIES = 25;
+    let foundPad = null;
+    for (const pad of PAD_STEPS) {
+      PLACE_BBOX = { minLat: COORD_LAT - pad, maxLat: COORD_LAT + pad, minLng: COORD_LNG - pad, maxLng: COORD_LNG + pad };
+      const approxKm = Math.round(pad * 111);
+      updateLoadingProgress(`Searching within ${approxKm}km of ${PLACE_NAME}...`);
+      try {
+        // Query GBIF directly — no extra padding, no country fallback
+        const r = await fetch(bboxUrl(PLACE_BBOX, 0));
+        const d = await r.json();
+        const items = (d.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
+        if (items.length >= MIN_SPECIES) { foundPad = pad; break; }
+      } catch {}
+    }
+
+    if (foundPad !== null) {
+      // PLACE_BBOX already set to the winning pad — run full GBIF load with no extra padding
+      updateLoadingProgress(`Loading species within ${Math.round(foundPad * 111)}km of ${PLACE_NAME}...`);
+      try {
+        await loadFromGBIF();
+        return;
+      } catch (err) {
+        console.warn('GBIF load failed, falling back to iNat:', err.message);
+        setState({ phase: 'loading' });
+        const birds = await loadFromInat(Math.round(foundPad * 111));
+        if (birds.length >= 8) { setTiers(birds); setState({ phase: 'intro' }); return; }
+      }
+    }
+    setState({ phase: 'error', loadError: 'Not enough bird species found near this location — try a different spot.' });
+    return;
+  }
+
+  // ── Normal place_id mode ──────────────────────────────────────────────────
   try {
     const pnr = await fetch(`place-names/${PLACE_ID}.json`);
     if (pnr.ok) { placeNames = await pnr.json(); }
   } catch {}
   CFG.indigenousField = 'indigenousName';
 
-  // Fetch place metadata (centroid + country code) — needed before GBIF call
   updateLoadingProgress('Identifying location...');
   await fetchPlaceMeta(PLACE_ID);
 
-  // Fallback: extract country code from place name (e.g. "Gisborne, NZ" or "Gisborne, New Zealand")
-  // iNat's ancestor hierarchy sometimes skips the country level (e.g. Oceania → Gisborne Region → Gisborne)
   if (!COUNTRY_CODE) {
     const parts = PLACE_NAME.split(',').map(s => s.trim());
     const lastPart = parts[parts.length - 1];
@@ -387,7 +429,6 @@ async function boot() {
     else COUNTRY_CODE = toISO(lastPart);
   }
 
-  // Load country-level indigenous names after country code is known
   if (!placeNames && COUNTRY_CODE) {
     try {
       const cnr = await fetch(`place-names/${COUNTRY_CODE}.json`);
@@ -396,18 +437,16 @@ async function boot() {
   }
 
   if (COUNTRY_CODE || PLACE_BBOX) {
-    // ── GBIF-first path (country query for country-level, bbox query for sub-national)
     updateLoadingProgress(`Loading from GBIF + eBird for ${PLACE_NAME}...`);
     try {
       await loadFromGBIF();
-      return; // progressive loading handles everything
+      return;
     } catch (err) {
       console.warn('GBIF load failed, falling back to iNat:', err.message);
-      setState({ phase: 'loading' }); // reset for iNat loading
+      setState({ phase: 'loading' });
     }
   }
 
-  // ── iNat fallback path (no country code, or GBIF failed) ──────────────
   updateLoadingProgress('Fetching species from iNaturalist...');
   const MIN_SPECIES = 15;
   const BUFFER_STEPS = [0, 5, 10, 25, 50];
