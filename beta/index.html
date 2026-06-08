@@ -441,7 +441,6 @@ async function onMapClick(e) {
       _lat: lat, _lng: lng, _countryCode: countryCode,
     };
     renderPlaceList(adminPlaces, coordOption);
-    if (adminPlaces.length) showBoundary(adminPlaces[0].id);
 
   } catch {
     statusText.textContent = 'Could not look up this location — try again.';
