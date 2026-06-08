@@ -207,7 +207,7 @@ function toggleLibraryMap() {
 
 async function loadLibrary() {
   try {
-    const r = await fetch(`../quizzes.json?_=${Date.now()}`);
+    const r = await fetch(`quizzes.json?_=${Date.now()}`);
     const d = await r.json();
     const quizzes = d.quizzes || [];
 
