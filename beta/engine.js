@@ -1,7 +1,7 @@
-// WhatDatBird? Quiz Engine v5.61
+// WhatDatBird? Quiz Engine v5.62
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.61';
+const APP_VERSION = 'v5.62';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -535,9 +535,22 @@ function renderResult(app, header) {
   ].find(m=>m!==null);
 
   const canSave = CFG.placeId || CFG.coordLat;
+  const defaultQuizName = CFG.placeName;
   const saveBtn = canSave ? `
-    <button class="btn-save-library" id="saveLibBtn" onclick="saveToLibrary()">&#127757; Add to Quiz Library</button>
-    <div id="saveLibMsg" style="font-size:0.8rem;color:#2a7a58;margin-top:8px;min-height:1.2em;text-align:center;font-weight:700;"></div>` : '';
+    <div id="saveLibSection">
+      <button class="btn-save-library" id="saveLibBtn" onclick="showRenameForm()">&#127757; Add to Quiz Library</button>
+      <div id="saveLibRename" style="display:none;margin-top:10px;">
+        <div style="font-size:0.8rem;color:#6b6960;margin-bottom:6px;text-align:center;">Name this quiz in the library:</div>
+        <div style="display:flex;gap:8px;max-width:380px;margin:0 auto;">
+          <input id="saveLibName" type="text" maxlength="60" value="${defaultQuizName.replace(/"/g,'&quot;')}"
+            style="flex:1;padding:8px 12px;font-size:0.88rem;border:1.5px solid #dddbd3;border-radius:8px;outline:none;font-family:inherit;"
+            onfocus="this.style.borderColor='#2a7a58'" onblur="this.style.borderColor='#dddbd3'">
+          <button onclick="saveToLibrary()" style="padding:8px 16px;background:#1a5940;color:#fff;border:none;border-radius:8px;font-weight:800;cursor:pointer;font-family:inherit;font-size:0.88rem;">Save</button>
+          <button onclick="hideRenameForm()" style="padding:8px 12px;background:none;border:1.5px solid #dddbd3;border-radius:8px;cursor:pointer;font-family:inherit;font-size:0.88rem;color:#6b6960;">✕</button>
+        </div>
+      </div>
+      <div id="saveLibMsg" style="font-size:0.8rem;color:#2a7a58;margin-top:8px;min-height:1.2em;text-align:center;font-weight:700;"></div>
+    </div>` : '';
 
   const lbSection = canSave ? `
     <div class="lb-entry" id="lbEntry">
@@ -570,6 +583,17 @@ function renderResult(app, header) {
     loadLeaderboard();
     checkInLibrary();
   }
+}
+
+function showRenameForm() {
+  document.getElementById('saveLibBtn').style.display = 'none';
+  document.getElementById('saveLibRename').style.display = 'block';
+  document.getElementById('saveLibName').focus();
+  document.getElementById('saveLibName').select();
+}
+function hideRenameForm() {
+  document.getElementById('saveLibBtn').style.display = '';
+  document.getElementById('saveLibRename').style.display = 'none';
 }
 
 function unlockLeaderboard() {
@@ -981,10 +1005,13 @@ async function submitScore(totalSeen) {
 
 // ── Quiz Library ──────────────────────────────────────────────────────────
 async function saveToLibrary() {
-  const btn = document.getElementById('saveLibBtn');
   const msg = document.getElementById('saveLibMsg');
-  if (!btn || (!CFG.placeId && !CFG.coordLat)) return;
-  btn.disabled = true;
+  if (!CFG.placeId && !CFG.coordLat) return;
+  const nameInput = document.getElementById('saveLibName');
+  const quizLabel = nameInput ? nameInput.value.trim() || CFG.placeName : CFG.placeName;
+  // Disable the save button inside the rename form
+  const saveBtn = document.querySelector('#saveLibRename button');
+  if (saveBtn) saveBtn.disabled = true;
   msg.style.color = '#2a7a58';
   msg.textContent = 'Reading library...';
 
@@ -1107,10 +1134,10 @@ async function saveToLibrary() {
   // 3. Write updated quizzes.json to GitHub
   msg.textContent = 'Saving...';
   const quizEntry = CFG.placeId ? {
-    name:        `WhatDatBird? - ${expandPlaceName(CFG.placeName)}`,
+    name:        `WhatDatBird? - ${quizLabel}`,
     continent,
     country,
-    description: expandPlaceName(CFG.placeName),
+    description: quizLabel,
     species:     null,
     type:        'dynamic',
     url:         `quiz.html?place_id=${CFG.placeId}&place_name=${encodeURIComponent(CFG.placeName)}`,
@@ -1118,10 +1145,10 @@ async function saveToLibrary() {
     photo_taxon: photoTaxon,
     added:       new Date().toISOString().split('T')[0],
   } : {
-    name:        `WhatDatBird? - ${CFG.placeName}`,
+    name:        `WhatDatBird? - ${quizLabel}`,
     continent,
     country,
-    description: CFG.placeName,
+    description: quizLabel,
     species:     null,
     type:        'dynamic',
     url:         `quiz.html?lat=${CFG.coordLat}&lng=${CFG.coordLng}&place_name=${encodeURIComponent(CFG.placeName)}${CFG.coordCC ? '&country_code='+CFG.coordCC : ''}`,
@@ -1144,13 +1171,14 @@ async function saveToLibrary() {
       const errD = await putR.json().catch(() => ({}));
       throw new Error(`GitHub write ${putR.status}: ${errD.message || ''}`);
     }
-    msg.textContent = 'Added! Will appear in ~1 minute.';
-    btn.style.display = 'none';
+    msg.textContent = '✓ Added to library! Will appear in ~1 minute.';
+    const section = document.getElementById('saveLibSection');
+    if (section) section.style.display = 'none';
     unlockLeaderboard();
   } catch (e) {
     msg.style.color = '#8a2c2c';
     msg.textContent = `Save failed: ${e.message}`;
-    btn.disabled = false;
+    if (saveBtn) saveBtn.disabled = false;
   }
 }
 
