@@ -336,7 +336,7 @@ function renderPlaceList(places, coordOption) {
     <div class="map-place-item map-place-coord" data-lat="${coordOption._lat}" data-lng="${coordOption._lng}" data-name="${coordOption.display_name}" data-cc="${coordOption._countryCode || ''}">
       <div>
         <div class="map-place-name">&#x1F4CD; ${coordOption.display_name}</div>
-        <div class="map-place-type">Birds within ~25km of this point</div>
+        <div class="map-place-type" id="coordSubtitle">Starting ~6km · expands until 25+ species found</div>
       </div>
       <span class="map-place-go">Let&#x2019;s Go &#8594;</span>
     </div>` : '';
@@ -447,7 +447,7 @@ async function onMapClick(e) {
   }
 }
 </script>
-<script src="engine.js?v=5.58"></script>
+<script src="engine.js?v=5.59"></script>
 <script>document.getElementById('appVersion').textContent = typeof APP_VERSION !== 'undefined' ? APP_VERSION : '';</script>
 </body>
 </html>
