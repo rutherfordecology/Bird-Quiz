@@ -272,6 +272,7 @@ function goCoords(lat, lng, name, countryCode) {
 // ── Map picker ────────────────────────────────────────────────────────────
 let pickMap = null, pickMarker = null, boundaryLayer = null;
 const boundaryCache = {};
+let _nomResults = [];
 
 const TYPE_LABEL = {
   2:'Country', 3:'State / Region', 4:'County / District', 5:'Town / City',
@@ -297,16 +298,63 @@ async function searchMapLocation() {
   if (!q) return;
   statusText.textContent = 'Searching…';
   placesEl.innerHTML = '';
+  clearBoundary();
+  if (pickMarker) { pickMarker.remove(); pickMarker = null; }
+  _nomResults = [];
   try {
-    const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`, { headers: { 'Accept-Language': 'en' } });
-    const d = await r.json();
-    if (!d.length) { statusText.textContent = 'No results found — try a different name.'; return; }
-    const { lat, lon } = d[0];
-    pickMap.setView([+lat, +lon], 10);
-    onMapClick({ latlng: { lat: +lat, lng: +lon } });
+    const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&addressdetails=1`, { headers: { 'Accept-Language': 'en' } });
+    _nomResults = await r.json();
+    if (!_nomResults.length) { statusText.textContent = 'No results found — try a different name.'; return; }
+    statusText.textContent = 'Select a location:';
+    placesEl.innerHTML = _nomResults.map((p, i) => `
+      <div class="map-place-item" onclick="selectNomResult(${i})">
+        <div>
+          <div class="map-place-name">${p.display_name.split(',').slice(0,2).join(',')}</div>
+          <div class="map-place-type">${p.type || p.class || ''}</div>
+        </div>
+        <span class="map-place-go">&#8594;</span>
+      </div>`).join('');
   } catch {
     statusText.textContent = 'Search failed — try again.';
   }
+}
+
+function selectNomResult(i) {
+  const p = _nomResults[i];
+  if (!p) return;
+  const bb = p.boundingbox; // [south, north, west, east] as strings
+  const s = Number(bb[0]), n = Number(bb[1]), w = Number(bb[2]), e = Number(bb[3]);
+  const lat = Number(p.lat), lon = Number(p.lon);
+  const cc = p.address?.country_code?.toUpperCase() || '';
+
+  clearBoundary();
+  if (pickMarker) pickMarker.remove();
+  pickMarker = L.marker([lat, lon]).addTo(pickMap);
+
+  boundaryLayer = L.rectangle([[s, w], [n, e]], {
+    color: '#1a5940', weight: 2.5, fillColor: '#2a7a58', fillOpacity: 0.15
+  }).addTo(pickMap);
+  try { pickMap.flyToBounds([[s, w], [n, e]], { duration: 0.6, maxZoom: 13 }); } catch {}
+
+  const shortName = p.display_name.split(',').slice(0, 2).join(',').trim();
+  const fullName  = p.display_name;
+
+  statusText.textContent = 'Ready to play:';
+  placesEl.innerHTML = `
+    <div class="map-place-item" onclick="goBbox(${s},${n},${w},${e},${JSON.stringify(fullName)},${JSON.stringify(cc)})">
+      <div>
+        <div class="map-place-name">&#x2b50; ${shortName}</div>
+        <div class="map-place-type">${p.type || p.class || ''}</div>
+      </div>
+      <span class="map-place-go">Let&#x2019;s Go &#8594;</span>
+    </div>`;
+}
+
+function goBbox(s, n, w, e, name, cc) {
+  let url = `quiz.html?swlat=${s}&nelat=${n}&swlng=${w}&nelng=${e}&place_name=${encodeURIComponent(name)}`;
+  if (cc) url += `&country_code=${encodeURIComponent(cc)}`;
+  window.location.href = url;
+  closeMapPicker();
 }
 
 function closeMapPicker() {
@@ -367,12 +415,19 @@ function renderPlaceList(places, coordOption) {
     </div>` : '';
 
   placesEl.innerHTML = coordHtml + adminHtml;
+  attachPlaceListeners();
+}
 
+function attachPlaceListeners() {
+  const firstNamed = placesEl.querySelector('.map-place-item:not(.map-place-coord)[data-id]');
   placesEl.querySelectorAll('.map-place-item:not(.map-place-coord)').forEach(el => {
     el.addEventListener('mouseenter', () => {
       placesEl.querySelectorAll('.map-place-item').forEach(x => x.classList.remove('active'));
       el.classList.add('active');
       showBoundary(el.dataset.id);
+    });
+    el.addEventListener('mouseleave', () => {
+      if (firstNamed && el !== firstNamed) showBoundary(firstNamed.dataset.id);
     });
     el.addEventListener('click', () => goPlace(el.dataset.id, el.dataset.name));
   });
@@ -460,7 +515,7 @@ async function onMapClick(e) {
   }
 }
 </script>
-<script src="engine.js?v=5.68"></script>
+<script src="engine.js?v=5.69"></script>
 <script>document.getElementById('appVersion').textContent = typeof APP_VERSION !== 'undefined' ? APP_VERSION : '';</script>
 </body>
 </html>

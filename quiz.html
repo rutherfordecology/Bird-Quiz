@@ -19,7 +19,7 @@ window.onunhandledrejection = e => {
 };
 </script>
 <div id="app"></div>
-<script src="engine.js?v=5.63" onerror="document.getElementById('app').innerHTML='<div style=padding:2rem;font-family:sans-serif;color:#8a2c2c>Failed to fetch engine.js — check network connection.<br><br><a href=index.html>← Back</a></div>'"></script>
+<script src="engine.js?v=5.69" onerror="document.getElementById('app').innerHTML='<div style=padding:2rem;font-family:sans-serif;color:#8a2c2c>Failed to fetch engine.js — check network connection.<br><br><a href=index.html>← Back</a></div>'"></script>
 <script>
 const params     = new URLSearchParams(window.location.search);
 const PLACE_ID   = params.get('place_id');
@@ -28,6 +28,12 @@ const COORD_LAT  = params.get('lat')  ? parseFloat(params.get('lat'))  : null;
 const COORD_LNG  = params.get('lng')  ? parseFloat(params.get('lng'))  : null;
 const COORD_CC   = params.get('country_code') || null;
 const COORD_MODE = !PLACE_ID && COORD_LAT !== null && COORD_LNG !== null;
+
+const BBOX_SW_LAT = params.get('swlat') ? parseFloat(params.get('swlat')) : null;
+const BBOX_NE_LAT = params.get('nelat') ? parseFloat(params.get('nelat')) : null;
+const BBOX_SW_LNG = params.get('swlng') ? parseFloat(params.get('swlng')) : null;
+const BBOX_NE_LNG = params.get('nelng') ? parseFloat(params.get('nelng')) : null;
+const BBOX_MODE = BBOX_SW_LAT !== null && BBOX_NE_LAT !== null;
 
 let PLACE_LAT = null, PLACE_LNG = null, COUNTRY_CODE = null;
 let placeNames = null;
@@ -216,7 +222,7 @@ async function getGBIFSpeciesKeys() {
   }
   if (PLACE_BBOX) {
     // Coord mode: no extra padding; normal mode: 0.2 deg buffer around iNat boundary
-    const extraPad = COORD_MODE ? 0 : 0.2;
+    const extraPad = (COORD_MODE || BBOX_MODE) ? 0 : 0.2;
     const r = await fetch(bboxUrl(PLACE_BBOX, extraPad));
     const d = await r.json();
     return (d.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
@@ -352,7 +358,7 @@ async function loadFromInat(bufferKm = 0) {
 
 // ── Boot ───────────────────────────────────────────────────────────────────
 async function boot() {
-  if (!PLACE_ID && !COORD_MODE) {
+  if (!PLACE_ID && !COORD_MODE && !BBOX_MODE) {
     initEngine({ placeName:'Error', backUrl:'index.html', easyBirds:[] });
     setState({ phase:'error', loadError:'No place specified. Go back and search for a location.' });
     return;
@@ -365,10 +371,46 @@ async function boot() {
     betaBadge:      true,
     indigenousField:'indigenousName',
     easyBirds:      [],
-    coordLat:       COORD_MODE ? COORD_LAT : null,
-    coordLng:       COORD_MODE ? COORD_LNG : null,
-    coordCC:        COORD_MODE ? COORD_CC  : null,
+    coordLat:       BBOX_MODE ? (BBOX_SW_LAT + BBOX_NE_LAT) / 2 : (COORD_MODE ? COORD_LAT : null),
+    coordLng:       BBOX_MODE ? (BBOX_SW_LNG + BBOX_NE_LNG) / 2 : (COORD_MODE ? COORD_LNG : null),
+    coordCC:        (COORD_MODE || BBOX_MODE) ? COORD_CC : null,
   });
+
+  // ── BBox mode (Nominatim bounding box passed directly) ───────────────────
+  if (BBOX_MODE) {
+    PLACE_BBOX = { minLat: BBOX_SW_LAT, maxLat: BBOX_NE_LAT, minLng: BBOX_SW_LNG, maxLng: BBOX_NE_LNG };
+    PLACE_LAT = (BBOX_SW_LAT + BBOX_NE_LAT) / 2;
+    PLACE_LNG = (BBOX_SW_LNG + BBOX_NE_LNG) / 2;
+    COUNTRY_CODE = COORD_CC;
+
+    if (COUNTRY_CODE) {
+      try {
+        const cnr = await fetch(`place-names/${COUNTRY_CODE}.json`);
+        if (cnr.ok) { placeNames = await cnr.json(); }
+      } catch {}
+    }
+
+    updateLoadingProgress(`Loading species for ${PLACE_NAME}...`);
+    try {
+      await loadFromGBIF();
+      return;
+    } catch (err) {
+      console.warn('GBIF bbox load failed, trying iNat fallback:', err.message);
+      setState({ phase: 'loading' });
+    }
+
+    // iNat fallback with expanding radius from bbox center
+    const PAD_STEPS = [0.2, 0.5, 1.0, 2.0];
+    for (const pad of PAD_STEPS) {
+      const radiusKm = Math.round(pad * 111);
+      try {
+        const birds = await loadFromInat(radiusKm);
+        if (birds.length >= 8) { setTiers(birds); setState({ phase: 'intro' }); return; }
+      } catch {}
+    }
+    setState({ phase: 'error', loadError: 'Not enough bird species found for this location.' });
+    return;
+  }
 
   // ── Coordinate mode (no iNat place_id — use lat/lng directly) ────────────
   if (COORD_MODE) {
