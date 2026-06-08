@@ -1,7 +1,7 @@
 // WhatDatBird? Quiz Engine v5.63
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.83';
+const APP_VERSION = 'v5.84';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -814,11 +814,10 @@ function renderQuiz(app) {
   if (audioRecAvailable) {
     const icon = state.audioPlaying ? '&#9208;&#65039;' : '&#128266;';
     const hasMultiple = xenoCantoCache[audioLatin]?.length > 1;
-    const nextBtn = (state.audioPlaying && hasMultiple) ? `<button class="audio-btn" onclick="nextAudio()" title="Different recording" aria-label="Next recording" style="margin-left:4px;font-size:0.75rem;">&#8635;</button>` : '';
+    const nextBtn = hasMultiple ? `<button class="audio-btn" onclick="nextAudio()" title="Different recording" aria-label="Next recording" style="margin-left:4px;font-size:0.75rem;">&#8635;</button>` : '';
     audioBtnHtml = `<button class="audio-btn${state.audioPlaying?' playing':''}" onclick="toggleAudio()" title="${state.audioPlaying?'Stop call':'Play call'}" aria-label="Play bird call">${icon}</button>${nextBtn}`;
-    if (state.audioPlaying && state.audioRec) {
-      audioCreditHtml = `<p class="audio-credit">&#127925; Recording by <a href="${state.audioRec.url}" target="_blank">${state.audioRec.recordist}</a> via <a href="https://xeno-canto.org" target="_blank">xeno-canto.org</a></p>`;
-    }
+    const displayRec = state.audioRec || audioRecAvailable[0];
+    audioCreditHtml = `<p class="audio-credit">&#127925; Recording by <a href="${displayRec.url}" target="_blank">${displayRec.recordist}</a> via <a href="https://xeno-canto.org" target="_blank">xeno-canto.org</a></p>`;
   }
 
   app.innerHTML = `
