@@ -157,13 +157,13 @@
       "added": "2026-06-08"
     },
     {
-      "name": "WhatDatBird? - Birds near Canterbury",
+      "name": "WhatDatBird? - Kaikoura offshore and coast",
       "continent": "Oceania",
       "country": "New Zealand",
-      "description": "Birds near Canterbury",
+      "description": "Kaikoura offshore and coast",
       "species": null,
       "type": "dynamic",
-      "url": "quiz.html?lat=-42.49476&lng=173.93005&place_name=Birds%20near%20Canterbury&country_code=NZ",
+      "url": "quiz.html?lat=-42.49476&lng=173.93005&place_name=Kaikoura%20offshore%20and%20coast&country_code=NZ",
       "coord_lat": -42.49476,
       "coord_lng": 173.93005
     }
