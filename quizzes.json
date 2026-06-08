@@ -143,6 +143,18 @@
       "place_id": 674,
       "photo_taxon": null,
       "added": "2026-06-07"
+    },
+    {
+      "name": "WhatDatBird? - New Zealand",
+      "continent": "Other",
+      "country": "New Zealand",
+      "description": "New Zealand",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?place_id=6803&place_name=New%20Zealand",
+      "place_id": 6803,
+      "photo_taxon": null,
+      "added": "2026-06-08"
     }
   ]
 }
