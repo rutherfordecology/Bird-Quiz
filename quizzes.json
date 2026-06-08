@@ -155,6 +155,17 @@
       "place_id": 6803,
       "photo_taxon": null,
       "added": "2026-06-08"
+    },
+    {
+      "name": "WhatDatBird? - Birds near Canterbury",
+      "continent": "Oceania",
+      "country": "New Zealand",
+      "description": "Birds near Canterbury",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=-42.49476&lng=173.93005&place_name=Birds%20near%20Canterbury&country_code=NZ",
+      "coord_lat": -42.49476,
+      "coord_lng": 173.93005
     }
   ]
 }
