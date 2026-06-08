@@ -169,10 +169,9 @@ async function processBatch(speciesItems) {
 }
 
 function applyPlaceNames(birds) {
-  if (!placeNames?.names) return;
   for (const bird of birds) {
-    const indName = placeNames.names[bird.latin];
-    if (indName) bird.indigenousName = indName;
+    if (placeNames?.names?.[bird.latin]) bird.indigenousName = placeNames.names[bird.latin];
+    if (placeNames?.nameOverrides?.[bird.latin]) bird.name = placeNames.nameOverrides[bird.latin];
   }
 }
 

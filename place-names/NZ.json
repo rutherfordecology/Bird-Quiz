@@ -1,5 +1,8 @@
 {
   "field": "indigenousName",
+  "nameOverrides": {
+    "Larus dominicanus": "Southern Black-backed Gull"
+  },
   "names": {
     "Prosthemadera novaeseelandiae": "tūī",
     "Hemiphaga novaeseelandiae": "kererū",
