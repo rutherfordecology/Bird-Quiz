@@ -1,7 +1,7 @@
 // WhatDatBird? Quiz Engine v5.63
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.77';
+const APP_VERSION = 'v5.79';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -477,7 +477,7 @@ async function toggleIntroLeaderboard() {
         ${entries.map((e,i) => `<div class="lb-row-item">
           <span class="lb-rank">${i+1}</span>
           <span class="lb-name">${e.name}</span>
-          <span class="lb-score">${e.score} birds</span>
+          <span class="lb-score">${e.pts ?? e.score} pts / ${e.score} birds</span>
           <span class="lb-date">${e.date}</span>
         </div>`).join('')}
       </div>`;
@@ -604,7 +604,7 @@ function renderResult(app, header) {
         <div class="lb-label">&#127942; Add your score to the leaderboard</div>
         <div class="lb-row">
           <input class="lb-input" id="lbName" type="text" maxlength="24" placeholder="Your name" autocomplete="off">
-          <button class="lb-submit" onclick="submitScore(${state.totalSeen})">Submit</button>
+          <button class="lb-submit" onclick="submitScore()">Submit</button>
         </div>
         <div id="lbMsg" style="font-size:0.78rem;color:#2a7a58;margin-top:6px;min-height:1em;text-align:center;font-weight:700;"></div>
       </div>
@@ -1003,13 +1003,13 @@ async function loadLeaderboard() {
       entries.map((e, i) => `<div class="lb-row-item">
         <span class="lb-rank">${i + 1}</span>
         <span class="lb-name">${e.name}</span>
-        <span class="lb-score">${e.score} birds</span>
+        <span class="lb-score">${e.pts ?? e.score} pts / ${e.score} birds</span>
         <span class="lb-date">${e.date}</span>
       </div>`).join('');
   } catch { board.innerHTML = ''; }
 }
 
-async function submitScore(totalSeen) {
+async function submitScore() {
   const nameEl = document.getElementById('lbName');
   const msgEl  = document.getElementById('lbMsg');
   const entry  = document.getElementById('lbEntry');
@@ -1022,12 +1022,12 @@ async function submitScore(totalSeen) {
     if (!data.boards) data.boards = {};
     const key = CFG.placeId ? `${CFG.placeId}_${state.mode}` : `coord_${CFG.coordLat.toFixed(3)}_${CFG.coordLng.toFixed(3)}_${state.mode}`;
     if (!data.boards[key]) data.boards[key] = [];
-    data.boards[key].push({ name, score: totalSeen, date: new Date().toISOString().split('T')[0] });
-    data.boards[key].sort((a, b) => a.score - b.score);
+    data.boards[key].push({ name, score: totalSeen, pts: state.totalCorrect, date: new Date().toISOString().split('T')[0] });
+    data.boards[key].sort((a, b) => (b.pts ?? 0) - (a.pts ?? 0) || (a.score ?? 0) - (b.score ?? 0));
     data.boards[key] = data.boards[key].slice(0, 10);
 
     const body = JSON.stringify({
-      message: `Leaderboard: ${name} scored ${totalSeen} at ${CFG.placeName}`,
+      message: `Leaderboard: ${name} scored ${state.totalCorrect} pts at ${CFG.placeName}`,
       sha: sha || undefined,
       content: btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2)))),
     });
