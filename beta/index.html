@@ -391,7 +391,15 @@ function renderPlaceList(places, coordOption) {
     el.addEventListener('mouseenter', () => {
       placesEl.querySelectorAll('.map-place-item').forEach(x => x.classList.remove('active'));
       el.classList.add('active');
+      const clat = parseFloat(el.dataset.lat), clng = parseFloat(el.dataset.lng);
+      const pad = 0.25;
       clearBoundary();
+      if (pickMap) {
+        boundaryLayer = L.rectangle([[clat - pad, clng - pad],[clat + pad, clng + pad]], {
+          color: '#1a5940', weight: 2.5, fillColor: '#2a7a58', fillOpacity: 0.15
+        }).addTo(pickMap);
+        try { pickMap.flyToBounds(boundaryLayer.getBounds(), { duration: 0.6, maxZoom: 13 }); } catch {}
+      }
     });
     el.addEventListener('click', () => goCoords(
       parseFloat(el.dataset.lat), parseFloat(el.dataset.lng),
