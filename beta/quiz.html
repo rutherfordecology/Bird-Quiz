@@ -215,12 +215,13 @@ async function getGBIFSpeciesKeys() {
     return (d.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
   }
   if (PLACE_BBOX) {
-    // Use 0.2 deg (~22km) padding for sub-national places
-    const r = await fetch(bboxUrl(PLACE_BBOX, 0.2));
+    // Coord mode: bbox already sized by expansion loop — no extra padding, no country fallback
+    const extraPad = COORD_MODE ? 0 : 0.2;
+    const r = await fetch(bboxUrl(PLACE_BBOX, extraPad));
     const d = await r.json();
     const items = (d.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
-    // Fall back to country if too few local records
-    if (items.length < 15 && COUNTRY_CODE) {
+    // Normal mode only: fall back to country if too few local records
+    if (!COORD_MODE && items.length < 15 && COUNTRY_CODE) {
       const cr = await fetch(countryUrl());
       const cd = await cr.json();
       return (cd.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
@@ -389,27 +390,32 @@ async function boot() {
     // Expand bbox until we find enough species
     const PAD_STEPS = [0.05, 0.1, 0.2, 0.5, 1.0, 2.0];
     const MIN_SPECIES = 25;
+    let foundPad = null;
     for (const pad of PAD_STEPS) {
       PLACE_BBOX = { minLat: COORD_LAT - pad, maxLat: COORD_LAT + pad, minLng: COORD_LNG - pad, maxLng: COORD_LNG + pad };
       const approxKm = Math.round(pad * 111);
       updateLoadingProgress(`Searching within ${approxKm}km of ${PLACE_NAME}...`);
       try {
-        const items = await getGBIFSpeciesKeys();
-        if (items.length >= MIN_SPECIES) {
-          await loadFromGBIF();
-          return;
-        }
+        // Query GBIF directly — no extra padding, no country fallback
+        const r = await fetch(bboxUrl(PLACE_BBOX, 0));
+        const d = await r.json();
+        const items = (d.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
+        if (items.length >= MIN_SPECIES) { foundPad = pad; break; }
       } catch {}
-      // Also try iNat radius at this scale before expanding
+    }
+
+    if (foundPad !== null) {
+      // PLACE_BBOX already set to the winning pad — run full GBIF load with no extra padding
+      updateLoadingProgress(`Loading species within ${Math.round(foundPad * 111)}km of ${PLACE_NAME}...`);
       try {
-        const radiusKm = Math.round(pad * 111);
-        const birds = await loadFromInat(radiusKm);
-        if (birds.length >= MIN_SPECIES) {
-          setTiers(birds);
-          setState({ phase: 'intro' });
-          return;
-        }
-      } catch {}
+        await loadFromGBIF();
+        return;
+      } catch (err) {
+        console.warn('GBIF load failed, falling back to iNat:', err.message);
+        setState({ phase: 'loading' });
+        const birds = await loadFromInat(Math.round(foundPad * 111));
+        if (birds.length >= 8) { setTiers(birds); setState({ phase: 'intro' }); return; }
+      }
     }
     setState({ phase: 'error', loadError: 'Not enough bird species found near this location — try a different spot.' });
     return;
