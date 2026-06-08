@@ -86,7 +86,12 @@
   .map-header h2 { font-size:1rem; font-weight:800; color:#1a5940; }
   .map-close { background:none; border:none; font-size:1.4rem; cursor:pointer; color:#9b9890; line-height:1; padding:0 4px; }
   .map-close:hover { color:#1c1b18; }
-#pickMap { flex:1; min-height:320px; }
+  .map-search-row { padding:8px 12px; border-bottom:1px solid #dddbd3; display:flex; gap:6px; flex-shrink:0; }
+  .map-search-row input { flex:1; padding:7px 11px; border:1px solid #ccc; border-radius:8px; font-size:0.88rem; font-family:inherit; outline:none; }
+  .map-search-row input:focus { border-color:#1a5940; }
+  .map-search-row button { padding:7px 13px; background:#1a5940; color:#fff; border:none; border-radius:8px; font-size:0.85rem; font-weight:700; cursor:pointer; white-space:nowrap; }
+  .map-search-row button:hover { background:#226b4d; }
+#pickMap { flex:1; min-height:280px; }
   .map-status { padding:10px 18px; font-size:0.85rem; color:#6b6960; border-top:1px solid #dddbd3; flex-shrink:0; min-height:44px; display:flex; align-items:center; }
   .map-status strong { color:#1a5940; }
   .map-places { border-top:1px solid #dddbd3; flex-shrink:0; overflow-y:auto; max-height:200px; }
@@ -129,6 +134,10 @@
     <div class="map-header">
       <h2>&#127758; Choose a location</h2>
       <button class="map-close" onclick="closeMapPicker()">&#x2715;</button>
+    </div>
+    <div class="map-search-row">
+      <input id="modalSearchInput" type="text" placeholder="Search for a place, park, or reserve…" onkeydown="if(event.key==='Enter')searchMapLocation()">
+      <button onclick="searchMapLocation()">Search</button>
     </div>
     <div id="pickMap"></div>
     <div class="map-status" id="mapStatus">
@@ -283,6 +292,23 @@ function openMapPicker() {
   setTimeout(() => pickMap.invalidateSize(), 80);
 }
 
+async function searchMapLocation() {
+  const q = document.getElementById('modalSearchInput').value.trim();
+  if (!q) return;
+  statusText.textContent = 'Searching…';
+  placesEl.innerHTML = '';
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`, { headers: { 'Accept-Language': 'en' } });
+    const d = await r.json();
+    if (!d.length) { statusText.textContent = 'No results found — try a different name.'; return; }
+    const { lat, lon } = d[0];
+    pickMap.setView([+lat, +lon], 10);
+    onMapClick({ latlng: { lat: +lat, lng: +lon } });
+  } catch {
+    statusText.textContent = 'Search failed — try again.';
+  }
+}
+
 function closeMapPicker() {
   document.getElementById('mapModal').classList.remove('open');
   document.getElementById('mapPlaces').innerHTML = '';
@@ -434,7 +460,7 @@ async function onMapClick(e) {
   }
 }
 </script>
-<script src="engine.js?v=5.66"></script>
+<script src="engine.js?v=5.67"></script>
 <script>document.getElementById('appVersion').textContent = typeof APP_VERSION !== 'undefined' ? APP_VERSION : '';</script>
 </body>
 </html>
