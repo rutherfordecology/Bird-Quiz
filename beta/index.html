@@ -341,7 +341,7 @@ function renderPlaceList(places, coordOption) {
       <span class="map-place-go">Let&#x2019;s Go &#8594;</span>
     </div>` : '';
 
-  placesEl.innerHTML = adminHtml + coordHtml;
+  placesEl.innerHTML = coordHtml + adminHtml;
 
   placesEl.querySelectorAll('.map-place-item:not(.map-place-coord)').forEach(el => {
     el.addEventListener('mouseenter', () => {
@@ -447,7 +447,7 @@ async function onMapClick(e) {
   }
 }
 </script>
-<script src="engine.js?v=5.57"></script>
+<script src="engine.js?v=5.58"></script>
 <script>document.getElementById('appVersion').textContent = typeof APP_VERSION !== 'undefined' ? APP_VERSION : '';</script>
 </body>
 </html>
