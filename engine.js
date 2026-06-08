@@ -1,7 +1,7 @@
-// WhatDatBird? Quiz Engine v5.53
+// WhatDatBird? Quiz Engine v5.54
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.53';
+const APP_VERSION = 'v5.54';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────

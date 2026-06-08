@@ -86,18 +86,10 @@
   .map-header h2 { font-size:1rem; font-weight:800; color:#1a5940; }
   .map-close { background:none; border:none; font-size:1.4rem; cursor:pointer; color:#9b9890; line-height:1; padding:0 4px; }
   .map-close:hover { color:#1c1b18; }
-  .map-search-wrap { padding:10px 14px; border-bottom:1px solid #dddbd3; flex-shrink:0; position:relative; }
+  .map-search-wrap { padding:10px 14px; border-bottom:1px solid #dddbd3; flex-shrink:0; }
   .map-search-input { width:100%; padding:9px 14px; font-size:0.92rem; font-family:system-ui,-apple-system,sans-serif; border:1.5px solid #dddbd3; border-radius:10px; background:#f8f7f4; color:#1c1b18; outline:none; transition:border-color 0.15s; }
   .map-search-input:focus { border-color:#2a7a58; background:#fff; }
   .map-search-input::placeholder { color:#b0aea6; }
-  .map-search-drop { display:none; position:absolute; top:calc(100% - 2px); left:14px; right:14px; background:#fff; border:1.5px solid #dddbd3; border-top:none; border-radius:0 0 10px 10px; box-shadow:0 8px 24px rgba(0,0,0,0.1); z-index:200; overflow:hidden; }
-  .map-search-drop.open { display:block; }
-  .map-search-item { padding:10px 14px; cursor:pointer; display:flex; align-items:center; gap:10px; border-bottom:1px solid #f3f2ee; transition:background 0.1s; }
-  .map-search-item:last-child { border-bottom:none; }
-  .map-search-item:hover, .map-search-item.active { background:#e8f4ef; }
-  .map-search-item-name { font-size:0.88rem; font-weight:700; color:#1c1b18; }
-  .map-search-item-type { font-size:0.7rem; color:#9b9890; margin-top:1px; }
-  .map-search-msg { padding:12px 14px; color:#9b9890; font-size:0.83rem; font-style:italic; }
   #pickMap { flex:1; min-height:320px; }
   .map-status { padding:10px 18px; font-size:0.85rem; color:#6b6960; border-top:1px solid #dddbd3; flex-shrink:0; min-height:44px; display:flex; align-items:center; }
   .map-status strong { color:#1a5940; }
@@ -142,14 +134,13 @@
       <h2>&#127758; Choose a location</h2>
       <button class="map-close" onclick="closeMapPicker()">&#x2715;</button>
     </div>
+    <div id="pickMap"></div>
     <div class="map-search-wrap">
       <input class="map-search-input" id="modalSearchInput" type="text"
         placeholder="Search a place, park, island, country…" autocomplete="off" />
-      <div class="map-search-drop" id="modalSearchDrop"></div>
     </div>
-    <div id="pickMap"></div>
     <div class="map-status" id="mapStatus">
-      <span id="mapStatusText">Search above or click the map to choose a location.</span>
+      <span id="mapStatusText">Search above or click the map to find a location.</span>
     </div>
     <div class="map-places" id="mapPlaces"></div>
   </div>
@@ -292,15 +283,14 @@ function openMapPicker() {
     }).addTo(pickMap);
     pickMap.on('click', onMapClick);
   }
-  setTimeout(() => { pickMap.invalidateSize(); document.getElementById('modalSearchInput').focus(); }, 80);
+  setTimeout(() => pickMap.invalidateSize(), 80);
 }
 
 function closeMapPicker() {
   document.getElementById('mapModal').classList.remove('open');
   document.getElementById('mapPlaces').innerHTML = '';
-  document.getElementById('mapStatusText').textContent = 'Search above or click the map to choose a location.';
+  document.getElementById('mapStatusText').textContent = 'Search below or click the map to find a location.';
   document.getElementById('modalSearchInput').value = '';
-  document.getElementById('modalSearchDrop').classList.remove('open');
   clearBoundary();
 }
 
@@ -332,61 +322,61 @@ async function showBoundary(id) {
 }
 
 // ── Modal search ──────────────────────────────────────────────────────────
-const modalInp  = document.getElementById('modalSearchInput');
-const modalDrop = document.getElementById('modalSearchDrop');
+const modalInp = document.getElementById('modalSearchInput');
+const statusText = document.getElementById('mapStatusText');
+const placesEl  = document.getElementById('mapPlaces');
 let modalTimer;
 
 modalInp.addEventListener('input', () => {
   clearTimeout(modalTimer);
   const q = modalInp.value.trim();
-  if (q.length < 2) { modalDrop.classList.remove('open'); clearBoundary(); return; }
-  modalDrop.innerHTML = '<div class="map-search-msg">Searching…</div>';
-  modalDrop.classList.add('open');
+  if (q.length < 2) {
+    if (!q) { placesEl.innerHTML = ''; statusText.textContent = 'Search below or click the map to find a location.'; clearBoundary(); }
+    return;
+  }
+  statusText.textContent = 'Searching…';
+  placesEl.innerHTML = '';
   modalTimer = setTimeout(() => doModalSearch(q), 350);
 });
-modalInp.addEventListener('blur', () => setTimeout(() => modalDrop.classList.remove('open'), 200));
-modalInp.addEventListener('focus', () => { if (modalInp.value.trim().length >= 2) modalDrop.classList.add('open'); });
 
 async function doModalSearch(q) {
   try {
     const r = await fetch(`https://api.inaturalist.org/v1/places/autocomplete?q=${encodeURIComponent(q)}&geo=true`);
     const d = await r.json();
     const results = (d.results || []).slice(0, 7);
-    if (!results.length) { modalDrop.innerHTML = '<div class="map-search-msg">No places found.</div>'; return; }
-    modalDrop.innerHTML = results.map(p => `
-      <div class="map-search-item" data-id="${p.id}" data-name="${p.display_name.replace(/"/g,'&quot;')}">
-        <span style="font-size:1rem">&#x1F4CD;</span>
-        <div>
-          <div class="map-search-item-name">${p.display_name}</div>
-          <div class="map-search-item-type">${TYPE_LABEL[p.place_type] || 'Place'}</div>
-        </div>
-      </div>`).join('');
-    modalDrop.querySelectorAll('.map-search-item').forEach(el => {
-      el.addEventListener('mouseenter', () => {
-        modalDrop.querySelectorAll('.map-search-item').forEach(x => x.classList.remove('active'));
-        el.classList.add('active');
-        showBoundary(el.dataset.id);
-      });
-      el.addEventListener('mousedown', () => {
-        modalDrop.classList.remove('open');
-        goPlace(el.dataset.id, el.dataset.name);
-      });
-    });
-    // Preview boundary for first result automatically
+    if (!results.length) { statusText.textContent = 'No places found.'; return; }
+    statusText.textContent = 'Hover a location to preview its area, then click to play:';
+    renderPlaceList(results);
     showBoundary(results[0].id);
-  } catch { modalDrop.innerHTML = '<div class="map-search-msg">Search failed — try again.</div>'; }
+  } catch { statusText.textContent = 'Search failed — try again.'; }
+}
+
+function renderPlaceList(places) {
+  placesEl.innerHTML = places.map(p => `
+    <div class="map-place-item" data-id="${p.id}" data-name="${p.display_name.replace(/'/g,"\\'")}">
+      <div>
+        <div class="map-place-name">${p.display_name}</div>
+        <div class="map-place-type">${TYPE_LABEL[p.place_type] || 'Place'}</div>
+      </div>
+      <span class="map-place-go">Let&#x2019;s Go &#8594;</span>
+    </div>`).join('');
+  placesEl.querySelectorAll('.map-place-item').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      placesEl.querySelectorAll('.map-place-item').forEach(x => x.classList.remove('active'));
+      el.classList.add('active');
+      showBoundary(el.dataset.id);
+    });
+    el.addEventListener('click', () => goPlace(el.dataset.id, el.dataset.name));
+  });
 }
 
 // ── Map click ─────────────────────────────────────────────────────────────
 async function onMapClick(e) {
   const { lat, lng } = e.latlng;
-  modalDrop.classList.remove('open');
   if (pickMarker) pickMarker.remove();
   pickMarker = L.marker([lat, lng]).addTo(pickMap);
   clearBoundary();
-
-  const statusText = document.getElementById('mapStatusText');
-  const placesEl   = document.getElementById('mapPlaces');
+  modalInp.value = '';
   statusText.textContent = 'Finding nearby locations…';
   placesEl.innerHTML = '';
 
@@ -426,25 +416,7 @@ async function onMapClick(e) {
     if (!all.length) { statusText.textContent = 'No locations found here — try another spot.'; return; }
 
     statusText.textContent = 'Hover a location to preview its area, then click to play:';
-    placesEl.innerHTML = all.map(p => `
-      <div class="map-place-item" data-id="${p.id}" data-name="${p.display_name.replace(/'/g,"\\'")}">
-        <div>
-          <div class="map-place-name">${p.display_name}</div>
-          <div class="map-place-type">${TYPE_LABEL[p.place_type] || 'Place'}</div>
-        </div>
-        <span class="map-place-go">Let&#x2019;s Go &#8594;</span>
-      </div>`).join('');
-
-    placesEl.querySelectorAll('.map-place-item').forEach(el => {
-      el.addEventListener('mouseenter', () => {
-        placesEl.querySelectorAll('.map-place-item').forEach(x => x.classList.remove('active'));
-        el.classList.add('active');
-        showBoundary(el.dataset.id);
-      });
-      el.addEventListener('click', () => goPlace(el.dataset.id, el.dataset.name));
-    });
-
-    // Auto-preview boundary for first result
+    renderPlaceList(all);
     showBoundary(all[0].id);
 
   } catch {
@@ -452,7 +424,7 @@ async function onMapClick(e) {
   }
 }
 </script>
-<script src="engine.js?v=5.53"></script>
+<script src="engine.js?v=5.54"></script>
 <script>document.getElementById('appVersion').textContent = typeof APP_VERSION !== 'undefined' ? APP_VERSION : '';</script>
 </body>
 </html>
