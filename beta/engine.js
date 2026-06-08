@@ -1,11 +1,12 @@
 // WhatDatBird? Quiz Engine v5.63
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.74';
+const APP_VERSION = 'v5.75';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
 let CFG = {};
+let _swipeX = 0;
 
 // ── Constants ─────────────────────────────────────────────────────────────
 const STREAK_TARGET = 10;
@@ -754,7 +755,7 @@ function renderQuiz(app) {
         <div class="streak-dots">${dots}</div>
         <span class="streak-label">&#128293; ${state.streak}/${STREAK_TARGET}</span>
       </div>
-      <div class="img-box" id="imgBox">${imgContent}${overlay}${carousel}</div>
+      <div class="img-box" id="imgBox" ontouchstart="_swipeX=event.touches[0].clientX" ontouchend="if(Math.abs(event.changedTouches[0].clientX-_swipeX)>40){event.changedTouches[0].clientX<_swipeX?nextPhoto():prevPhoto()}">${imgContent}${overlay}${carousel}</div>
       <p class="question-text">&#128269; Which bird is this?</p>
       <div class="options">${optionsHtml}</div>
       ${fieldNote}
