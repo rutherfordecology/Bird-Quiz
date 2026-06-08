@@ -177,6 +177,17 @@
       "url": "quiz.html?lat=-41.29989&lng=174.78802&place_name=Birds%20near%20Wellington&country_code=NZ",
       "coord_lat": -41.29989,
       "coord_lng": 174.78802
+    },
+    {
+      "name": "WhatDatBird? - Birds near Whenua Hou",
+      "continent": "Oceania",
+      "country": "New Zealand",
+      "description": "Birds near Whenua Hou",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=-46.77364&lng=167.63523&place_name=Birds%20near%20Southland&country_code=NZ",
+      "coord_lat": -46.77364,
+      "coord_lng": 167.63523
     }
   ]
 }
