@@ -278,6 +278,7 @@ function goCoords(lat, lng, name, countryCode) {
 let pickMap = null, pickMarker = null, boundaryLayer = null;
 const boundaryCache = {};
 let _nomResults = [];
+let _pendingBbox = null;
 
 const TYPE_LABEL = {
   2:'Country', 3:'State / Region', 4:'County / District', 5:'Town / City',
@@ -348,24 +349,26 @@ function selectNomResult(i) {
   try { pickMap.flyToBounds(boundaryLayer.getBounds(), { duration: 0.6, maxZoom: 13 }); } catch {}
 
   const shortName = p.display_name.split(',').slice(0, 2).join(',').trim();
-  const fullName  = p.display_name;
+  _pendingBbox = { s, n, w, e, name: p.display_name, cc };
 
   statusText.textContent = 'Ready to play:';
   placesEl.innerHTML = `
-    <div class="map-place-item" onclick="goBbox(${s},${n},${w},${e},${JSON.stringify(fullName)},${JSON.stringify(cc)})">
+    <div class="map-place-item" onclick="goBbox()">
       <div>
         <div class="map-place-name">&#x2b50; ${shortName}</div>
         <div class="map-place-type">${p.type || p.class || ''}</div>
       </div>
-      <span class="map-place-go">Let&#x2019;s Go &#8594;</span>
+      <span class="map-place-go">Make a Quiz &#8594;</span>
     </div>`;
 }
 
-function goBbox(s, n, w, e, name, cc) {
+function goBbox() {
+  if (!_pendingBbox) return;
+  const { s, n, w, e, name, cc } = _pendingBbox;
   let url = `quiz.html?swlat=${s}&nelat=${n}&swlng=${w}&nelng=${e}&place_name=${encodeURIComponent(name)}`;
-  if (cc) url += `&country_code=${encodeURIComponent(cc)}`;
-  window.location.href = url;
+  if (cc) url += `&country_code=${cc}`;
   closeMapPicker();
+  window.location.href = url;
 }
 
 function closeMapPicker() {
@@ -526,7 +529,7 @@ async function onMapClick(e) {
   }
 }
 </script>
-<script src="engine.js?v=5.72"></script>
+<script src="engine.js?v=5.73"></script>
 <script>document.getElementById('appVersion').textContent = typeof APP_VERSION !== 'undefined' ? APP_VERSION : '';</script>
 </body>
 </html>
