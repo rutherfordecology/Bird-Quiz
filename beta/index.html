@@ -263,6 +263,11 @@ loadLibrary();
 function goPlace(id, name) {
   window.location.href = `quiz.html?place_id=${id}&place_name=${encodeURIComponent(name)}&beta=1`;
 }
+function goCoords(lat, lng, name, countryCode) {
+  let url = `quiz.html?lat=${lat.toFixed(5)}&lng=${lng.toFixed(5)}&place_name=${encodeURIComponent(name)}&beta=1`;
+  if (countryCode) url += `&country_code=${countryCode}`;
+  window.location.href = url;
+}
 
 // ── Map picker ────────────────────────────────────────────────────────────
 let pickMap = null, pickMarker = null, boundaryLayer = null;
@@ -352,8 +357,8 @@ async function doModalSearch(q) {
   } catch { statusText.textContent = 'Search failed — try again.'; }
 }
 
-function renderPlaceList(places) {
-  placesEl.innerHTML = places.map(p => `
+function renderPlaceList(places, coordOption) {
+  const adminHtml = places.map(p => `
     <div class="map-place-item" data-id="${p.id}" data-name="${p.display_name.replace(/'/g,"\\'")}">
       <div>
         <div class="map-place-name">${p.display_name}</div>
@@ -361,13 +366,37 @@ function renderPlaceList(places) {
       </div>
       <span class="map-place-go">Let&#x2019;s Go &#8594;</span>
     </div>`).join('');
-  placesEl.querySelectorAll('.map-place-item').forEach(el => {
+
+  const coordHtml = coordOption ? `
+    <div class="map-place-item map-place-coord" data-lat="${coordOption._lat}" data-lng="${coordOption._lng}" data-name="${coordOption.display_name}" data-cc="${coordOption._countryCode || ''}">
+      <div>
+        <div class="map-place-name">&#x1F4CD; ${coordOption.display_name}</div>
+        <div class="map-place-type">Birds within ~25km of this point</div>
+      </div>
+      <span class="map-place-go">Let&#x2019;s Go &#8594;</span>
+    </div>` : '';
+
+  placesEl.innerHTML = adminHtml + coordHtml;
+
+  placesEl.querySelectorAll('.map-place-item:not(.map-place-coord)').forEach(el => {
     el.addEventListener('mouseenter', () => {
       placesEl.querySelectorAll('.map-place-item').forEach(x => x.classList.remove('active'));
       el.classList.add('active');
       showBoundary(el.dataset.id);
     });
     el.addEventListener('click', () => goPlace(el.dataset.id, el.dataset.name));
+  });
+
+  placesEl.querySelectorAll('.map-place-coord').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      placesEl.querySelectorAll('.map-place-item').forEach(x => x.classList.remove('active'));
+      el.classList.add('active');
+      clearBoundary();
+    });
+    el.addEventListener('click', () => goCoords(
+      parseFloat(el.dataset.lat), parseFloat(el.dataset.lng),
+      el.dataset.name, el.dataset.cc
+    ));
   });
 }
 
@@ -387,7 +416,12 @@ async function onMapClick(e) {
     });
     const nomD = await nomR.json();
     const addr = nomD.address || {};
-    // Cast a wide net over Nominatim address fields — small cities often come back as hamlet/suburb/municipality
+    const countryCode = addr.country_code?.toUpperCase() || null;
+
+    // Build a human-readable "near X" label from the most specific Nominatim name
+    const nearLabel = addr.city || addr.town || addr.village || addr.hamlet || addr.suburb || addr.municipality || nomD.name || 'this location';
+
+    // Cast a wide net over Nominatim address fields
     const searchTerms = [...new Set([
       nomD.name, addr.city, addr.town, addr.village, addr.hamlet,
       addr.suburb, addr.municipality, addr.county
@@ -400,30 +434,42 @@ async function onMapClick(e) {
     ]);
 
     const nearbyD = await nearbyR.json();
-    const PRIORITY = { 6:0, 100:1, 5:2, 4:3, 10:4, 3:5, 9:6, 13:7, 2:8, 12:9, 1:10 };
-    const nearby = [...(nearbyD.results?.standard || []), ...(nearbyD.results?.community || [])];
-    const autoResults = await Promise.all(autoRs.map(r => r?.ok ? r.json().then(d => d.results || []) : []));
-    // Widen geo filter slightly — 3 deg instead of 2 to catch places whose centroid is offset from the click
-    const auto = autoResults.flat().filter(p => { if (!p.location) return true; const [a,b] = p.location.split(',').map(Number); return Math.abs(a-lat) <= 3 && Math.abs(b-lng) <= 3; });
+    // Admin priority — lower = higher priority; community (100) excluded entirely
+    const PRIORITY = { 6:0, 5:1, 4:2, 10:3, 3:4, 9:5, 13:6, 2:7, 12:8, 7:9 };
+    const ADMIN_TYPES = new Set(Object.keys(PRIORITY).map(Number));
 
-    const CITY_TYPES = new Set([5]);
+    // Only standard places, no community places
+    const nearby = (nearbyD.results?.standard || []).filter(p => ADMIN_TYPES.has(p.place_type));
+    const autoResults = await Promise.all(autoRs.map(r => r?.ok ? r.json().then(d => d.results || []) : []));
+    const auto = autoResults.flat().filter(p => {
+      if (!ADMIN_TYPES.has(p.place_type)) return false;
+      if (!p.location) return true;
+      const [a,b] = p.location.split(',').map(Number);
+      return Math.abs(a-lat) <= 3 && Math.abs(b-lng) <= 3;
+    });
+
     const dist = p => { if (!p.location) return 999; const [a,b] = p.location.split(',').map(Number); return Math.max(Math.abs(a-lat), Math.abs(b-lng)); };
     const seen = new Set();
-    const all = [...auto, ...nearby]
+    const adminPlaces = [...auto, ...nearby]
       .filter(p => { if (seen.has(p.id) || p.place_type === 1) return false; seen.add(p.id); return true; })
       .sort((a, b) => {
-        const aNear = CITY_TYPES.has(a.place_type) && dist(a) <= 0.1;
-        const bNear = CITY_TYPES.has(b.place_type) && dist(b) <= 0.1;
-        if (aNear !== bNear) return aNear ? -1 : 1;
-        return (PRIORITY[a.place_type] ?? 99) - (PRIORITY[b.place_type] ?? 99);
+        const pa = PRIORITY[a.place_type] ?? 99, pb = PRIORITY[b.place_type] ?? 99;
+        if (pa !== pb) return pa - pb;
+        return dist(a) - dist(b); // tie-break by proximity
       })
-      .slice(0, 8);
-
-    if (!all.length) { statusText.textContent = 'No locations found here — try another spot.'; return; }
+      .slice(0, 7);
 
     statusText.textContent = 'Hover a location to preview its area, then click to play:';
-    renderPlaceList(all);
-    showBoundary(all[0].id);
+
+    // Build list: admin places first, then coordinate fallback at bottom
+    const coordOption = {
+      id: null,
+      display_name: `Birds near ${nearLabel}`,
+      place_type: -1, // sentinel
+      _lat: lat, _lng: lng, _countryCode: countryCode,
+    };
+    renderPlaceList(adminPlaces, coordOption);
+    if (adminPlaces.length) showBoundary(adminPlaces[0].id);
 
   } catch {
     statusText.textContent = 'Could not look up this location — try again.';
