@@ -19,7 +19,7 @@ window.onunhandledrejection = e => {
 };
 </script>
 <div id="app"></div>
-<script src="engine.js?v=5.60" onerror="document.getElementById('app').innerHTML='<div style=padding:2rem;font-family:sans-serif;color:#8a2c2c>Failed to fetch engine.js — check network connection.<br><br><a href=index.html>← Back</a></div>'"></script>
+<script src="engine.js?v=5.61" onerror="document.getElementById('app').innerHTML='<div style=padding:2rem;font-family:sans-serif;color:#8a2c2c>Failed to fetch engine.js — check network connection.<br><br><a href=index.html>← Back</a></div>'"></script>
 <script>
 const params     = new URLSearchParams(window.location.search);
 const PLACE_ID   = params.get('place_id');
@@ -365,6 +365,9 @@ async function boot() {
     betaBadge:      true,
     indigenousField:'indigenousName',
     easyBirds:      [],
+    coordLat:       COORD_MODE ? COORD_LAT : null,
+    coordLng:       COORD_MODE ? COORD_LNG : null,
+    coordCC:        COORD_MODE ? COORD_CC  : null,
   });
 
   // ── Coordinate mode (no iNat place_id — use lat/lng directly) ────────────

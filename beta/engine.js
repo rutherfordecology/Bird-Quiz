@@ -1,7 +1,7 @@
-// WhatDatBird? Quiz Engine v5.60
+// WhatDatBird? Quiz Engine v5.61
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.60';
+const APP_VERSION = 'v5.61';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -448,7 +448,8 @@ async function toggleIntroLeaderboard() {
     const data = JSON.parse(atob(d.content.replace(/\n/g,'')));
     const MODES = [{key:'easy',label:'Common'},{key:'hard',label:'Birder'},{key:'complete',label:'Complete'},{key:'rarity',label:'Rarity'}];
     const html = MODES.map(({key, label}) => {
-      const entries = data.boards?.[`${CFG.placeId}_${key}`] || [];
+      const lbKey = CFG.placeId ? `${CFG.placeId}_${key}` : `coord_${CFG.coordLat.toFixed(3)}_${CFG.coordLng.toFixed(3)}_${key}`;
+      const entries = data.boards?.[lbKey] || [];
       if (!entries.length) return '';
       return `<div style="margin-bottom:14px">
         <div class="lb-title" style="margin-bottom:6px">&#127942; ${label}</div>
@@ -533,11 +534,12 @@ function renderResult(app, header) {
     'You did it! Those wrong ones kept coming back until you nailed them! &#128038;',
   ].find(m=>m!==null);
 
-  const saveBtn = CFG.placeId ? `
+  const canSave = CFG.placeId || CFG.coordLat;
+  const saveBtn = canSave ? `
     <button class="btn-save-library" id="saveLibBtn" onclick="saveToLibrary()">&#127757; Add to Quiz Library</button>
     <div id="saveLibMsg" style="font-size:0.8rem;color:#2a7a58;margin-top:8px;min-height:1.2em;text-align:center;font-weight:700;"></div>` : '';
 
-  const lbSection = CFG.placeId ? `
+  const lbSection = canSave ? `
     <div class="lb-entry" id="lbEntry">
       <div id="lbLocked" style="text-align:center;color:#9b9890;font-size:0.85rem;padding:8px 0">&#128274; Add this quiz to the library to unlock the leaderboard</div>
       <div id="lbUnlocked" style="display:none">
@@ -564,7 +566,7 @@ function renderResult(app, header) {
       <button class="btn-back" onclick="window.location.href='${CFG.backUrl}'">&#8592; All Quizzes</button>
     </div>`;
   launchConfetti();
-  if (CFG.placeId) {
+  if (CFG.placeId || CFG.coordLat) {
     loadLeaderboard();
     checkInLibrary();
   }
@@ -585,7 +587,10 @@ async function checkInLibrary() {
     if (!r.ok) return;
     const d = await r.json();
     const data = JSON.parse(decodeURIComponent(escape(atob(d.content.replace(/\n/g, '')))).replace(/^﻿/, ''));
-    if (data.quizzes.some(q => String(q.place_id) === String(CFG.placeId))) {
+    const alreadyIn = CFG.placeId
+      ? data.quizzes.some(q => String(q.place_id) === String(CFG.placeId))
+      : data.quizzes.some(q => q.coord_lat && Math.abs(q.coord_lat - CFG.coordLat) < 0.001 && Math.abs(q.coord_lng - CFG.coordLng) < 0.001);
+    if (alreadyIn) {
       const btn = document.getElementById('saveLibBtn');
       const msg = document.getElementById('saveLibMsg');
       if (btn) btn.style.display = 'none';
@@ -946,7 +951,7 @@ async function submitScore(totalSeen) {
   try {
     const { sha, data } = await readLB();
     if (!data.boards) data.boards = {};
-    const key = `${CFG.placeId}_${state.mode}`;
+    const key = CFG.placeId ? `${CFG.placeId}_${state.mode}` : `coord_${CFG.coordLat.toFixed(3)}_${CFG.coordLng.toFixed(3)}_${state.mode}`;
     if (!data.boards[key]) data.boards[key] = [];
     data.boards[key].push({ name, score: totalSeen, date: new Date().toISOString().split('T')[0] });
     data.boards[key].sort((a, b) => a.score - b.score);
@@ -978,7 +983,7 @@ async function submitScore(totalSeen) {
 async function saveToLibrary() {
   const btn = document.getElementById('saveLibBtn');
   const msg = document.getElementById('saveLibMsg');
-  if (!btn || !CFG.placeId) return;
+  if (!btn || (!CFG.placeId && !CFG.coordLat)) return;
   btn.disabled = true;
   msg.style.color = '#2a7a58';
   msg.textContent = 'Reading library...';
@@ -1000,15 +1005,40 @@ async function saveToLibrary() {
     return;
   }
 
-  if (data.quizzes.some(q => String(q.place_id) === String(CFG.placeId))) {
+  const alreadySaved = CFG.placeId
+    ? data.quizzes.some(q => String(q.place_id) === String(CFG.placeId))
+    : data.quizzes.some(q => q.coord_lat && Math.abs(q.coord_lat - CFG.coordLat) < 0.001 && Math.abs(q.coord_lng - CFG.coordLng) < 0.001);
+  if (alreadySaved) {
     msg.textContent = 'Already in the library!';
     btn.style.display = 'none';
     return;
   }
 
-  // 2. Fetch place metadata from iNat
+  // 2. Fetch place metadata
   msg.textContent = 'Fetching place info...';
   let continent = 'Other', country = CFG.placeName, photoTaxon = null;
+
+  // Coord mode: derive country/continent from country code, no iNat place lookup needed
+  if (CFG.coordLat && !CFG.placeId) {
+    if (CFG.coordCC && ISO_TO_COUNTRY[CFG.coordCC]) {
+      country = ISO_TO_COUNTRY[CFG.coordCC];
+    }
+    const COUNTRY_CONTINENT = {
+      'United States':'North America','Canada':'North America','Mexico':'North America','Guatemala':'North America','Cuba':'North America','Costa Rica':'North America','Panama':'North America','Honduras':'North America','Nicaragua':'North America','El Salvador':'North America','Dominican Republic':'North America','Haiti':'North America','Trinidad and Tobago':'North America',
+      'Brazil':'South America','Argentina':'South America','Colombia':'South America','Peru':'South America','Venezuela':'South America','Chile':'South America','Ecuador':'South America','Bolivia':'South America','Paraguay':'South America','Uruguay':'South America','Guyana':'South America',
+      'United Kingdom':'Europe','France':'Europe','Germany':'Europe','Spain':'Europe','Italy':'Europe','Portugal':'Europe','Netherlands':'Europe','Belgium':'Europe','Switzerland':'Europe','Austria':'Europe','Sweden':'Europe','Norway':'Europe','Denmark':'Europe','Finland':'Europe','Poland':'Europe','Czech Republic':'Europe','Hungary':'Europe','Romania':'Europe','Greece':'Europe','Ireland':'Europe','Croatia':'Europe','Bulgaria':'Europe','Serbia':'Europe','Russia':'Europe','Ukraine':'Europe','Iceland':'Europe',
+      'Australia':'Oceania','New Zealand':'Oceania','Papua New Guinea':'Oceania','Fiji':'Oceania','Samoa':'Oceania','Tonga':'Oceania','Vanuatu':'Oceania','Solomon Islands':'Oceania','New Caledonia':'Oceania','French Polynesia':'Oceania',
+      'China':'Asia','Japan':'Asia','India':'Asia','Indonesia':'Asia','Philippines':'Asia','Vietnam':'Asia','Thailand':'Asia','Malaysia':'Asia','South Korea':'Asia','Taiwan':'Asia','Myanmar':'Asia','Cambodia':'Asia','Nepal':'Asia','Sri Lanka':'Asia','Singapore':'Asia','Bangladesh':'Asia','Pakistan':'Asia','Mongolia':'Asia','Kazakhstan':'Asia',
+      'South Africa':'Africa','Kenya':'Africa','Tanzania':'Africa','Ethiopia':'Africa','Uganda':'Africa','Ghana':'Africa','Nigeria':'Africa','Cameroon':'Africa','Senegal':'Africa','Madagascar':'Africa','Zambia':'Africa','Zimbabwe':'Africa','Botswana':'Africa','Mozambique':'Africa','Morocco':'Africa','Egypt':'Africa','Rwanda':'Africa','Malawi':'Africa',
+    };
+    continent = COUNTRY_CONTINENT[country] || 'Other';
+    // Get a photo from iNat by coords
+    try {
+      const spR = await fetch(`https://api.inaturalist.org/v1/observations/species_counts?lat=${CFG.coordLat}&lng=${CFG.coordLng}&radius=25&iconic_taxa=Aves&quality_grade=research&per_page=1&order_by=observations_count&order=desc`);
+      const spD = await spR.json();
+      photoTaxon = spD.results?.[0]?.taxon?.name || null;
+    } catch {}
+  } else {
   try {
     const placeR = await fetch(`https://api.inaturalist.org/v1/places/${CFG.placeId}`);
     const placeD = await placeR.json();
@@ -1070,13 +1100,13 @@ async function saveToLibrary() {
     const spD = await spR.json();
     photoTaxon = spD.results?.[0]?.taxon?.name || null;
   } catch (e) {
-    // Non-fatal — save with defaults
     console.warn('iNat metadata fetch failed:', e.message);
   }
+  } // end else (place_id mode)
 
   // 3. Write updated quizzes.json to GitHub
   msg.textContent = 'Saving...';
-  data.quizzes.push({
+  const quizEntry = CFG.placeId ? {
     name:        `WhatDatBird? - ${expandPlaceName(CFG.placeName)}`,
     continent,
     country,
@@ -1087,7 +1117,18 @@ async function saveToLibrary() {
     place_id:    Number(CFG.placeId),
     photo_taxon: photoTaxon,
     added:       new Date().toISOString().split('T')[0],
-  });
+  } : {
+    name:        `WhatDatBird? - ${CFG.placeName}`,
+    continent,
+    country,
+    description: CFG.placeName,
+    species:     null,
+    type:        'dynamic',
+    url:         `quiz.html?lat=${CFG.coordLat}&lng=${CFG.coordLng}&place_name=${encodeURIComponent(CFG.placeName)}${CFG.coordCC ? '&country_code='+CFG.coordCC : ''}`,
+    coord_lat:   CFG.coordLat,
+    coord_lng:   CFG.coordLng,
+  };
+  data.quizzes.push(quizEntry);
   try {
     const body = JSON.stringify({
       message: `Add ${CFG.placeName} to quiz library`,
