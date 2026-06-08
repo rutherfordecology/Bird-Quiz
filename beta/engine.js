@@ -1,7 +1,7 @@
-// WhatDatBird? Quiz Engine v5.62
+// WhatDatBird? Quiz Engine v5.63
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.62';
+const APP_VERSION = 'v5.63';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -1120,8 +1120,12 @@ async function saveToLibrary() {
           'Senegal':'Africa','Madagascar':'Africa','Zambia':'Africa','Zimbabwe':'Africa',
           'Botswana':'Africa','Mozambique':'Africa','Morocco':'Africa','Egypt':'Africa',
         };
-        continent = COUNTRY_CONTINENT[country] || 'Other';
+        continent = COUNTRY_CONTINENT[country] || COUNTRY_CONTINENT[CFG.placeName] || COUNTRY_CONTINENT[CFG.placeName?.split(',')[0]?.trim()] || 'Other';
       }
+    }
+    // Final safety net — catches country-level places where iNat has no continent ancestor
+    if (!continent || continent === 'Other') {
+      continent = COUNTRY_CONTINENT[country] || COUNTRY_CONTINENT[CFG.placeName] || COUNTRY_CONTINENT[CFG.placeName?.split(',')[0]?.trim()] || 'Other';
     }
     const spR = await fetch(`https://api.inaturalist.org/v1/observations/species_counts?place_id=${CFG.placeId}&iconic_taxa=Aves&quality_grade=research&per_page=1&order_by=observations_count&order=desc`);
     const spD = await spR.json();
