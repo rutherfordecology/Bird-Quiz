@@ -379,39 +379,39 @@ async function boot() {
     PLACE_LNG = COORD_LNG;
     COUNTRY_CODE = COORD_CC;
 
-    // Build a bbox (~25km pad ≈ 0.25 deg) for GBIF
-    const pad = 0.2;
-    PLACE_BBOX = { minLat: COORD_LAT - pad, maxLat: COORD_LAT + pad, minLng: COORD_LNG - pad, maxLng: COORD_LNG + pad };
-
     if (COUNTRY_CODE) {
       try {
         const cnr = await fetch(`../place-names/${COUNTRY_CODE}.json`);
         if (cnr.ok) { placeNames = await cnr.json(); }
       } catch {}
-      updateLoadingProgress(`Loading from GBIF + eBird near ${PLACE_NAME}...`);
-      try {
-        await loadFromGBIF();
-        return;
-      } catch (err) {
-        console.warn('GBIF load failed, falling back to iNat:', err.message);
-        setState({ phase: 'loading' });
-      }
     }
 
-    // iNat radius fallback for coord mode
-    updateLoadingProgress('Fetching species from iNaturalist...');
-    const BUFFER_STEPS = [25, 10, 50];
-    for (const buf of BUFFER_STEPS) {
+    // Expand bbox until we find enough species
+    const PAD_STEPS = [0.05, 0.1, 0.2, 0.5, 1.0, 2.0];
+    const MIN_SPECIES = 15;
+    for (const pad of PAD_STEPS) {
+      PLACE_BBOX = { minLat: COORD_LAT - pad, maxLat: COORD_LAT + pad, minLng: COORD_LNG - pad, maxLng: COORD_LNG + pad };
+      const approxKm = Math.round(pad * 111);
+      updateLoadingProgress(`Searching within ${approxKm}km of ${PLACE_NAME}...`);
       try {
-        const birds = await loadFromInat(buf);
-        if (birds.length >= 8) {
+        const items = await getGBIFSpeciesKeys();
+        if (items.length >= MIN_SPECIES) {
+          await loadFromGBIF();
+          return;
+        }
+      } catch {}
+      // Also try iNat radius at this scale before expanding
+      try {
+        const radiusKm = Math.round(pad * 111);
+        const birds = await loadFromInat(radiusKm);
+        if (birds.length >= MIN_SPECIES) {
           setTiers(birds);
           setState({ phase: 'intro' });
           return;
         }
       } catch {}
     }
-    setState({ phase: 'error', loadError: 'Not enough bird species found near this location.' });
+    setState({ phase: 'error', loadError: 'Not enough bird species found near this location — try a different spot.' });
     return;
   }
 
