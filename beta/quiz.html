@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WhatDatBird?</title>
+<link rel="stylesheet" href="quiz.css">
+<style>.beta-badge{display:inline-block;font-size:0.65rem;font-weight:800;background:#d4a84b;color:#1c1b18;border-radius:4px;padding:2px 7px;letter-spacing:0.06em;vertical-align:middle;margin-left:6px;}</style>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-HBJSECY37S"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-HBJSECY37S');</script>
+</head>
+<body>
+<script>
+window.onerror = (msg, src, line) => {
+  document.getElementById('app').innerHTML = `<div style="padding:2rem;font-family:sans-serif;color:#8a2c2c"><strong>Error loading quiz</strong><br><small>${msg}<br>${src} line ${line}</small><br><br><a href="index.html">← Back</a></div>`;
+};
+window.onunhandledrejection = e => {
+  document.getElementById('app').innerHTML = `<div style="padding:2rem;font-family:sans-serif;color:#8a2c2c"><strong>Error loading quiz</strong><br><small>${e.reason}</small><br><br><a href="index.html">← Back</a></div>`;
+};
+</script>
+<div id="app"></div>
+<script src="engine.js?v=5.54" onerror="document.getElementById('app').innerHTML='<div style=padding:2rem;font-family:sans-serif;color:#8a2c2c>Failed to fetch engine.js — check network connection.<br><br><a href=index.html>← Back</a></div>'"></script>
+<script>
+const params     = new URLSearchParams(window.location.search);
+const PLACE_ID   = params.get('place_id');
+const PLACE_NAME = decodeURIComponent(params.get('place_name') || 'Unknown Place');
+
+let PLACE_LAT = null, PLACE_LNG = null, COUNTRY_CODE = null;
+let placeNames = null;
+let PLACE_BBOX = null;   // {minLat, maxLat, minLng, maxLng} from iNat bounding box
+let IS_COUNTRY = false;  // true if the searched place itself is a country
+const YEAR_FROM  = new Date().getFullYear() - 15;
+const YEAR_RANGE = `${YEAR_FROM},${new Date().getFullYear()}`;
+
+// ── Species blocklist (GBIF data quality issues) ───────────────────────────
+const BLOCKLIST = new Set([
+  'Porphyrio porphyrio', // Western Swamphen — misidentifications in NZ GBIF data
+]);
+
+// ── ISO country code lookup ────────────────────────────────────────────────
+const ISO_CODES = {
+  'Afghanistan':'AF','Albania':'AL','Algeria':'DZ','Angola':'AO','Argentina':'AR',
+  'Australia':'AU','Austria':'AT','Azerbaijan':'AZ','Bangladesh':'BD','Belgium':'BE',
+  'Bhutan':'BT','Bolivia':'BO','Botswana':'BW','Brazil':'BR','Bulgaria':'BG',
+  'Cambodia':'KH','Cameroon':'CM','Canada':'CA','Chile':'CL','China':'CN',
+  'Colombia':'CO','Costa Rica':'CR','Croatia':'HR','Cuba':'CU','Czech Republic':'CZ',
+  'Denmark':'DK','Ecuador':'EC','Egypt':'EG','Ethiopia':'ET','Fiji':'FJ',
+  'Finland':'FI','France':'FR','French Polynesia':'PF','Germany':'DE','Ghana':'GH',
+  'Greece':'GR','Guatemala':'GT','Guyana':'GY','Honduras':'HN','Hungary':'HU',
+  'Iceland':'IS','India':'IN','Indonesia':'ID','Iran':'IR','Ireland':'IE',
+  'Israel':'IL','Italy':'IT','Jamaica':'JM','Japan':'JP','Jordan':'JO',
+  'Kazakhstan':'KZ','Kenya':'KE','Laos':'LA','Lebanon':'LB','Madagascar':'MG',
+  'Malawi':'MW','Malaysia':'MY','Mexico':'MX','Mongolia':'MN','Morocco':'MA',
+  'Mozambique':'MZ','Myanmar':'MM','Namibia':'NA','Nepal':'NP','Netherlands':'NL',
+  'New Caledonia':'NC','New Zealand':'NZ','Nicaragua':'NI','Nigeria':'NG',
+  'Norway':'NO','Pakistan':'PK','Panama':'PA','Papua New Guinea':'PG',
+  'Paraguay':'PY','Peru':'PE','Philippines':'PH','Poland':'PL','Portugal':'PT',
+  'Romania':'RO','Russia':'RU','Rwanda':'RW','Samoa':'WS','Saudi Arabia':'SA',
+  'Senegal':'SN','Singapore':'SG','Solomon Islands':'SB','South Africa':'ZA',
+  'South Korea':'KR','Spain':'ES','Sri Lanka':'LK','Sudan':'SD','Sweden':'SE',
+  'Switzerland':'CH','Taiwan':'TW','Tanzania':'TZ','Thailand':'TH','Tonga':'TO',
+  'Trinidad and Tobago':'TT','Turkey':'TR','Uganda':'UG','Ukraine':'UA',
+  'United Kingdom':'GB','United States':'US','Uruguay':'UY','Vanuatu':'VU',
+  'Venezuela':'VE','Vietnam':'VN','Zambia':'ZM','Zimbabwe':'ZW',
+};
+function toISO(name) {
+  return ISO_CODES[name] || ISO_CODES[name?.split(',')[0]?.trim()] || null;
+}
+
+// ── Place metadata ─────────────────────────────────────────────────────────
+async function fetchPlaceMeta(placeId) {
+  try {
+    const r = await fetch(`https://api.inaturalist.org/v1/places/${placeId}`);
+    const d = await r.json();
+    const place = d.results?.[0];
+
+    // Centroid
+    const coords = place?.point_geojson?.coordinates;
+    if (coords) { PLACE_LNG = coords[0]; PLACE_LAT = coords[1]; }
+
+    // Bounding box (used for sub-national GBIF queries)
+    const bbox = place?.bounding_box_geojson;
+    if (bbox?.coordinates?.[0]) {
+      const pts = bbox.coordinates[0];
+      const lats = pts.map(p => p[1]), lngs = pts.map(p => p[0]);
+      PLACE_BBOX = {
+        minLat: Math.min(...lats), maxLat: Math.max(...lats),
+        minLng: Math.min(...lngs), maxLng: Math.max(...lngs),
+      };
+    }
+
+    // Check if the place itself is a country
+    IS_COUNTRY = toISO(place?.display_name) !== null;
+
+    // Walk ancestor hierarchy to find country code
+    if (!IS_COUNTRY) {
+      const ancestorIds = (place?.ancestor_place_ids || []).join(',');
+      if (ancestorIds) {
+        const ar = await fetch(`https://api.inaturalist.org/v1/places?id=${ancestorIds}&per_page=100`);
+        const ad = await ar.json();
+        const country = (ad.results || []).find(p => toISO(p.display_name));
+        if (country) COUNTRY_CODE = toISO(country.display_name);
+      }
+    } else {
+      COUNTRY_CODE = toISO(place.display_name);
+    }
+  } catch {}
+}
+
+// ── Core species processing ────────────────────────────────────────────────
+async function processBatch(speciesItems) {
+  return (await Promise.all(speciesItems.map(async ({key, count}) => {
+    try {
+      // 1. GBIF species: Latin name + real taxonomy keys
+      const gr = await fetch(`https://api.gbif.org/v1/species/${key}`);
+      const gd = await gr.json();
+      if (gd.rank !== 'SPECIES' || gd.class !== 'Aves') return null;
+      const latin = gd.canonicalName;
+      if (!latin) return null;
+      if (BLOCKLIST.has(latin)) return null; // skip blocklisted species
+
+      // 2. iNat: fetch when GBIF lacks a vernacular name, or when names may differ due to taxonomy revisions
+      const inat = (!gd.vernacularName) ? await fetch(
+        `https://api.inaturalist.org/v1/taxa?q=${encodeURIComponent(latin)}&rank=species&per_page=5`
+      ).then(r => r.json()).then(d => {
+        const t = d.results?.find(r => r.name.toLowerCase() === latin.toLowerCase()) || d.results?.[0];
+        if (!t) return null;
+        if (t.name.toLowerCase() === latin.toLowerCase()) return t;
+        // Epithet match is only accepted if common names also share a word (guards against e.g. multiple novaeseelandiae species)
+        const epithet = latin.split(' ')[1]?.toLowerCase();
+        const tEpithet = t.name.split(' ')[1]?.toLowerCase();
+        if (epithet && epithet === tEpithet && gd.vernacularName && t.preferred_common_name) {
+          const aWords = new Set(gd.vernacularName.toLowerCase().split(/\s+/));
+          const bWords = t.preferred_common_name.toLowerCase().split(/\s+/);
+          if (bWords.some(w => aWords.has(w))) return t;
+        }
+        return null;
+      }).catch(() => null) : null;
+
+      const name = gd.vernacularName || inat?.preferred_common_name || null;
+      if (!name) return null; // skip species with no usable common name
+
+      return {
+        name,
+        latin,
+        gbifKey:      key,
+        ancestorIds:  [gd.classKey, gd.orderKey, gd.familyKey, gd.genusKey].filter(Boolean),
+        family:       gd.family  || '',
+        order:        gd.order   || '',
+        count,
+        wikiUrl:      inat?.wikipedia_url || `https://en.wikipedia.org/wiki/${latin.replace(/ /g,'_')}`,
+        inatId:       inat?.id || null,
+        defaultPhoto: inat?.default_photo?.url?.replace('/square.', '/medium.') || null,
+        note:         null,
+        seabird:      false,
+      };
+    } catch { return null; }
+  }))).filter(Boolean);
+}
+
+function applyPlaceNames(birds) {
+  if (!placeNames?.names) return;
+  for (const bird of birds) {
+    const indName = placeNames.names[bird.latin];
+    if (indName) bird.indigenousName = indName;
+  }
+}
+
+function setTiers(birds) {
+  applyPlaceNames(birds);
+  const { easy, hard, complete, rarity } = computeTiers(birds);
+  CFG.easyBirds     = easy;
+  CFG.hardBirds     = hard;
+  CFG.completeBirds = complete;
+  CFG.rarityBirds   = rarity;
+}
+
+function computeTiers(allBirds) {
+  const birds = [...allBirds].sort((a,b) => (b.count||0) - (a.count||0));
+  const n     = birds.length;
+  const easyCount = Math.min(25, n);
+  const hardCount = Math.min(150, Math.max(easyCount + 1, Math.floor(n * 0.9)));
+  // Rarity: bottom 10% by count, minimum 8 species
+  const rarityPool = birds.slice(Math.floor(n * 0.85)).filter(b => (b.count||0) >= 1);
+  const rarity = rarityPool.length >= 8 ? rarityPool : null;
+  return {
+    easy:     birds.slice(0, easyCount),
+    hard:     hardCount > easyCount ? birds.slice(0, hardCount) : null,
+    complete: n > hardCount         ? birds                     : null,
+    rarity,
+  };
+}
+
+function updateLoadingProgress(text) {
+  const el = document.querySelector('.loading-sub');
+  if (el) el.textContent = text;
+}
+
+// ── GBIF-first loading ─────────────────────────────────────────────────────
+function bboxUrl(b, pad) {
+  return `https://api.gbif.org/v1/occurrence/search?decimalLatitude=${(b.minLat-pad).toFixed(4)},${(b.maxLat+pad).toFixed(4)}&decimalLongitude=${(b.minLng-pad).toFixed(4)},${(b.maxLng+pad).toFixed(4)}&taxonKey=212&facet=speciesKey&facetMincount=1&facetLimit=500&limit=0&year=${YEAR_RANGE}`;
+}
+function countryUrl() {
+  return `https://api.gbif.org/v1/occurrence/search?country=${COUNTRY_CODE}&taxonKey=212&facet=speciesKey&facetMincount=1&facetLimit=1000&limit=0&year=${YEAR_RANGE}`;
+}
+
+async function getGBIFSpeciesKeys() {
+  if (IS_COUNTRY && COUNTRY_CODE) {
+    const r = await fetch(countryUrl());
+    const d = await r.json();
+    return (d.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
+  }
+  if (PLACE_BBOX) {
+    // Use 0.2 deg (~22km) padding for sub-national places
+    const r = await fetch(bboxUrl(PLACE_BBOX, 0.2));
+    const d = await r.json();
+    const items = (d.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
+    // Fall back to country if too few local records
+    if (items.length < 15 && COUNTRY_CODE) {
+      const cr = await fetch(countryUrl());
+      const cd = await cr.json();
+      return (cd.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
+    }
+    return items;
+  }
+  if (COUNTRY_CODE) {
+    const r = await fetch(countryUrl());
+    const d = await r.json();
+    return (d.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
+  }
+  throw new Error('No geographic data available for GBIF query');
+}
+
+async function loadFromGBIF() {
+  const speciesItems = (await getGBIFSpeciesKeys()).sort((a,b) => b.count - a.count);
+  if (speciesItems.length < 8) throw new Error('Not enough GBIF data for this location');
+
+  const birds  = [];
+  const BATCH  = 40;
+  let introShown = false;
+
+  for (let i = 0; i < speciesItems.length; i += BATCH) {
+    updateLoadingProgress(
+      `Loading from GBIF + eBird... ${birds.length} of ~${speciesItems.length} species`
+    );
+    const results = await processBatch(speciesItems.slice(i, i + BATCH));
+    birds.push(...results);
+
+    // Show intro once we have enough for at least two tiers (so mode buttons render)
+    if (!introShown && birds.length >= 30) {
+      introShown = true;
+      setTiers(birds);
+      setState({ phase: 'intro' });
+      // Loop continues in background, updating counts in place
+    } else if (introShown) {
+      const hadRarity = !!CFG.rarityBirds;
+      setTiers(birds);
+      if (state.phase === 'intro') {
+        const rarityJustAppeared = !hadRarity && !!CFG.rarityBirds;
+        if (rarityJustAppeared) {
+          // Rarity tier newly available — re-render to add the button
+          render();
+        } else {
+          const easy = CFG.easyBirds, hard = CFG.hardBirds, complete = CFG.completeBirds, rarity = CFG.rarityBirds;
+          const ec = document.getElementById('mc-easy');
+          const hc = document.getElementById('mc-hard');
+          const cc = document.getElementById('mc-complete');
+          const rc = document.getElementById('mc-rarity');
+          if (ec) ec.textContent = (easy?.length || 0) + ' SPECIES';
+          if (hc && hard) hc.textContent = hard.length + ' SPECIES';
+          if (cc && complete) cc.textContent = complete.length + ' SPECIES';
+          if (rc && rarity) rc.textContent = rarity.length + ' SPECIES';
+        }
+      }
+    }
+  }
+
+  if (!introShown) throw new Error('Could not find enough bird species with English names.');
+
+  // Attach locale-based indigenous names (e.g. Māori for NZ) if available
+  const locale = COUNTRY_CODE ? COUNTRY_LOCALE[COUNTRY_CODE] : null;
+  if (locale) {
+    const baseUrl = `https://api.inaturalist.org/v1/observations/species_counts?place_id=${PLACE_ID}&iconic_taxa=Aves&quality_grade=research&per_page=200&order_by=observations_count&order=desc&d1=${YEAR_FROM}-01-01`;
+    const indNames = await fetchIndigenousNames(baseUrl, locale);
+    for (const bird of birds) {
+      if (!bird.indigenousName && indNames[bird.latin]) bird.indigenousName = indNames[bird.latin];
+    }
+    if (Object.keys(indNames).length > 0) setTiers(birds); // re-tier with names attached
+  }
+
+  return birds;
+}
+
+// ── Country → iNat locale map ─────────────────────────────────────────────
+const COUNTRY_LOCALE = {
+  'WS':'sm','TO':'to','FJ':'fj','WF':'wls','CK':'rar','NU':'niu','TV':'tvl',
+  'NZ':'mi','PF':'ty','NC':'fr',
+  'MX':'es','GT':'es','HN':'es','NI':'es','CR':'es','PA':'es',
+  'CO':'es','VE':'es','PE':'es','BO':'es','EC':'es','CL':'es','AR':'es','UY':'es','PY':'es','CU':'es',
+  'ES':'es','PT':'pt','BR':'pt',
+  'FR':'fr','BE':'fr','CH':'fr',
+  'DE':'de','AT':'de',
+  'JP':'ja','CN':'zh','TW':'zh','KR':'ko',
+  'RU':'ru','UA':'uk',
+  'AR':'ar','EG':'ar','MA':'ar','SA':'ar',
+  'IN':'hi','BD':'bn',
+};
+
+async function fetchIndigenousNames(baseUrl, locale) {
+  try {
+    const r = await fetch(baseUrl + `&locale=${locale}`);
+    if (!r.ok) return {};
+    const d = await r.json();
+    const map = {};
+    for (const item of (d.results || [])) {
+      const name = item.taxon?.preferred_common_name;
+      const latin = item.taxon?.name;
+      if (name && latin) map[latin] = name;
+    }
+    return map;
+  } catch { return {}; }
+}
+
+// ── iNat fallback (for places without a country code, or if GBIF fails) ───
+async function loadFromInat(bufferKm = 0) {
+  if (bufferKm > 0 && PLACE_LAT === null) await fetchPlaceMeta(PLACE_ID);
+  const baseUrl = (bufferKm > 0 && PLACE_LAT !== null)
+    ? `https://api.inaturalist.org/v1/observations/species_counts?lat=${PLACE_LAT}&lng=${PLACE_LNG}&radius=${bufferKm}&iconic_taxa=Aves&quality_grade=research&per_page=200&order_by=observations_count&order=desc&d1=${YEAR_FROM}-01-01`
+    : `https://api.inaturalist.org/v1/observations/species_counts?place_id=${PLACE_ID}&iconic_taxa=Aves&quality_grade=research&per_page=200&order_by=observations_count&order=desc&d1=${YEAR_FROM}-01-01`;
+
+  const locale = COUNTRY_CODE ? COUNTRY_LOCALE[COUNTRY_CODE] : null;
+  const [r, indNames] = await Promise.all([
+    fetch(baseUrl),
+    locale ? fetchIndigenousNames(baseUrl, locale) : Promise.resolve({}),
+  ]);
+  if (!r.ok) throw new Error('iNat API error');
+  const d = await r.json();
+  return (d.results || [])
+    .filter(item => item.taxon?.preferred_common_name && item.taxon?.rank === 'species')
+    .filter(item => !BLOCKLIST.has(item.taxon.name))
+    .map(item => ({
+      name:          item.taxon.preferred_common_name,
+      latin:         item.taxon.name,
+      inatId:        item.taxon.id,
+      ancestorIds:   item.taxon.ancestor_ids || [],
+      count:         item.count,
+      wikiUrl:       item.taxon.wikipedia_url || `https://en.wikipedia.org/wiki/${item.taxon.name.replace(/ /g,'_')}`,
+      defaultPhoto:  item.taxon.default_photo?.url?.replace('/square.', '/medium.') || null,
+      note:          null,
+      seabird:       false,
+      indigenousName: indNames[item.taxon.name] || null,
+    }));
+}
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+async function boot() {
+  if (!PLACE_ID) {
+    initEngine({ placeName:'Error', backUrl:'index.html', easyBirds:[] });
+    setState({ phase:'error', loadError:'No place specified. Go back and search for a location.' });
+    return;
+  }
+
+  initEngine({
+    placeName:      PLACE_NAME,
+    placeId:        PLACE_ID,
+    backUrl:        'index.html',
+    betaBadge:      true,
+    indigenousField:'indigenousName',
+    easyBirds:      [],
+  });
+
+  // Load indigenous names — place-specific first, then country-level fallback
+  try {
+    const pnr = await fetch(`../place-names/${PLACE_ID}.json`);
+    if (pnr.ok) { placeNames = await pnr.json(); }
+  } catch {}
+  CFG.indigenousField = 'indigenousName';
+
+  // Fetch place metadata (centroid + country code) — needed before GBIF call
+  updateLoadingProgress('Identifying location...');
+  await fetchPlaceMeta(PLACE_ID);
+
+  // Fallback: extract country code from place name (e.g. "Gisborne, NZ" or "Gisborne, New Zealand")
+  // iNat's ancestor hierarchy sometimes skips the country level (e.g. Oceania → Gisborne Region → Gisborne)
+  if (!COUNTRY_CODE) {
+    const parts = PLACE_NAME.split(',').map(s => s.trim());
+    const lastPart = parts[parts.length - 1];
+    if (/^[A-Z]{2}$/.test(lastPart)) COUNTRY_CODE = lastPart;
+    else COUNTRY_CODE = toISO(lastPart);
+  }
+
+  // Load country-level indigenous names after country code is known
+  if (!placeNames && COUNTRY_CODE) {
+    try {
+      const cnr = await fetch(`../place-names/${COUNTRY_CODE}.json`);
+      if (cnr.ok) { placeNames = await cnr.json(); }
+    } catch {}
+  }
+
+  if (COUNTRY_CODE || PLACE_BBOX) {
+    // ── GBIF-first path (country query for country-level, bbox query for sub-national)
+    updateLoadingProgress(`Loading from GBIF + eBird for ${PLACE_NAME}...`);
+    try {
+      await loadFromGBIF();
+      return; // progressive loading handles everything
+    } catch (err) {
+      console.warn('GBIF load failed, falling back to iNat:', err.message);
+      setState({ phase: 'loading' }); // reset for iNat loading
+    }
+  }
+
+  // ── iNat fallback path (no country code, or GBIF failed) ──────────────
+  updateLoadingProgress('Fetching species from iNaturalist...');
+  const MIN_SPECIES = 15;
+  const BUFFER_STEPS = [0, 5, 10, 25, 50];
+
+  for (const buf of BUFFER_STEPS) {
+    try {
+      if (buf > 0) setState({ buffer: buf });
+      const birds = await loadFromInat(buf);
+      if (birds.length >= MIN_SPECIES || buf === BUFFER_STEPS[BUFFER_STEPS.length - 1]) {
+        if (birds.length < 8) throw new Error('Not enough species data (need at least 8).');
+        setTiers(birds);
+        setState({ phase: 'intro' });
+        return;
+      }
+    } catch (err) {
+      setState({ phase: 'error', loadError: err.message });
+      return;
+    }
+  }
+}
+
+if (!window.__engineLoaded) {
+  document.getElementById('app').innerHTML = '<div style="padding:2rem;font-family:sans-serif;color:#8a2c2c"><strong>engine.js did not load</strong><br><br><a href="index.html">← Back</a></div>';
+} else {
+  boot();
+}
+</script>
+</body>
+</html>
