@@ -22,15 +22,20 @@
   }
 
   .topbar {
-    background: #1a5940; padding: 12px 24px;
+    background: #1a5940; padding: 10px 16px;
     display: flex; align-items: center; justify-content: space-between;
-    width: 100%; box-sizing: border-box;
+    width: 100%; box-sizing: border-box; gap: 8px;
   }
-  .topbar-left { display: flex; align-items: center; gap: 10px; }
-  .topbar-title { font-size: 1.1rem; font-weight: 900; color: #fff; }
-  .topbar-re { font-size: 0.8rem; color: rgba(255,255,255,0.5); }
+  .topbar-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .topbar-logo { height: 44px; width: auto; display: block; flex-shrink: 0; }
+  @media (max-width: 480px) { .topbar-logo { display: none; } }
+  .topbar-title { font-size: 1.05rem; font-weight: 900; color: #fff; white-space: nowrap; }
+  .topbar-version { font-size: 0.65rem; font-weight: 400; color: rgba(255,255,255,0.35); letter-spacing: 0.04em; white-space: nowrap; }
+  .topbar-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  .topbar-re { font-size: 0.75rem; color: rgba(255,255,255,0.5); white-space: nowrap; }
   .topbar-re a { color: rgba(255,255,255,0.75); text-decoration: none; font-weight: 600; }
   .topbar-re a:hover { color: #fff; }
+  @media (max-width: 380px) { .topbar-re { display: none; } }
 
   .hero {
     text-align: center; padding: 40px 20px 36px;
@@ -109,13 +114,13 @@
 
 <div class="topbar">
   <div class="topbar-left">
-    <img src="logo-transparent.png" alt="WhatDatBird logo" style="height:54px;width:auto;display:block;">
+    <img src="logo-transparent.png" alt="WhatDatBird logo" class="topbar-logo">
     <span class="topbar-title">WhatDatBird?</span>
-    <span id="appVersion" style="font-size:0.7rem;font-weight:400;color:rgba(255,255,255,0.35);letter-spacing:0.04em;"></span>
+    <span id="appVersion" class="topbar-version"></span>
   </div>
-  <div style="display:flex;align-items:center;gap:16px;">
-    <a href="about.html" style="font-size:0.8rem;color:rgba(255,255,255,0.6);text-decoration:none;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.6)'">&#8505; About</a>
+  <div class="topbar-right">
     <span class="topbar-re">by <a href="https://www.rutherfordecology.co.nz/" target="_blank"><strong>Rutherford</strong> ecology</a></span>
+    <a href="about.html" style="font-size:0.8rem;color:rgba(255,255,255,0.6);text-decoration:none;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.6)'">&#8505; About</a>
   </div>
 </div>
 
@@ -515,7 +520,7 @@ async function onMapClick(e) {
   }
 }
 </script>
-<script src="engine.js?v=5.69"></script>
+<script src="engine.js?v=5.71"></script>
 <script>document.getElementById('appVersion').textContent = typeof APP_VERSION !== 'undefined' ? APP_VERSION : '';</script>
 </body>
 </html>
