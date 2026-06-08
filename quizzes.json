@@ -25,18 +25,6 @@
       "added": "2026-06-06"
     },
     {
-      "name": "WhatDatBird? - Whenua Hou Nature Reserve, New Zealand",
-      "continent": "Oceania",
-      "country": "New Zealand",
-      "description": "Whenua Hou Nature Reserve, New Zealand",
-      "species": null,
-      "type": "dynamic",
-      "url": "quiz.html?place_id=88743&place_name=Whenua%20Hou%20Nature%20Reserve%2C%20SO%2C%20NZ",
-      "place_id": 88743,
-      "photo_taxon": null,
-      "added": "2026-06-06"
-    },
-    {
       "name": "WhatDatBird? - Nakaseke, Uganda",
       "continent": "Africa",
       "country": "Uganda",
@@ -153,7 +141,7 @@
       "type": "dynamic",
       "url": "quiz.html?place_id=6803&place_name=New%20Zealand",
       "place_id": 6803,
-      "photo_taxon": null,
+      "photo_taxon": "Prosthemadera novaeseelandiae",
       "added": "2026-06-08"
     },
     {
@@ -165,7 +153,9 @@
       "type": "dynamic",
       "url": "quiz.html?lat=-42.49476&lng=173.93005&place_name=Kaikoura%20offshore%20and%20coast&country_code=NZ",
       "coord_lat": -42.49476,
-      "coord_lng": 173.93005
+      "coord_lng": 173.93005,
+      "photo_taxon": "Diomedea antipodensis",
+      "added": "2026-06-08"
     },
     {
       "name": "WhatDatBird? - Birds near Wellington",
@@ -176,7 +166,9 @@
       "type": "dynamic",
       "url": "quiz.html?lat=-41.29989&lng=174.78802&place_name=Birds%20near%20Wellington&country_code=NZ",
       "coord_lat": -41.29989,
-      "coord_lng": 174.78802
+      "coord_lng": 174.78802,
+      "photo_taxon": "Nestor meridionalis",
+      "added": "2026-06-08"
     },
     {
       "name": "WhatDatBird? - Birds near Whenua Hou",
@@ -187,7 +179,9 @@
       "type": "dynamic",
       "url": "quiz.html?lat=-46.77364&lng=167.63523&place_name=Birds%20near%20Southland&country_code=NZ",
       "coord_lat": -46.77364,
-      "coord_lng": 167.63523
+      "coord_lng": 167.63523,
+      "photo_taxon": "Strigops habroptila",
+      "added": "2026-06-08"
     }
   ]
 }
