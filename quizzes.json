@@ -166,6 +166,17 @@
       "url": "quiz.html?lat=-42.49476&lng=173.93005&place_name=Kaikoura%20offshore%20and%20coast&country_code=NZ",
       "coord_lat": -42.49476,
       "coord_lng": 173.93005
+    },
+    {
+      "name": "WhatDatBird? - Birds near Wellington",
+      "continent": "Oceania",
+      "country": "New Zealand",
+      "description": "Birds near Wellington",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=-41.29989&lng=174.78802&place_name=Birds%20near%20Wellington&country_code=NZ",
+      "coord_lat": -41.29989,
+      "coord_lng": 174.78802
     }
   ]
 }
