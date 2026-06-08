@@ -1158,6 +1158,8 @@ async function saveToLibrary() {
     url:         `quiz.html?lat=${CFG.coordLat}&lng=${CFG.coordLng}&place_name=${encodeURIComponent(CFG.placeName)}${CFG.coordCC ? '&country_code='+CFG.coordCC : ''}`,
     coord_lat:   CFG.coordLat,
     coord_lng:   CFG.coordLng,
+    photo_taxon: photoTaxon,
+    added:       new Date().toISOString().split('T')[0],
   };
   data.quizzes.push(quizEntry);
   try {
