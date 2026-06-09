@@ -225,6 +225,21 @@
       "lat": -13.40455,
       "lng": 48.34521,
       "added": "2026-06-09"
+    },
+    {
+      "name": "WhatDatBird? - Birds near Motu",
+      "continent": "Oceania",
+      "country": "New Zealand",
+      "description": "Birds near Motu",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=-38.25548&lng=177.54709&place_name=Birds%20near%20Motu%20Road&country_code=NZ",
+      "coord_lat": -38.25548,
+      "coord_lng": 177.54709,
+      "photo_taxon": "Hymenolaimus malacorhynchos",
+      "lat": -38.25548,
+      "lng": 177.54709,
+      "added": "2026-06-09"
     }
   ]
 }
