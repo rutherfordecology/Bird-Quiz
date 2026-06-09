@@ -1,7 +1,7 @@
 // WhatDatBird? Quiz Engine v5.63
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.93';
+const APP_VERSION = 'v5.94';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -1090,15 +1090,26 @@ function buildQueue(pool) {
   return queue;
 }
 
+function preloadImage(url) {
+  return new Promise(resolve => {
+    if (!url) { resolve(url); return; }
+    const img = new Image();
+    img.onload = () => resolve(url);
+    img.onerror = () => resolve(url); // still show it even if error (onerror handler in render will catch)
+    img.src = url;
+  });
+}
+
 function startQuiz() {
   const pool=getPool();
   const queue=buildQueue(pool);
   const first=queue.shift();
   setState({phase:'quiz',queue,wrongBin:[],current:first,streak:0,streakHistory:[],totalSeen:0,totalCorrect:0,selected:null,imgUrl:null,imgLoading:true,photoUrls:[],photoIdx:0,options:getOptions(first,pool)});
-  fetchImage(first, state.mode).then(url => {
+  fetchImage(first, state.mode).then(async url => {
     const all=(inatPhotoCache[first.latin||first.name]||[]).slice(0,5);
     const photoUrls=url?[url,...all.filter(u=>u!==url)].slice(0,5):all;
     if (!url && !photoUrls.length) { logNoPhoto(first); _advance(); return; }
+    await preloadImage(url);
     setState({imgUrl:url,imgLoading:false,photoUrls,photoIdx:0});
   });
 }
@@ -1150,7 +1161,7 @@ function _advance() {
     }
   }
   setState({current:next,queue,wrongBin,selected:null,imgUrl:null,imgLoading:true,photoUrls:[],photoIdx:0,options:getOptions(next,pool),audioPlaying:false,audioLoading:false,audioRec:null});
-  fetchImage(next, state.mode).then(url => {
+  fetchImage(next, state.mode).then(async url => {
     const all=(inatPhotoCache[next.latin||next.name]||[]).slice(0,5);
     const photoUrls=url?[url,...all.filter(u=>u!==url)].slice(0,5):all;
     if (!url && !photoUrls.length) {
@@ -1158,6 +1169,7 @@ function _advance() {
       _advance();
       return;
     }
+    await preloadImage(url);
     setState({imgUrl:url,imgLoading:false,photoUrls,photoIdx:0});
   });
   // Prefetch current bird's field note + call audio, and next bird's photos + note + audio
