@@ -285,6 +285,21 @@
       "lat": -33.830072799999996,
       "lng": 18.6612014,
       "added": "2026-06-09"
+    },
+    {
+      "name": "WhatDatBird? - Shelton, Cambridgeshire",
+      "continent": "Europe",
+      "country": "United Kingdom",
+      "description": "Shelton, Cambridgeshire",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=52.3075681&lng=-0.48520415&place_name=PE28%200NP%2C%20United%20Kingdom&country_code=GB",
+      "coord_lat": 52.3075681,
+      "coord_lng": -0.48520415,
+      "photo_taxon": "Milvus milvus",
+      "lat": 52.3075681,
+      "lng": -0.48520415,
+      "added": "2026-06-09"
     }
   ]
 }
