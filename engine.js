@@ -1,7 +1,7 @@
 // WhatDatBird? Quiz Engine v5.63
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.94';
+const APP_VERSION = 'v5.95';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -1100,18 +1100,41 @@ function preloadImage(url) {
   });
 }
 
+async function showBirdImage(bird) {
+  const cacheKey = bird.latin || bird.name;
+  const immediate = bird.defaultPhoto || null;
+
+  if (immediate) {
+    // Show defaultPhoto instantly, then load full carousel in background
+    await preloadImage(immediate);
+    if (state.current !== bird) return; // bird changed while preloading
+    setState({imgUrl: immediate, imgLoading: false, photoUrls: [immediate], photoIdx: 0});
+    // Background: fetch full observation carousel
+    fetchInatImage(bird).then(url => {
+      if (state.current !== bird) return;
+      const all = (inatPhotoCache[cacheKey] || []).slice(0, 5);
+      const photoUrls = url ? [url, ...all.filter(u => u !== url)].slice(0, 5) : all;
+      if (photoUrls.length > 1) setState({photoUrls, photoIdx: 0});
+    }).catch(() => {});
+  } else {
+    // No defaultPhoto — fall back to full fetch as before
+    fetchImage(bird, state.mode).then(async url => {
+      const all = (inatPhotoCache[cacheKey] || []).slice(0, 5);
+      const photoUrls = url ? [url, ...all.filter(u => u !== url)].slice(0, 5) : all;
+      if (!url && !photoUrls.length) { logNoPhoto(bird); _advance(); return; }
+      await preloadImage(url);
+      if (state.current !== bird) return;
+      setState({imgUrl: url, imgLoading: false, photoUrls, photoIdx: 0});
+    });
+  }
+}
+
 function startQuiz() {
   const pool=getPool();
   const queue=buildQueue(pool);
   const first=queue.shift();
   setState({phase:'quiz',queue,wrongBin:[],current:first,streak:0,streakHistory:[],totalSeen:0,totalCorrect:0,selected:null,imgUrl:null,imgLoading:true,photoUrls:[],photoIdx:0,options:getOptions(first,pool)});
-  fetchImage(first, state.mode).then(async url => {
-    const all=(inatPhotoCache[first.latin||first.name]||[]).slice(0,5);
-    const photoUrls=url?[url,...all.filter(u=>u!==url)].slice(0,5):all;
-    if (!url && !photoUrls.length) { logNoPhoto(first); _advance(); return; }
-    await preloadImage(url);
-    setState({imgUrl:url,imgLoading:false,photoUrls,photoIdx:0});
-  });
+  showBirdImage(first);
 }
 
 function selectAnswer(opt, event) {
@@ -1161,17 +1184,7 @@ function _advance() {
     }
   }
   setState({current:next,queue,wrongBin,selected:null,imgUrl:null,imgLoading:true,photoUrls:[],photoIdx:0,options:getOptions(next,pool),audioPlaying:false,audioLoading:false,audioRec:null});
-  fetchImage(next, state.mode).then(async url => {
-    const all=(inatPhotoCache[next.latin||next.name]||[]).slice(0,5);
-    const photoUrls=url?[url,...all.filter(u=>u!==url)].slice(0,5):all;
-    if (!url && !photoUrls.length) {
-      logNoPhoto(next);
-      _advance();
-      return;
-    }
-    await preloadImage(url);
-    setState({imgUrl:url,imgLoading:false,photoUrls,photoIdx:0});
-  });
+  showBirdImage(next);
   // Prefetch current bird's field note + call audio, and next bird's photos + note + audio
   if (next.wikiUrl && !next.note) fetchIDNote(next.wikiUrl).catch(() => {});
   fetchXenoCanto(next.latin || next.name).then(rec => { if (rec && state.current === next) render(); }).catch(() => {});
