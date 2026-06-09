@@ -75,10 +75,14 @@
   .card-img { height: 150px; background: #eeede8; overflow: hidden; display: flex; align-items: center; justify-content: center; }
   .card-img img { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
   .card-img-ph { font-size: 3rem; color: #c8c6bc; }
-  .card-body { padding: 14px 16px; }
+  .card-body { padding: 14px 16px; position: relative; }
   .card-name { font-size: 1.1rem; font-weight: 900; color: #1a5940; margin-bottom: 3px; }
   .card-sub { font-size: 0.78rem; color: #6b6960; margin-bottom: 10px; line-height: 1.4; }
-  .card-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .card-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-right: 32px; }
+  .card-share { position: absolute; bottom: 12px; right: 12px; background: none; border: none; padding: 4px; cursor: pointer; color: #c8c6bc; line-height: 1; border-radius: 6px; transition: color 0.15s; }
+  .card-share:hover { color: #2a7a58; }
+  .card-share svg { display: block; width: 18px; height: 18px; }
+  .share-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a5940; color: #fff; padding: 10px 20px; border-radius: 10px; font-size: 0.85rem; font-weight: 700; pointer-events: none; opacity: 0; transition: opacity 0.2s; z-index: 9999; }
   .card-count { font-size: 0.72rem; font-weight: 700; color: #2a7a58; }
   .tag { font-size: 0.6rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 8px; border-radius: 20px; }
   .tag-preset { background: #e8f4ef; color: #1a5940; border: 1.5px solid #6dba9a; }
@@ -258,12 +262,15 @@ async function loadLibrary() {
     function cardHtml(q) {
       const count = q.species ? `<span class="card-count">${q.species} species</span>` : '';
       const imgId = `card-img-${q.place_id || q.url.replace(/\W/g,'')}`;
+      const shareIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>`;
+      const absUrl = q.url.startsWith('http') ? q.url : `https://rutherfordecology.github.io/WhatDatBird/${q.url}`;
       return `<a class="place-card" href="${q.url}">
         <div class="card-img" id="${imgId}"><div class="card-img-ph">&#x1F426;</div></div>
         <div class="card-body">
           <div class="card-name">${q.name}</div>
           <div class="card-sub">${q.description}</div>
           <div class="card-meta">${count}</div>
+          <button class="card-share" onclick="shareQuiz(event,'${absUrl.replace(/'/g,"\\'")}','${q.name.replace(/'/g,"\\'")}');" title="Share this quiz">${shareIcon}</button>
         </div>
       </a>`;
     }
@@ -311,6 +318,24 @@ async function loadPlacePhoto(placeId, el) {
 }
 
 loadLibrary();
+
+let _shareToastTimer = null;
+function shareQuiz(e, url, name) {
+  e.preventDefault(); e.stopPropagation();
+  const text = `Test your bird ID skills - ${name} quiz on WhatDatBird?`;
+  if (navigator.share) {
+    navigator.share({ title: `WhatDatBird? — ${name}`, text, url }).catch(() => {});
+  } else {
+    navigator.clipboard?.writeText(url).then(() => showShareToast('Link copied!')).catch(() => showShareToast('Link: ' + url));
+  }
+}
+function showShareToast(msg) {
+  let t = document.getElementById('shareToast');
+  if (!t) { t = document.createElement('div'); t.id='shareToast'; t.className='share-toast'; document.body.appendChild(t); }
+  t.textContent = msg; t.style.opacity = '1';
+  clearTimeout(_shareToastTimer);
+  _shareToastTimer = setTimeout(() => { t.style.opacity = '0'; }, 2200);
+}
 
 function goPlace(id, name) {
   window.location.href = `quiz.html?place_id=${id}&place_name=${encodeURIComponent(name)}`;
