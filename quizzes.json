@@ -210,6 +210,21 @@
       "lat": -23.44252,
       "lng": 151.91487,
       "added": "2026-06-09"
+    },
+    {
+      "name": "WhatDatBird? - Birds near Antafondro, Madagascar",
+      "continent": "Africa",
+      "country": "Madagascar",
+      "description": "Birds near Antafondro, Madagascar",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=-13.40455&lng=48.34521&place_name=Birds%20near%20Antafondro&country_code=MG",
+      "coord_lat": -13.40455,
+      "coord_lng": 48.34521,
+      "photo_taxon": "Dicrurus forficatus",
+      "lat": -13.40455,
+      "lng": 48.34521,
+      "added": "2026-06-09"
     }
   ]
 }
