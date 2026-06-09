@@ -195,6 +195,21 @@
       "coord_lng": 31.460623050000002,
       "photo_taxon": "Coracias caudatus",
       "added": "2026-06-08"
+    },
+    {
+      "name": "WhatDatBird? - Birds near Heron Island, Australia",
+      "continent": "Oceania",
+      "country": "Australia",
+      "description": "Birds near Heron Island, Australia",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=-23.44252&lng=151.91487&place_name=Birds%20near%20Heron%20Island&country_code=AU",
+      "coord_lat": -23.44252,
+      "coord_lng": 151.91487,
+      "photo_taxon": "Egretta sacra",
+      "lat": -23.44252,
+      "lng": 151.91487,
+      "added": "2026-06-09"
     }
   ]
 }
