@@ -30,6 +30,12 @@
       {
         "name": "Juniper",
         "score": 10,
+        "pts": 10,
+        "date": "2026-06-09"
+      },
+      {
+        "name": "Juniper",
+        "score": 10,
         "date": "2026-06-06"
       },
       {
@@ -61,11 +67,6 @@
         "name": "Juniper",
         "score": 13,
         "date": "2026-06-07"
-      },
-      {
-        "name": "Lobotaniser",
-        "score": 16,
-        "date": "2026-06-06"
       }
     ],
     "88743_complete": [
