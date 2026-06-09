@@ -255,6 +255,21 @@
       "lat": -33.9288301,
       "lng": 18.4172197,
       "added": "2026-06-09"
+    },
+    {
+      "name": "WhatDatBird? - Churchhaven, South Africa",
+      "continent": "Africa",
+      "country": "South Africa",
+      "description": "Churchhaven, South Africa",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=-33.1773857&lng=18.0659491&place_name=Churchhaven%2C%20South%20Africa&country_code=ZA",
+      "coord_lat": -33.1773857,
+      "coord_lng": 18.0659491,
+      "photo_taxon": "Pternistis capensis",
+      "lat": -33.1773857,
+      "lng": 18.0659491,
+      "added": "2026-06-09"
     }
   ]
 }
