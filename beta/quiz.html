@@ -240,18 +240,21 @@ async function loadFromGBIF() {
   if (speciesItems.length < 8) throw new Error('Not enough GBIF data for this location');
 
   const birds  = [];
-  const BATCH  = 40;
+  const FIRST_BATCH = 25;
+  const BATCH  = 50;
   let introShown = false;
 
-  for (let i = 0; i < speciesItems.length; i += BATCH) {
+  for (let i = 0; i < speciesItems.length; ) {
+    const size = (i === 0) ? FIRST_BATCH : BATCH;
     updateLoadingProgress(
       `Loading from GBIF + eBird... ${birds.length} of ~${speciesItems.length} species`
     );
-    const results = await processBatch(speciesItems.slice(i, i + BATCH));
+    const results = await processBatch(speciesItems.slice(i, i + size));
     birds.push(...results);
+    i += size;
 
     // Show intro once we have enough for at least two tiers (so mode buttons render)
-    if (!introShown && birds.length >= (COORD_MODE ? 8 : 30)) {
+    if (!introShown && birds.length >= (COORD_MODE ? 8 : 15)) {
       introShown = true;
       setTiers(birds);
       setState({ phase: 'intro' });
