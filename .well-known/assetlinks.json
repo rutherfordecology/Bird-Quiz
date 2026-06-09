@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "io.github.rutherfordecology.twa",
+    "sha256_cert_fingerprints": ["EE:29:21:4B:8D:5E:4C:CA:D6:3A:45:5B:61:CA:01:FE:90:F2:97:AC:B6:F1:94:2B:19:77:4F:47:59:B7:11:46"]
+  }
+}]
