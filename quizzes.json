@@ -7,8 +7,10 @@
       "description": "Gisborne, New Zealand",
       "species": null,
       "type": "dynamic",
-      "url": "quiz.html?place_id=11508&place_name=Gisborne%2C%20NZ",
+      "url": "quiz.html?place_id=11508&place_name=Gisborne%2C%20NZ&swlat=-39.1623&nelat=-38.1623&swlng=177.5177&nelng=178.5177&country_code=NZ",
       "place_id": 11508,
+      "coord_lat": -38.6623,
+      "coord_lng": 178.0177,
       "photo_taxon": "Hemiphaga novaeseelandiae",
       "added": "2026-06-05"
     },

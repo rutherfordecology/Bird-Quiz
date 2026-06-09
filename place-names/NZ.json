@@ -1,7 +1,11 @@
 {
   "field": "indigenousName",
+  "blocklist": [
+    "Vanellus spinosus"
+  ],
   "nameOverrides": {
-    "Larus dominicanus": "Southern Black-backed Gull"
+    "Larus dominicanus": "Southern Black-backed Gull",
+    "Gerygone igata": "Grey Warbler"
   },
   "names": {
     "Prosthemadera novaeseelandiae": "tūī",
