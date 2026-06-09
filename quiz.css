@@ -38,6 +38,7 @@ body {
 .spinner { width:40px; height:40px; border:3px solid #dddbd3; border-top-color:#2a7a58; border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 20px; }
 .loading-text { color:#6b6960; font-size:0.9rem; font-weight:700; }
 .loading-sub { color:#9b9890; font-size:0.78rem; margin-top:6px; }
+.loading-quote { color:#6b6960; font-size:0.85rem; font-style:italic; margin-top:28px; max-width:280px; margin-left:auto; margin-right:auto; line-height:1.5; opacity:1; transition:opacity 0.8s ease; }
 
 /* Error */
 .error-box { background:#faf0f0; border:1.5px solid #d47a7a; border-radius:12px; padding:20px; text-align:center; }

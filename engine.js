@@ -1,7 +1,7 @@
 // WhatDatBird? Quiz Engine v5.63
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.90';
+const APP_VERSION = 'v5.91';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -390,6 +390,64 @@ let state = {
 };
 function setState(p) { Object.assign(state,p); render(); }
 
+// ── Loading quotes ────────────────────────────────────────────────────────
+const LOADING_QUOTES = [
+  "Good things come to those who wait… and watch.",
+  "Even a heron stands still for hours. Patience.",
+  "The early bird gets the worm, but you get the quiz.",
+  "Loading birds. They're shy.",
+  "Consulting local ornithologists…",
+  "Ruffling through the field guides…",
+  "Asking the birds nicely to show up…",
+  "Politely disturbing the undergrowth…",
+  "Scanning the treetops…",
+  "A watched bird never loads.",
+  "Fetching birds from the internet. They don't like being fetched.",
+  "Cross-referencing beak shapes…",
+  "The albatross flies for years without landing. We won't take that long.",
+  "Loading… like a duck trying to look calm on the surface.",
+  "Birding requires patience. So does this.",
+  "Some of these birds are very camera shy.",
+  "Did you know a group of crows is called a murder? Anyway, loading…",
+  "Negotiating with the pigeons…",
+  "No binoculars required. Almost ready.",
+  "Convincing a wren to pose for photos…",
+  "Bribing seagulls with chips to cooperate…",
+  "A penguin can hold its breath for 20 minutes. You've got this.",
+  "Herding the birds into something resembling an order…",
+  "The kakapo only breeds every few years. Loading is faster.",
+  "Checking if that's really a rare vagrant or just a weird pigeon…",
+  "Counting wing bars…",
+  "Almost there. The birds are just preening.",
+  "Loading local knowledge…",
+  "Some of these birds only come out at dusk. Fortunately data doesn't.",
+  "The swift never lands… but this will.",
+];
+let _quoteInterval = null;
+let _quoteIdx = Math.floor(Math.random() * LOADING_QUOTES.length);
+function startQuoteCycle() {
+  stopQuoteCycle();
+  function showNext() {
+    const el = document.getElementById('loadingQuote');
+    if (!el) return;
+    el.style.transition = 'none';
+    el.style.opacity = '0';
+    setTimeout(() => {
+      if (!document.getElementById('loadingQuote')) return;
+      _quoteIdx = (_quoteIdx + 1) % LOADING_QUOTES.length;
+      el.textContent = LOADING_QUOTES[_quoteIdx];
+      el.style.transition = 'opacity 0.8s ease';
+      el.style.opacity = '1';
+    }, 400);
+  }
+  const el = document.getElementById('loadingQuote');
+  if (el) { el.style.opacity = '1'; }
+  _quoteInterval = setInterval(showNext, 3500);
+}
+function stopQuoteCycle() {
+  if (_quoteInterval) { clearInterval(_quoteInterval); _quoteInterval = null; }
+}
+
 function getPool() {
   if (state.mode==='rarity')   return CFG.rarityBirds || CFG.easyBirds;
   if (state.mode==='complete') return CFG.completeBirds || CFG.hardBirds || CFG.easyBirds;
@@ -467,9 +525,12 @@ function render() {
         <div class="spinner"></div>
         <div class="loading-text">Loading birds for ${CFG.placeName}...</div>
         <div class="loading-sub">${state.buffer>0?`Searching within ${state.buffer}km radius`:'Fetching species from iNaturalist'}</div>
+        <div id="loadingQuote" class="loading-quote">${LOADING_QUOTES[_quoteIdx]}</div>
       </div>`;
+    startQuoteCycle();
     return;
   }
+  stopQuoteCycle();
 
   // Error
   if (state.phase==='error') {
