@@ -188,7 +188,30 @@ const CONTINENT_ORDER = ['Africa','Antarctica','Asia','Europe','North America','
 let _libraryQuizzes = [];
 let _libraryMap = null;
 
-function toggleLibraryMap() {
+function quizCoords(q) {
+  // Return {lat, lng} from whichever field is present, or null
+  const lat = q.lat ?? q.coord_lat ?? null;
+  const lng = q.lng ?? q.coord_lng ?? null;
+  return (lat != null && lng != null) ? { lat, lng } : null;
+}
+
+async function resolveQuizCoords(q) {
+  const c = quizCoords(q);
+  if (c) return c;
+  if (!q.place_id) return null;
+  try {
+    const r = await fetch(`https://api.inaturalist.org/v1/places/${q.place_id}`);
+    if (!r.ok) return null;
+    const d = await r.json();
+    const loc = d.results?.[0]?.location; // "lat,lng"
+    if (!loc) return null;
+    const [lat, lng] = loc.split(',').map(Number);
+    if (isNaN(lat) || isNaN(lng)) return null;
+    return { lat, lng };
+  } catch { return null; }
+}
+
+async function toggleLibraryMap() {
   const box = document.getElementById('libraryMap');
   const open = box.classList.toggle('open');
   document.getElementById('libMapToggle').textContent = open ? '✕ Hide quiz map' : '🗺️ View quiz map';
@@ -199,17 +222,23 @@ function toggleLibraryMap() {
         attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         maxZoom: 18
       }).addTo(_libraryMap);
+      _libraryMap.setView([20, 0], 2);
+      setTimeout(() => _libraryMap.invalidateSize(), 80);
+      // Resolve all quiz coords (instant for stored coords, async for place_id lookups)
+      const coordPromises = _libraryQuizzes.map(q => resolveQuizCoords(q).then(c => ({ q, c })));
       const pts = [];
-      for (const q of _libraryQuizzes) {
-        if (q.lat == null || q.lng == null) continue;
-        pts.push([q.lat, q.lng]);
-        L.marker([q.lat, q.lng]).addTo(_libraryMap)
+      for (const p of coordPromises) {
+        const { q, c } = await p;
+        if (!c) continue;
+        pts.push([c.lat, c.lng]);
+        L.marker([c.lat, c.lng]).addTo(_libraryMap)
           .bindPopup(`<div class="lib-map-popup"><div>${q.description || q.name}</div><a href="${q.url}">Play this quiz &#8594;</a></div>`);
       }
-      if (pts.length) _libraryMap.fitBounds(pts, { padding: [30,30], maxZoom: 6 });
-      else _libraryMap.setView([20,0], 2);
+      if (pts.length > 1) _libraryMap.fitBounds(pts, { padding: [30, 30], maxZoom: 6 });
+      else if (pts.length === 1) _libraryMap.setView(pts[0], 8);
+    } else {
+      setTimeout(() => _libraryMap.invalidateSize(), 80);
     }
-    setTimeout(() => _libraryMap.invalidateSize(), 80);
   }
 }
 
@@ -257,7 +286,7 @@ async function loadLibrary() {
 
     _libraryQuizzes = quizzes;
     const mapToggle = document.getElementById('libMapToggle');
-    if (mapToggle && quizzes.some(q => q.lat != null && q.lng != null)) mapToggle.style.display = 'inline-block';
+    if (mapToggle && quizzes.length) mapToggle.style.display = 'inline-block';
 
     function cardHtml(q) {
       const count = q.species ? `<span class="card-count">${q.species} species</span>` : '';
