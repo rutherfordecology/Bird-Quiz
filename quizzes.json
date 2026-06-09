@@ -240,6 +240,21 @@
       "lat": -38.25548,
       "lng": 177.54709,
       "added": "2026-06-09"
+    },
+    {
+      "name": "WhatDatBird? - Cape Town, South Africa",
+      "continent": "Africa",
+      "country": "South Africa",
+      "description": "Cape Town, South Africa",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=-33.9288301&lng=18.4172197&place_name=Cape%20Town%2C%20South%20Africa&country_code=ZA",
+      "coord_lat": -33.9288301,
+      "coord_lng": 18.4172197,
+      "photo_taxon": "Alopochen aegyptiaca",
+      "lat": -33.9288301,
+      "lng": 18.4172197,
+      "added": "2026-06-09"
     }
   ]
 }
