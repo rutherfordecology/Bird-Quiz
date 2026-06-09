@@ -300,6 +300,21 @@
       "lat": 52.3075681,
       "lng": -0.48520415,
       "added": "2026-06-09"
+    },
+    {
+      "name": "WhatDatBird? - Javea common birds",
+      "continent": "Europe",
+      "country": "Spain",
+      "description": "Javea common birds",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=38.7673955&lng=0.1682287&place_name=X%C3%A0bia%20%2F%20J%C3%A1vea%2C%20Spain&country_code=ES",
+      "coord_lat": 38.7673955,
+      "coord_lng": 0.1682287,
+      "photo_taxon": "Phoenicopterus roseus",
+      "lat": 38.7673955,
+      "lng": 0.1682287,
+      "added": "2026-06-09"
     }
   ]
 }
