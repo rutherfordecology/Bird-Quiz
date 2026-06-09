@@ -1,7 +1,7 @@
 // WhatDatBird? Quiz Engine v5.63
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.88';
+const APP_VERSION = 'v5.89';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -969,7 +969,10 @@ function slidePhoto(newIdx, dir) {
   newImg.className = 'slide-in';
   newImg.style.cssText = `position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;object-position:center top;transform:translateX(${dir>0?'100%':'-100%'});`;
   curImg.style.cssText = `position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;object-position:center top;`;
-  box.appendChild(newImg);
+  // Insert before the overlay so it stays on top of both images
+  const overlayEl = box.querySelector('.img-overlay');
+  if (overlayEl) box.insertBefore(newImg, overlayEl);
+  else box.appendChild(newImg);
   newImg.getBoundingClientRect(); // force reflow so initial transform is established
   newImg.style.transition = curImg.style.transition = 'transform 0.28s ease';
   newImg.style.transform = 'translateX(0)';
