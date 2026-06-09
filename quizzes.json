@@ -179,7 +179,7 @@
       "description": "Birds near Whenua Hou",
       "species": null,
       "type": "dynamic",
-      "url": "quiz.html?lat=-46.77364&lng=167.63523&place_name=Birds%20near%20Southland&country_code=NZ",
+      "url": "quiz.html?lat=-46.77364&lng=167.63523&place_name=Birds%20near%20Whenua%20Hou&country_code=NZ",
       "coord_lat": -46.77364,
       "coord_lng": 167.63523,
       "photo_taxon": "Strigops habroptila",
