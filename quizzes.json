@@ -270,6 +270,21 @@
       "lat": -33.1773857,
       "lng": 18.0659491,
       "added": "2026-06-09"
+    },
+    {
+      "name": "WhatDatBird? - Durbanville, South Africa",
+      "continent": "Africa",
+      "country": "South Africa",
+      "description": "Durbanville, South Africa",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=-33.830072799999996&lng=18.6612014&place_name=Durbanville%2C%20South%20Africa&country_code=ZA",
+      "coord_lat": -33.830072799999996,
+      "coord_lng": 18.6612014,
+      "photo_taxon": "Alopochen aegyptiaca",
+      "lat": -33.830072799999996,
+      "lng": 18.6612014,
+      "added": "2026-06-09"
     }
   ]
 }
