@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WhatDatBird? — Offline</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh; background: #1a5940;
+    font-family: system-ui, -apple-system, sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px; text-align: center;
+  }
+  .card {
+    background: #fff; border-radius: 20px; padding: 40px 32px;
+    max-width: 340px; width: 100%;
+  }
+  .icon { font-size: 4rem; margin-bottom: 16px; }
+  h1 { font-size: 1.6rem; font-weight: 900; color: #1a5940; margin-bottom: 10px; }
+  p { color: #6b6960; font-size: 0.92rem; line-height: 1.6; margin-bottom: 20px; }
+  button {
+    background: #1a5940; color: #fff; border: none; border-radius: 12px;
+    padding: 14px 28px; font-size: 1rem; font-weight: 800;
+    font-family: inherit; cursor: pointer; width: 100%;
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">🐦</div>
+    <h1>You're offline</h1>
+    <p>WhatDatBird? needs an internet connection to load bird photos and species lists. Connect to Wi-Fi or mobile data and try again.</p>
+    <button onclick="window.location.reload()">Try again</button>
+  </div>
+</body>
+</html>

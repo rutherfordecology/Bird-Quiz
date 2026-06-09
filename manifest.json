@@ -1,0 +1,33 @@
+{
+  "name": "WhatDatBird?",
+  "short_name": "WhatDatBird",
+  "description": "Bird photo identification quiz. Pick any location in the world and test your bird ID skills.",
+  "start_url": "/WhatDatBird/",
+  "scope": "/WhatDatBird/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a5940",
+  "theme_color": "#1a5940",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["games", "education"],
+  "lang": "en"
+}
