@@ -317,6 +317,21 @@
       "lat": 38.7673955,
       "lng": 0.1682287,
       "added": "2026-06-09"
+    },
+    {
+      "name": "WhatDatBird? - Birds near Karlshamn, Sweden",
+      "continent": "Europe",
+      "country": "Sweden",
+      "description": "Birds near Karlshamn, Sweden",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=56.17251&lng=14.90845&place_name=Birds%20near%20Karlshamn&country_code=SE",
+      "coord_lat": 56.17251,
+      "coord_lng": 14.90845,
+      "photo_taxon": "Motacilla alba",
+      "lat": 56.17251,
+      "lng": 14.90845,
+      "added": "2026-06-11"
     }
   ]
 }
