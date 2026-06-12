@@ -6,8 +6,8 @@
   "scope": "https://rutherfordecology.github.io/WhatDatBird/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#1a5940",
-  "theme_color": "#1a5940",
+  "background_color": "#084430",
+  "theme_color": "#084430",
   "icons": [
     {
       "src": "icon-192.png",
