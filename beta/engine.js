@@ -1,7 +1,7 @@
 // WhatDatBird? Quiz Engine v5.63
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.92';
+const APP_VERSION = 'v5.93';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -254,12 +254,15 @@ async function fetchIDNote(wikiUrl) {
     if (sectionMatch) {
       text = sectionMatch[2].replace(/\n+/g,' ').trim().replace(/([.!?])\s+/g,'$1\n').split('\n').slice(0,3).join(' ').trim();
     } else {
-      // No dedicated ID section — scan all sections for physical description sentences
-      const skipPat = /\b(found in|native to|endemic to|range[sd]?( from| across| throughout)?|distribut|habitat|forest|woodland|grassland|scrub|wetland|taxonom|classif|synonym|named (after|by|for)|family \w+idae|order \w+iformes|genus |species |subspecies|conspecific|considered [a-z]+ species|iucn|population|migrat|winter|summer|breed|nest|diet|feed|eat|prey|forag)\b/i;
-      const idPat = /\b(cm|mm|inch|gram|kg|g\b|length|wingspan|plumage|feather|crown|mantle|breast|belly|throat|nape|back|wing|tail|bill|beak|eye|leg|foot|colour|color|white|black|brown|grey|gray|green|blue|red|yellow|orange|rufous|chestnut|olive|buff|pale|dark|bright|glossy|streak|spot|stripe|band|barr|patch|underpart|upperpart|adult|male|female|juvenile|immature)\b/i;
+      // No dedicated ID section — prefer sentences with physical descriptors, skip pure distribution/taxonomy
+      const skipPat = /\b(found in|native to|endemic to|range[sd]?( from| across| throughout)?|distribut|taxonom|classif|synonym|named (after|by|for)|family \w+idae|order \w+iformes|conspecific|iucn)\b/i;
+      const idPat = /\b(cm|mm|inch|length|wingspan|plumage|feather|crown|mantle|breast|belly|throat|nape|back|wing|tail|bill|beak|eye|leg|foot|colour|color|white|black|brown|grey|gray|green|blue|red|yellow|orange|rufous|chestnut|olive|buff|pale|dark|bright|glossy|streak|spot|stripe|band|patch|underpart|upperpart|adult|male|female|juvenile|immature)\b/i;
       const sentences = extract.replace(/\n+/g,' ').split(/(?<=[.!?])\s+/);
-      const idSentences = sentences.filter(s => s.trim().length > 40 && idPat.test(s) && !skipPat.test(s));
-      text = idSentences.slice(0,3).join(' ').trim();
+      const long = sentences.filter(s => s.trim().length > 40);
+      // Prefer ID sentences; fall back to any non-skip sentence; last resort: first long sentence
+      const idSentences = long.filter(s => idPat.test(s) && !skipPat.test(s));
+      const fallback = long.filter(s => !skipPat.test(s));
+      text = (idSentences.length ? idSentences.slice(0,3) : fallback.length ? fallback.slice(0,2) : long.slice(0,2)).join(' ').trim();
     }
     wikiSummaryCache[wikiUrl] = text || null;
     return wikiSummaryCache[wikiUrl];
@@ -882,7 +885,7 @@ function renderSpeciesList(app, header, sortMode) {
         <span class="sp-name">${bird.name}</span>
         ${samoanInline}
         <span class="sp-latin">${bird.latin||''}</span>
-        <button class="sp-chevron-btn" onclick="toggleSpDetail('${detailId}',this)" data-latin="${encodeURIComponent(bird.latin||bird.name)}" data-wiki="${encodeURIComponent(bird.wikiUrl||'')}" data-inat="${bird.inatId||''}" aria-label="Show details">&#8250;</button>
+        <button class="sp-chevron-btn" onclick="toggleSpDetail('${detailId}',this)" data-latin="${encodeURIComponent(bird.latin||bird.name)}" data-wiki="${encodeURIComponent(bird.wikiUrl||'')}" data-inat="${bird.inatId||''}" data-photo="${encodeURIComponent(bird.defaultPhoto||'')}" aria-label="Show details">&#8250;</button>
       </div>
       <div class="sp-meta-row">${rarityPill}${countBadge}${familyLabel}<a href="${inatUrl}" target="_blank" style="font-size:0.7rem;color:#9b9890;">iNat &#8594;</a></div>
       ${badges?`<div class="sp-badges">${badges}</div>`:''}
@@ -916,15 +919,19 @@ async function toggleSpDetail(id, btn) {
   const latin = decodeURIComponent(btn.dataset.latin || '');
   const wikiUrl = decodeURIComponent(btn.dataset.wiki || '');
   const inatId = btn.dataset.inat ? parseInt(btn.dataset.inat) : null;
+  const taxaPhoto = decodeURIComponent(btn.dataset.photo || '');
   panel.innerHTML = `<div class="sp-id-loading">Loading...</div>`;
 
-  // Fetch photos and ID note in parallel
-  const [photos, noteText] = await Promise.all([
+  // Fetch observation photos and ID note in parallel; taxa photo is already available
+  const [obsPhotos, noteText] = await Promise.all([
     fetchInatPhotosByTaxon(inatId, latin),
     wikiUrl ? fetchIDNote(wikiUrl) : Promise.resolve(null),
   ]);
 
-  const photoUrls = photos.length ? photos : [];
+  // Taxa photo always first, then unique observation photos
+  const seen = new Set(taxaPhoto ? [taxaPhoto] : []);
+  const extra = obsPhotos.filter(u => !seen.has(u) && seen.add(u));
+  const photoUrls = [...(taxaPhoto ? [taxaPhoto] : []), ...extra].slice(0, 5);
   // Store photos on panel for carousel nav functions to access
   if (photoUrls.length) panel._spPhotos = photoUrls;
   let carouselHtml = '';
