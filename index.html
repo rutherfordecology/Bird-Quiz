@@ -58,12 +58,12 @@
 .lib-map-popup a { color:#1a5940; font-weight:800; text-decoration:none; }
 .lib-map-popup a:hover { text-decoration:underline; }
 .section-label {
-    max-width: 640px; margin: 0 auto 14px; padding: 0 20px;
+    max-width: 1400px; margin: 0 auto 14px; padding: 0 20px;
     font-size: 0.68rem; font-weight: 800; letter-spacing: 0.12em;
     text-transform: uppercase; color: #9b9890;
   }
   .cards-grid {
-    max-width: 1400px; margin: 0 auto 60px; padding: 0 20px;
+    max-width: 1400px; margin: 0 auto 40px; padding: 0 20px;
     display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;
   }
   .place-card {
@@ -260,10 +260,9 @@ async function loadLibrary() {
     const continents = CONTINENT_ORDER.filter(c => groups[c]);
     for (const continent of continents) {
       const quizzesInContinent = groups[continent];
-      html += `<div class="section-label" style="max-width:640px;margin:0 auto 14px;padding:0 20px;">${continent}</div>`;
+      html += `<div class="section-label">${continent}</div>`;
 
       if (quizzesInContinent.length > 10) {
-        // Sub-group by country
         const byCountry = {};
         for (const q of quizzesInContinent) {
           const c = q.country || 'Other';
@@ -271,7 +270,7 @@ async function loadLibrary() {
           byCountry[c].push(q);
         }
         for (const [country, qs] of Object.entries(byCountry).sort()) {
-          html += `<div class="section-label" style="max-width:640px;margin:0 auto 10px;padding:0 20px;font-size:0.6rem;color:#b0aea6;">${country}</div>
+          html += `<div class="section-label" style="font-size:0.6rem;color:#b0aea6;">${country}</div>
                    <div class="cards-grid">`;
           for (const q of qs) html += cardHtml(q);
           html += `</div>`;
