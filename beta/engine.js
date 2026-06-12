@@ -1,7 +1,7 @@
 // WhatDatBird? Quiz Engine v5.63
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.89';
+const APP_VERSION = 'v5.90';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -254,8 +254,11 @@ async function fetchIDNote(wikiUrl) {
     if (sectionMatch) {
       text = sectionMatch[2].replace(/\n+/g,' ').trim().replace(/([.!?])\s+/g,'$1\n').split('\n').slice(0,3).join(' ').trim();
     } else {
-      const intro = extract.split('\n').find(l => l.trim().length > 40) || '';
-      text = intro.replace(/([.!?])\s+/g,'$1\n').split('\n').slice(0,2).join(' ').trim();
+      // Fall back to intro but skip sentences about distribution, range, or taxonomy
+      const skipPat = /\b(found in|native to|endemic to|ranges? (from|across|throughout)|distributed|habitat|habitat|taxonom|classif|named (after|by|for)|family \w+idae|order \w+iformes)\b/i;
+      const sentences = extract.replace(/\n+/g,' ').split(/(?<=[.!?])\s+/);
+      const idSentences = sentences.filter(s => s.trim().length > 40 && !skipPat.test(s));
+      text = idSentences.slice(0,2).join(' ').trim() || sentences.find(s => s.trim().length > 40)?.trim() || '';
     }
     wikiSummaryCache[wikiUrl] = text || null;
     return wikiSummaryCache[wikiUrl];
@@ -844,23 +847,24 @@ function renderQuiz(app) {
 function renderSpeciesList(app, header) {
   const birds = CFG.completeBirds || CFG.hardBirds || CFG.easyBirds;
   const sorted = [...birds].sort((a,b) => (b.count||0)-(a.count||0));
-  const rows = sorted.map(bird => {
+  const rows = sorted.map((bird, idx) => {
     const inatUrl=`https://www.inaturalist.org/taxa/search?q=${encodeURIComponent(bird.latin||bird.name)}`;
     const rarity = CFG.rarity?.[bird.name];
     const rarityPill = rarity ? `<span class="rarity-pill rarity-${rarity}">${rarity.charAt(0).toUpperCase()+rarity.slice(1)}</span>` : '';
     const countBadge = bird.count ? `<span class="obs-count">${bird.count.toLocaleString()} iNat obs</span>` : '';
     const samoanInline = bird[CFG.indigenousField] ? `<span class="sp-samoan-inline">${bird[CFG.indigenousField]}</span>` : '';
-    const noteRow = bird.note ? `<div class="sp-note">${bird.note}</div>` : '';
     const badges = birdBadges(bird);
+    const detailId = `spd-${idx}`;
     return `<div class="sp-item">
       <div class="sp-name-row">
         <span class="sp-name">${bird.name}</span>
         ${samoanInline}
         <span class="sp-latin">${bird.latin||''}</span>
+        <button class="sp-chevron-btn" onclick="toggleSpDetail('${detailId}',this)" data-latin="${encodeURIComponent(bird.latin||bird.name)}" data-wiki="${encodeURIComponent(bird.wikiUrl||'')}" data-inat="${bird.inatId||''}" aria-label="Show details">&#8250;</button>
       </div>
       <div class="sp-meta-row">${rarityPill}${countBadge}<a href="${inatUrl}" target="_blank" style="font-size:0.7rem;color:#9b9890;">iNat &#8594;</a></div>
-      ${noteRow}
       ${badges?`<div class="sp-badges">${badges}</div>`:''}
+      <div class="sp-detail" id="${detailId}"></div>
     </div>`;
   }).join('');
 
@@ -870,6 +874,85 @@ function renderSpeciesList(app, header) {
       <div class="info-box"><p>&#128203; <strong>${birds.length} species</strong> - sorted by iNaturalist observation count.</p></div>
       ${rows}
     </div>`;
+}
+
+async function toggleSpDetail(id, btn) {
+  const panel = document.getElementById(id);
+  if (!panel) return;
+  const isOpen = panel.classList.contains('open');
+  panel.classList.toggle('open', !isOpen);
+  btn.classList.toggle('open', !isOpen);
+  if (isOpen || panel.dataset.loaded) return;
+  panel.dataset.loaded = '1';
+
+  const latin = decodeURIComponent(btn.dataset.latin || '');
+  const wikiUrl = decodeURIComponent(btn.dataset.wiki || '');
+  const inatId = btn.dataset.inat ? parseInt(btn.dataset.inat) : null;
+  panel.innerHTML = `<div class="sp-id-loading">Loading...</div>`;
+
+  // Fetch photos and ID note in parallel
+  const [photos, noteText] = await Promise.all([
+    inatId ? fetchInatPhotosById(inatId) : Promise.resolve([]),
+    wikiUrl ? fetchIDNote(wikiUrl) : Promise.resolve(null),
+  ]);
+
+  const photoUrls = photos.length ? photos : [];
+  // Store photos on panel for carousel nav functions to access
+  if (photoUrls.length) panel._spPhotos = photoUrls;
+  let carouselHtml = '';
+  if (photoUrls.length) {
+    const imgId = `spc-img-${id}`;
+    const dotsHtml = photoUrls.length > 1
+      ? `<div class="sp-dc-dots">${photoUrls.map((_,i)=>`<div class="sp-dc-dot${i===0?' active':''}" id="${imgId}-dot-${i}" onclick="spGoPhoto('${id}','${imgId}',${i})"></div>`).join('')}</div>`
+      : '';
+    const prevNext = photoUrls.length > 1
+      ? `<button class="sp-dc-prev" onclick="spPrevPhoto('${id}','${imgId}')">&#8249;</button><button class="sp-dc-next" onclick="spNextPhoto('${id}','${imgId}')">&#8250;</button>`
+      : '';
+    carouselHtml = `<div class="sp-detail-carousel">${prevNext}<img id="${imgId}" src="${photoUrls[0]}" alt="${latin}" onerror="this.parentElement.style.display='none'"/>${dotsHtml}</div>`;
+  }
+
+  const noteHtml = noteText
+    ? `<div class="sp-id-label">&#128269; How to identify</div><p class="sp-id-text">${noteText}</p>`
+    : `<div class="sp-id-label">&#128269; How to identify</div><p class="sp-id-loading">No identification notes available.</p>`;
+
+  panel.innerHTML = carouselHtml + noteHtml;
+}
+
+// Fetch up to 5 iNat photos for a taxon by iNat ID
+async function fetchInatPhotosById(inatId) {
+  try {
+    const r = await fetch(`https://api.inaturalist.org/v1/observations?taxon_id=${inatId}&quality_grade=research&order_by=votes&per_page=10`);
+    if (!r.ok) return [];
+    const d = await r.json();
+    const urls = [];
+    const seen = new Set();
+    for (const obs of (d.results||[])) {
+      const url = obs.photos?.[0]?.url?.replace('/square.','/medium.');
+      if (url && !seen.has(url)) { seen.add(url); urls.push(url); if(urls.length>=5) break; }
+    }
+    return urls;
+  } catch { return []; }
+}
+
+function spGoPhoto(detailId, imgId, idx) {
+  const img = document.getElementById(imgId);
+  const panel = document.getElementById(detailId);
+  if (!img || !panel?._spPhotos) return;
+  img.src = panel._spPhotos[idx];
+  panel.querySelectorAll('.sp-dc-dot').forEach((d,i) => d.classList.toggle('active', i===idx));
+  img.dataset.idx = idx;
+}
+function spPrevPhoto(detailId, imgId) {
+  const img = document.getElementById(imgId);
+  const panel = document.getElementById(detailId);
+  const cur = parseInt(img?.dataset.idx||'0');
+  if (panel?._spPhotos) spGoPhoto(detailId, imgId, (cur - 1 + panel._spPhotos.length) % panel._spPhotos.length);
+}
+function spNextPhoto(detailId, imgId) {
+  const img = document.getElementById(imgId);
+  const panel = document.getElementById(detailId);
+  const cur = parseInt(img?.dataset.idx||'0');
+  if (panel?._spPhotos) spGoPhoto(detailId, imgId, (cur + 1) % panel._spPhotos.length);
 }
 
 function renderAbout(app, header) {

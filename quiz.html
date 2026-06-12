@@ -19,7 +19,7 @@ window.onunhandledrejection = e => {
 };
 </script>
 <div id="app"></div>
-<script src="engine.js?v=5.69" onerror="document.getElementById('app').innerHTML='<div style=padding:2rem;font-family:sans-serif;color:#8a2c2c>Failed to fetch engine.js — check network connection.<br><br><a href=index.html>← Back</a></div>'"></script>
+<script src="engine.js?v=5.90" onerror="document.getElementById('app').innerHTML='<div style=padding:2rem;font-family:sans-serif;color:#8a2c2c>Failed to fetch engine.js — check network connection.<br><br><a href=index.html>← Back</a></div>'"></script>
 <script>
 const params     = new URLSearchParams(window.location.search);
 const PLACE_ID   = params.get('place_id');
@@ -128,6 +128,7 @@ async function processBatch(speciesItems) {
       const latin = gd.canonicalName;
       if (!latin) return null;
       if (BLOCKLIST.has(latin)) return null; // skip blocklisted species
+      if (placeNames?.blocklist?.includes(latin)) return null;
 
       // 2. iNat: fetch when GBIF lacks a vernacular name, or when names may differ due to taxonomy revisions
       const inat = (!gd.vernacularName) ? await fetch(
@@ -239,18 +240,21 @@ async function loadFromGBIF() {
   if (speciesItems.length < 8) throw new Error('Not enough GBIF data for this location');
 
   const birds  = [];
-  const BATCH  = 40;
+  const FIRST_BATCH = 25;
+  const BATCH  = 50;
   let introShown = false;
 
-  for (let i = 0; i < speciesItems.length; i += BATCH) {
+  for (let i = 0; i < speciesItems.length; ) {
+    const size = (i === 0) ? FIRST_BATCH : BATCH;
     updateLoadingProgress(
       `Loading from GBIF + eBird... ${birds.length} of ~${speciesItems.length} species`
     );
-    const results = await processBatch(speciesItems.slice(i, i + BATCH));
+    const results = await processBatch(speciesItems.slice(i, i + size));
     birds.push(...results);
+    i += size;
 
     // Show intro once we have enough for at least two tiers (so mode buttons render)
-    if (!introShown && birds.length >= (COORD_MODE ? 8 : 30)) {
+    if (!introShown && birds.length >= (COORD_MODE ? 8 : 15)) {
       introShown = true;
       setTiers(birds);
       setState({ phase: 'intro' });
@@ -340,7 +344,7 @@ async function loadFromInat(bufferKm = 0) {
   const d = await r.json();
   return (d.results || [])
     .filter(item => item.taxon?.preferred_common_name && item.taxon?.rank === 'species')
-    .filter(item => !BLOCKLIST.has(item.taxon.name))
+    .filter(item => !BLOCKLIST.has(item.taxon.name) && !placeNames?.blocklist?.includes(item.taxon.name))
     .map(item => ({
       name:          item.taxon.preferred_common_name,
       latin:         item.taxon.name,

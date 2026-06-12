@@ -1,7 +1,7 @@
 // WhatDatBird? Quiz Engine v5.63
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.98';
+const APP_VERSION = 'v5.90';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -254,8 +254,11 @@ async function fetchIDNote(wikiUrl) {
     if (sectionMatch) {
       text = sectionMatch[2].replace(/\n+/g,' ').trim().replace(/([.!?])\s+/g,'$1\n').split('\n').slice(0,3).join(' ').trim();
     } else {
-      const intro = extract.split('\n').find(l => l.trim().length > 40) || '';
-      text = intro.replace(/([.!?])\s+/g,'$1\n').split('\n').slice(0,2).join(' ').trim();
+      // Fall back to intro but skip sentences about distribution, range, or taxonomy
+      const skipPat = /\b(found in|native to|endemic to|ranges? (from|across|throughout)|distributed|habitat|habitat|taxonom|classif|named (after|by|for)|family \w+idae|order \w+iformes)\b/i;
+      const sentences = extract.replace(/\n+/g,' ').split(/(?<=[.!?])\s+/);
+      const idSentences = sentences.filter(s => s.trim().length > 40 && !skipPat.test(s));
+      text = idSentences.slice(0,2).join(' ').trim() || sentences.find(s => s.trim().length > 40)?.trim() || '';
     }
     wikiSummaryCache[wikiUrl] = text || null;
     return wikiSummaryCache[wikiUrl];
@@ -390,64 +393,6 @@ let state = {
 };
 function setState(p) { Object.assign(state,p); render(); }
 
-// ── Loading quotes ────────────────────────────────────────────────────────
-const LOADING_QUOTES = [
-  "Good things come to those who wait… and watch.",
-  "Even a heron stands still for hours. Patience.",
-  "The early bird gets the worm, but you get the quiz.",
-  "Loading birds. They're shy.",
-  "Consulting local ornithologists…",
-  "Ruffling through the field guides…",
-  "Asking the birds nicely to show up…",
-  "Politely disturbing the undergrowth…",
-  "Scanning the treetops…",
-  "A watched bird never loads.",
-  "Fetching birds from the internet. They don't like being fetched.",
-  "Cross-referencing beak shapes…",
-  "The albatross flies for years without landing. We won't take that long.",
-  "Loading… like a duck trying to look calm on the surface.",
-  "Birding requires patience. So does this.",
-  "Some of these birds are very camera shy.",
-  "Did you know a group of crows is called a murder? Anyway, loading…",
-  "Negotiating with the pigeons…",
-  "No binoculars required. Almost ready.",
-  "Convincing a wren to pose for photos…",
-  "Bribing seagulls with chips to cooperate…",
-  "A penguin can hold its breath for 20 minutes. You've got this.",
-  "Herding the birds into something resembling an order…",
-  "The kakapo only breeds every few years. Loading is faster.",
-  "Checking if that's really a rare vagrant or just a weird pigeon…",
-  "Counting wing bars…",
-  "Almost there. The birds are just preening.",
-  "Loading local knowledge…",
-  "Some of these birds only come out at dusk. Fortunately data doesn't.",
-  "The swift never lands… but this will.",
-];
-let _quoteInterval = null;
-let _quoteIdx = Math.floor(Math.random() * LOADING_QUOTES.length);
-function startQuoteCycle() {
-  stopQuoteCycle();
-  function showNext() {
-    const el = document.getElementById('loadingQuote');
-    if (!el) return;
-    el.style.transition = 'none';
-    el.style.opacity = '0';
-    setTimeout(() => {
-      if (!document.getElementById('loadingQuote')) return;
-      _quoteIdx = (_quoteIdx + 1) % LOADING_QUOTES.length;
-      el.textContent = LOADING_QUOTES[_quoteIdx];
-      el.style.transition = 'opacity 0.8s ease';
-      el.style.opacity = '1';
-    }, 400);
-  }
-  const el = document.getElementById('loadingQuote');
-  if (el) { el.style.opacity = '1'; }
-  _quoteInterval = setInterval(showNext, 3500);
-}
-function stopQuoteCycle() {
-  if (_quoteInterval) { clearInterval(_quoteInterval); _quoteInterval = null; }
-}
-
 function getPool() {
   if (state.mode==='rarity')   return CFG.rarityBirds || CFG.easyBirds;
   if (state.mode==='complete') return CFG.completeBirds || CFG.hardBirds || CFG.easyBirds;
@@ -525,12 +470,9 @@ function render() {
         <div class="spinner"></div>
         <div class="loading-text">Loading birds for ${CFG.placeName}...</div>
         <div class="loading-sub">${state.buffer>0?`Searching within ${state.buffer}km radius`:'Fetching species from iNaturalist'}</div>
-        <div id="loadingQuote" class="loading-quote">${LOADING_QUOTES[_quoteIdx]}</div>
       </div>`;
-    startQuoteCycle();
     return;
   }
-  stopQuoteCycle();
 
   // Error
   if (state.phase==='error') {
@@ -808,7 +750,7 @@ function renderQuiz(app) {
   }).join('');
 
   let imgContent;
-  if(state.imgLoading) imgContent=`<div class="img-placeholder"><div class="img-spinner"></div></div>`;
+  if(state.imgLoading) imgContent=`<div class="img-placeholder"><div class="icon">&#128247;</div><span>Loading...</span></div>`;
   else if(state.imgUrl) imgContent=`<img src="${state.imgUrl}" alt="mystery bird" onerror="imgFailed()" onload="adjustImgPosition(this)"/>`;
   else imgContent=`<div class="img-placeholder"><div class="icon">&#128247;</div><span>No photo available</span></div>`;
 
@@ -905,23 +847,24 @@ function renderQuiz(app) {
 function renderSpeciesList(app, header) {
   const birds = CFG.completeBirds || CFG.hardBirds || CFG.easyBirds;
   const sorted = [...birds].sort((a,b) => (b.count||0)-(a.count||0));
-  const rows = sorted.map(bird => {
+  const rows = sorted.map((bird, idx) => {
     const inatUrl=`https://www.inaturalist.org/taxa/search?q=${encodeURIComponent(bird.latin||bird.name)}`;
     const rarity = CFG.rarity?.[bird.name];
     const rarityPill = rarity ? `<span class="rarity-pill rarity-${rarity}">${rarity.charAt(0).toUpperCase()+rarity.slice(1)}</span>` : '';
     const countBadge = bird.count ? `<span class="obs-count">${bird.count.toLocaleString()} iNat obs</span>` : '';
     const samoanInline = bird[CFG.indigenousField] ? `<span class="sp-samoan-inline">${bird[CFG.indigenousField]}</span>` : '';
-    const noteRow = bird.note ? `<div class="sp-note">${bird.note}</div>` : '';
     const badges = birdBadges(bird);
+    const detailId = `spd-${idx}`;
     return `<div class="sp-item">
       <div class="sp-name-row">
         <span class="sp-name">${bird.name}</span>
         ${samoanInline}
         <span class="sp-latin">${bird.latin||''}</span>
+        <button class="sp-chevron-btn" onclick="toggleSpDetail('${detailId}',this)" data-latin="${encodeURIComponent(bird.latin||bird.name)}" data-wiki="${encodeURIComponent(bird.wikiUrl||'')}" data-inat="${bird.inatId||''}" aria-label="Show details">&#8250;</button>
       </div>
       <div class="sp-meta-row">${rarityPill}${countBadge}<a href="${inatUrl}" target="_blank" style="font-size:0.7rem;color:#9b9890;">iNat &#8594;</a></div>
-      ${noteRow}
       ${badges?`<div class="sp-badges">${badges}</div>`:''}
+      <div class="sp-detail" id="${detailId}"></div>
     </div>`;
   }).join('');
 
@@ -931,6 +874,85 @@ function renderSpeciesList(app, header) {
       <div class="info-box"><p>&#128203; <strong>${birds.length} species</strong> - sorted by iNaturalist observation count.</p></div>
       ${rows}
     </div>`;
+}
+
+async function toggleSpDetail(id, btn) {
+  const panel = document.getElementById(id);
+  if (!panel) return;
+  const isOpen = panel.classList.contains('open');
+  panel.classList.toggle('open', !isOpen);
+  btn.classList.toggle('open', !isOpen);
+  if (isOpen || panel.dataset.loaded) return;
+  panel.dataset.loaded = '1';
+
+  const latin = decodeURIComponent(btn.dataset.latin || '');
+  const wikiUrl = decodeURIComponent(btn.dataset.wiki || '');
+  const inatId = btn.dataset.inat ? parseInt(btn.dataset.inat) : null;
+  panel.innerHTML = `<div class="sp-id-loading">Loading...</div>`;
+
+  // Fetch photos and ID note in parallel
+  const [photos, noteText] = await Promise.all([
+    inatId ? fetchInatPhotosById(inatId) : Promise.resolve([]),
+    wikiUrl ? fetchIDNote(wikiUrl) : Promise.resolve(null),
+  ]);
+
+  const photoUrls = photos.length ? photos : [];
+  // Store photos on panel for carousel nav functions to access
+  if (photoUrls.length) panel._spPhotos = photoUrls;
+  let carouselHtml = '';
+  if (photoUrls.length) {
+    const imgId = `spc-img-${id}`;
+    const dotsHtml = photoUrls.length > 1
+      ? `<div class="sp-dc-dots">${photoUrls.map((_,i)=>`<div class="sp-dc-dot${i===0?' active':''}" id="${imgId}-dot-${i}" onclick="spGoPhoto('${id}','${imgId}',${i})"></div>`).join('')}</div>`
+      : '';
+    const prevNext = photoUrls.length > 1
+      ? `<button class="sp-dc-prev" onclick="spPrevPhoto('${id}','${imgId}')">&#8249;</button><button class="sp-dc-next" onclick="spNextPhoto('${id}','${imgId}')">&#8250;</button>`
+      : '';
+    carouselHtml = `<div class="sp-detail-carousel">${prevNext}<img id="${imgId}" src="${photoUrls[0]}" alt="${latin}" onerror="this.parentElement.style.display='none'"/>${dotsHtml}</div>`;
+  }
+
+  const noteHtml = noteText
+    ? `<div class="sp-id-label">&#128269; How to identify</div><p class="sp-id-text">${noteText}</p>`
+    : `<div class="sp-id-label">&#128269; How to identify</div><p class="sp-id-loading">No identification notes available.</p>`;
+
+  panel.innerHTML = carouselHtml + noteHtml;
+}
+
+// Fetch up to 5 iNat photos for a taxon by iNat ID
+async function fetchInatPhotosById(inatId) {
+  try {
+    const r = await fetch(`https://api.inaturalist.org/v1/observations?taxon_id=${inatId}&quality_grade=research&order_by=votes&per_page=10`);
+    if (!r.ok) return [];
+    const d = await r.json();
+    const urls = [];
+    const seen = new Set();
+    for (const obs of (d.results||[])) {
+      const url = obs.photos?.[0]?.url?.replace('/square.','/medium.');
+      if (url && !seen.has(url)) { seen.add(url); urls.push(url); if(urls.length>=5) break; }
+    }
+    return urls;
+  } catch { return []; }
+}
+
+function spGoPhoto(detailId, imgId, idx) {
+  const img = document.getElementById(imgId);
+  const panel = document.getElementById(detailId);
+  if (!img || !panel?._spPhotos) return;
+  img.src = panel._spPhotos[idx];
+  panel.querySelectorAll('.sp-dc-dot').forEach((d,i) => d.classList.toggle('active', i===idx));
+  img.dataset.idx = idx;
+}
+function spPrevPhoto(detailId, imgId) {
+  const img = document.getElementById(imgId);
+  const panel = document.getElementById(detailId);
+  const cur = parseInt(img?.dataset.idx||'0');
+  if (panel?._spPhotos) spGoPhoto(detailId, imgId, (cur - 1 + panel._spPhotos.length) % panel._spPhotos.length);
+}
+function spNextPhoto(detailId, imgId) {
+  const img = document.getElementById(imgId);
+  const panel = document.getElementById(detailId);
+  const cur = parseInt(img?.dataset.idx||'0');
+  if (panel?._spPhotos) spGoPhoto(detailId, imgId, (cur + 1) % panel._spPhotos.length);
 }
 
 function renderAbout(app, header) {
@@ -1091,51 +1113,17 @@ function buildQueue(pool) {
   return queue;
 }
 
-function preloadImage(url) {
-  return new Promise(resolve => {
-    if (!url) { resolve(url); return; }
-    const img = new Image();
-    img.onload = () => resolve(url);
-    img.onerror = () => resolve(url); // still show it even if error (onerror handler in render will catch)
-    img.src = url;
-  });
-}
-
-async function showBirdImage(bird) {
-  const cacheKey = bird.latin || bird.name;
-  const immediate = bird.defaultPhoto || null;
-
-  if (immediate) {
-    // Show defaultPhoto instantly, then load full carousel in background
-    await preloadImage(immediate);
-    if (state.current !== bird) return; // bird changed while preloading
-    setState({imgUrl: immediate, imgLoading: false, photoUrls: [immediate], photoIdx: 0});
-    // Background: fetch full observation carousel
-    fetchInatImage(bird).then(url => {
-      if (state.current !== bird) return;
-      const all = (inatPhotoCache[cacheKey] || []).slice(0, 5);
-      const photoUrls = url ? [url, ...all.filter(u => u !== url)].slice(0, 5) : all;
-      if (photoUrls.length > 1) setState({photoUrls, photoIdx: 0});
-    }).catch(() => {});
-  } else {
-    // No defaultPhoto — fall back to full fetch as before
-    fetchImage(bird, state.mode).then(async url => {
-      const all = (inatPhotoCache[cacheKey] || []).slice(0, 5);
-      const photoUrls = url ? [url, ...all.filter(u => u !== url)].slice(0, 5) : all;
-      if (!url && !photoUrls.length) { logNoPhoto(bird); _advance(); return; }
-      await preloadImage(url);
-      if (state.current !== bird) return;
-      setState({imgUrl: url, imgLoading: false, photoUrls, photoIdx: 0});
-    });
-  }
-}
-
 function startQuiz() {
   const pool=getPool();
   const queue=buildQueue(pool);
   const first=queue.shift();
   setState({phase:'quiz',queue,wrongBin:[],current:first,streak:0,streakHistory:[],totalSeen:0,totalCorrect:0,selected:null,imgUrl:null,imgLoading:true,photoUrls:[],photoIdx:0,options:getOptions(first,pool)});
-  showBirdImage(first);
+  fetchImage(first, state.mode).then(url => {
+    const all=(inatPhotoCache[first.latin||first.name]||[]).slice(0,5);
+    const photoUrls=url?[url,...all.filter(u=>u!==url)].slice(0,5):all;
+    if (!url && !photoUrls.length) { logNoPhoto(first); _advance(); return; }
+    setState({imgUrl:url,imgLoading:false,photoUrls,photoIdx:0});
+  });
 }
 
 function selectAnswer(opt, event) {
@@ -1185,7 +1173,16 @@ function _advance() {
     }
   }
   setState({current:next,queue,wrongBin,selected:null,imgUrl:null,imgLoading:true,photoUrls:[],photoIdx:0,options:getOptions(next,pool),audioPlaying:false,audioLoading:false,audioRec:null});
-  showBirdImage(next);
+  fetchImage(next, state.mode).then(url => {
+    const all=(inatPhotoCache[next.latin||next.name]||[]).slice(0,5);
+    const photoUrls=url?[url,...all.filter(u=>u!==url)].slice(0,5):all;
+    if (!url && !photoUrls.length) {
+      logNoPhoto(next);
+      _advance();
+      return;
+    }
+    setState({imgUrl:url,imgLoading:false,photoUrls,photoIdx:0});
+  });
   // Prefetch current bird's field note + call audio, and next bird's photos + note + audio
   if (next.wikiUrl && !next.note) fetchIDNote(next.wikiUrl).catch(() => {});
   fetchXenoCanto(next.latin || next.name).then(rec => { if (rec && state.current === next) render(); }).catch(() => {});
