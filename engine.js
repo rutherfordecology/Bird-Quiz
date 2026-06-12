@@ -797,6 +797,7 @@ async function checkInLibrary() {
 
 function renderQuiz(app) {
   const bird = state.current;
+  if (!bird) return;
   const pool = getPool();
   const modePill = state.mode==='complete'?'pill-complete':state.mode==='hard'?'pill-hard':state.mode==='rarity'?'pill-complete':'pill-easy';
   const modeLabel = state.mode==='complete'?'Complete':state.mode==='hard'?'Birder':state.mode==='rarity'?'Rarity':'Common';
