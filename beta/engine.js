@@ -1,7 +1,7 @@
 // WhatDatBird? Quiz Engine v5.63
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.91';
+const APP_VERSION = 'v5.92';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -845,9 +845,29 @@ function renderQuiz(app) {
     </div>`;
 }
 
-function renderSpeciesList(app, header) {
+let _spSortMode = 'count'; // 'count' or 'taxonomy'
+let _spHeader = '';
+
+function renderSpeciesList(app, header, sortMode) {
+  if (header) _spHeader = header;
+  if (sortMode) _spSortMode = sortMode;
   const birds = CFG.completeBirds || CFG.hardBirds || CFG.easyBirds;
-  const sorted = [...birds].sort((a,b) => (b.count||0)-(a.count||0));
+
+  let sorted;
+  if (_spSortMode === 'taxonomy') {
+    sorted = [...birds].sort((a, b) => {
+      const ai = a.ancestorIds || [], bi = b.ancestorIds || [];
+      // Compare order → family → genus (indices 1, 2, 3 in ancestorIds)
+      for (const i of [1, 2, 3]) {
+        const diff = (ai[i] || 0) - (bi[i] || 0);
+        if (diff !== 0) return diff;
+      }
+      return (a.latin || a.name).localeCompare(b.latin || b.name);
+    });
+  } else {
+    sorted = [...birds].sort((a, b) => (b.count || 0) - (a.count || 0));
+  }
+
   const rows = sorted.map((bird, idx) => {
     const inatUrl=`https://www.inaturalist.org/taxa/search?q=${encodeURIComponent(bird.latin||bird.name)}`;
     const rarity = CFG.rarity?.[bird.name];
@@ -856,6 +876,7 @@ function renderSpeciesList(app, header) {
     const samoanInline = bird[CFG.indigenousField] ? `<span class="sp-samoan-inline">${bird[CFG.indigenousField]}</span>` : '';
     const badges = birdBadges(bird);
     const detailId = `spd-${idx}`;
+    const familyLabel = _spSortMode === 'taxonomy' && bird.family ? `<span class="sp-family">${bird.family}</span>` : '';
     return `<div class="sp-item">
       <div class="sp-name-row">
         <span class="sp-name">${bird.name}</span>
@@ -863,16 +884,22 @@ function renderSpeciesList(app, header) {
         <span class="sp-latin">${bird.latin||''}</span>
         <button class="sp-chevron-btn" onclick="toggleSpDetail('${detailId}',this)" data-latin="${encodeURIComponent(bird.latin||bird.name)}" data-wiki="${encodeURIComponent(bird.wikiUrl||'')}" data-inat="${bird.inatId||''}" aria-label="Show details">&#8250;</button>
       </div>
-      <div class="sp-meta-row">${rarityPill}${countBadge}<a href="${inatUrl}" target="_blank" style="font-size:0.7rem;color:#9b9890;">iNat &#8594;</a></div>
+      <div class="sp-meta-row">${rarityPill}${countBadge}${familyLabel}<a href="${inatUrl}" target="_blank" style="font-size:0.7rem;color:#9b9890;">iNat &#8594;</a></div>
       ${badges?`<div class="sp-badges">${badges}</div>`:''}
       <div class="sp-detail" id="${detailId}"></div>
     </div>`;
   }).join('');
 
-  app.innerHTML = header + `
+  const sortLabel = _spSortMode === 'taxonomy' ? 'taxonomic order' : 'observation count';
+  const toggleLabel = _spSortMode === 'taxonomy' ? '&#128202; Sort by count' : '&#128218; Sort by taxonomy';
+
+  app.innerHTML = _spHeader + `
     <div class="fade">
       <button class="btn-secondary" style="margin-bottom:12px" onclick="goIntro()">&#8592; Back</button>
-      <div class="info-box"><p>&#128203; <strong>${birds.length} species</strong> - sorted by iNaturalist observation count.</p></div>
+      <div class="info-box" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <p style="margin:0">&#128203; <strong>${birds.length} species</strong> - sorted by ${sortLabel}.</p>
+        <button class="btn-sort-toggle" onclick="renderSpeciesList(document.getElementById('app'),null,_spSortMode==='taxonomy'?'count':'taxonomy')">${toggleLabel}</button>
+      </div>
       ${rows}
     </div>`;
 }

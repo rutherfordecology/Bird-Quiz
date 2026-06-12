@@ -190,6 +190,9 @@ body {
 .sp-chevron-btn.open { transform:rotate(90deg); color:#2a7a58; }
 .sp-detail { display:none; margin-top:10px; border-top:2px solid #2a7a58; padding-top:12px; }
 .sp-detail.open { display:block; }
+.btn-sort-toggle { background:#e8f4ef; border:1.5px solid #6dba9a; color:#1a5940; font-size:0.72rem; font-weight:700; padding:4px 10px; border-radius:20px; cursor:pointer; white-space:nowrap; }
+.btn-sort-toggle:hover { background:#d0ece0; }
+.sp-family { font-size:0.68rem; font-weight:700; color:#6b6960; background:#f0efeb; padding:1px 6px; border-radius:10px; }
 .sp-detail-carousel { position:relative; width:100%; border-radius:8px; overflow:hidden; background:#111; margin-bottom:10px; }
 .sp-detail-carousel img { width:100%; max-height:220px; object-fit:cover; display:block; }
 .sp-dc-prev, .sp-dc-next { position:absolute; top:50%; transform:translateY(-50%); background:rgba(0,0,0,0.45); border:none; color:#fff; font-size:1.4rem; padding:4px 10px; cursor:pointer; border-radius:4px; z-index:2; }
