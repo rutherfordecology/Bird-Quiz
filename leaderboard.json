@@ -165,6 +165,12 @@
     "8504_hard": [
       {
         "name": "Juniper",
+        "score": 31,
+        "pts": 26,
+        "date": "2026-06-12"
+      },
+      {
+        "name": "Juniper",
         "score": 13,
         "date": "2026-06-07"
       },
