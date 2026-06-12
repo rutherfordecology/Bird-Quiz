@@ -1,7 +1,7 @@
 // WhatDatBird? Quiz Engine v5.63
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.90';
+const APP_VERSION = 'v5.91';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -254,11 +254,12 @@ async function fetchIDNote(wikiUrl) {
     if (sectionMatch) {
       text = sectionMatch[2].replace(/\n+/g,' ').trim().replace(/([.!?])\s+/g,'$1\n').split('\n').slice(0,3).join(' ').trim();
     } else {
-      // Fall back to intro but skip sentences about distribution, range, or taxonomy
-      const skipPat = /\b(found in|native to|endemic to|ranges? (from|across|throughout)|distributed|habitat|habitat|taxonom|classif|named (after|by|for)|family \w+idae|order \w+iformes)\b/i;
+      // No dedicated ID section — scan all sections for physical description sentences
+      const skipPat = /\b(found in|native to|endemic to|range[sd]?( from| across| throughout)?|distribut|habitat|forest|woodland|grassland|scrub|wetland|taxonom|classif|synonym|named (after|by|for)|family \w+idae|order \w+iformes|genus |species |subspecies|conspecific|considered [a-z]+ species|iucn|population|migrat|winter|summer|breed|nest|diet|feed|eat|prey|forag)\b/i;
+      const idPat = /\b(cm|mm|inch|gram|kg|g\b|length|wingspan|plumage|feather|crown|mantle|breast|belly|throat|nape|back|wing|tail|bill|beak|eye|leg|foot|colour|color|white|black|brown|grey|gray|green|blue|red|yellow|orange|rufous|chestnut|olive|buff|pale|dark|bright|glossy|streak|spot|stripe|band|barr|patch|underpart|upperpart|adult|male|female|juvenile|immature)\b/i;
       const sentences = extract.replace(/\n+/g,' ').split(/(?<=[.!?])\s+/);
-      const idSentences = sentences.filter(s => s.trim().length > 40 && !skipPat.test(s));
-      text = idSentences.slice(0,2).join(' ').trim() || sentences.find(s => s.trim().length > 40)?.trim() || '';
+      const idSentences = sentences.filter(s => s.trim().length > 40 && idPat.test(s) && !skipPat.test(s));
+      text = idSentences.slice(0,3).join(' ').trim();
     }
     wikiSummaryCache[wikiUrl] = text || null;
     return wikiSummaryCache[wikiUrl];
@@ -892,7 +893,7 @@ async function toggleSpDetail(id, btn) {
 
   // Fetch photos and ID note in parallel
   const [photos, noteText] = await Promise.all([
-    inatId ? fetchInatPhotosById(inatId) : Promise.resolve([]),
+    fetchInatPhotosByTaxon(inatId, latin),
     wikiUrl ? fetchIDNote(wikiUrl) : Promise.resolve(null),
   ]);
 
@@ -918,10 +919,11 @@ async function toggleSpDetail(id, btn) {
   panel.innerHTML = carouselHtml + noteHtml;
 }
 
-// Fetch up to 5 iNat photos for a taxon by iNat ID
-async function fetchInatPhotosById(inatId) {
+// Fetch up to 5 iNat photos — by taxon_id if available, otherwise by latin name
+async function fetchInatPhotosByTaxon(inatId, latin) {
   try {
-    const r = await fetch(`https://api.inaturalist.org/v1/observations?taxon_id=${inatId}&quality_grade=research&order_by=votes&per_page=10`);
+    const param = inatId ? `taxon_id=${inatId}` : `taxon_name=${encodeURIComponent(latin)}`;
+    const r = await fetch(`https://api.inaturalist.org/v1/observations?${param}&quality_grade=research&order_by=votes&per_page=10`);
     if (!r.ok) return [];
     const d = await r.json();
     const urls = [];
