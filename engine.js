@@ -1,7 +1,7 @@
 // WhatDatBird? Quiz Engine v5.63
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.94';
+const APP_VERSION = 'v5.95';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -240,33 +240,65 @@ function getPhotoUrls(bird, mode) {
 
 // ── Wikipedia ID notes ────────────────────────────────────────────────────
 const wikiSummaryCache = {};
+const ID_SECTIONS = /^(description|identification|appearance|plumage|characteristics|field marks|field identification|morphology)/i;
+
 async function fetchIDNote(wikiUrl) {
   if (!wikiUrl) return null;
   if (wikiSummaryCache[wikiUrl] !== undefined) return wikiSummaryCache[wikiUrl];
   try {
-    const title = decodeURIComponent(wikiUrl.split('/wiki/').pop());
-    const r = await fetch(`https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&redirects=1&prop=extracts&explaintext=true&exsectionformat=plain&format=json&origin=*`);
-    if (!r.ok) throw new Error();
-    const d = await r.json();
-    const extract = Object.values(d.query.pages)[0]?.extract || '';
-    const sectionMatch = extract.match(/\n=+\s*(description|identification|appearance|plumage)\s*=+\s*\n([\s\S]+?)(?=\n=+\s|\s*$)/i);
-    let text;
-    if (sectionMatch) {
-      text = sectionMatch[2].replace(/\n+/g,' ').trim().replace(/([.!?])\s+/g,'$1\n').split('\n').slice(0,3).join(' ').trim();
-    } else {
-      // No dedicated ID section — prefer sentences with physical descriptors, skip pure distribution/taxonomy
-      const skipPat = /\b(found in|native to|endemic to|range[sd]?( from| across| throughout)?|distribut|taxonom|classif|synonym|named (after|by|for)|family \w+idae|order \w+iformes|conspecific|iucn)\b/i;
-      const idPat = /\b(cm|mm|inch|length|wingspan|plumage|feather|crown|mantle|breast|belly|throat|nape|back|wing|tail|bill|beak|eye|leg|foot|colour|color|white|black|brown|grey|gray|green|blue|red|yellow|orange|rufous|chestnut|olive|buff|pale|dark|bright|glossy|streak|spot|stripe|band|patch|underpart|upperpart|adult|male|female|juvenile|immature)\b/i;
-      const sentences = extract.replace(/\n+/g,' ').split(/(?<=[.!?])\s+/);
-      const long = sentences.filter(s => s.trim().length > 40);
-      // Prefer ID sentences; fall back to any non-skip sentence; last resort: first long sentence
-      const idSentences = long.filter(s => idPat.test(s) && !skipPat.test(s));
-      const fallback = long.filter(s => !skipPat.test(s));
-      text = (idSentences.length ? idSentences.slice(0,3) : fallback.length ? fallback.slice(0,2) : long.slice(0,2)).join(' ').trim();
+    const rawTitle = decodeURIComponent(wikiUrl.split('/wiki/').pop());
+    // Step 1: resolve redirects and get section list
+    const secR = await fetch(`https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(rawTitle)}&prop=sections&redirects=1&format=json&origin=*`);
+    if (!secR.ok) throw new Error();
+    const secD = await secR.json();
+    const title = secD.parse?.title || rawTitle;
+    const sections = secD.parse?.sections || [];
+
+    // Find the best ID-relevant section
+    const idSec = sections.find(s => ID_SECTIONS.test(s.line?.replace(/<[^>]+>/g, '')));
+
+    let text = '';
+    if (idSec) {
+      // Step 2a: fetch that specific section's wikitext, strip markup
+      const secR2 = await fetch(`https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(title)}&section=${idSec.index}&prop=wikitext&format=json&origin=*`);
+      if (secR2.ok) {
+        const secD2 = await secR2.json();
+        const wikitext = secD2.parse?.wikitext?.['*'] || '';
+        // Strip wiki markup: templates, refs, links, bold/italic, headers
+        text = wikitext
+          .replace(/{{[^}]*}}/g, '')
+          .replace(/<ref[^>]*>[\s\S]*?<\/ref>/gi, '')
+          .replace(/<[^>]+>/g, '')
+          .replace(/\[\[(?:[^|\]]*\|)?([^\]]+)\]\]/g, '$1')
+          .replace(/'{2,}/g, '')
+          .replace(/==+[^=]+==+/g, '')
+          .replace(/\n+/g, ' ')
+          .trim();
+        // Take first 3 meaningful sentences
+        text = text.replace(/([.!?])\s+/g,'$1\n').split('\n')
+          .filter(s => s.trim().length > 30).slice(0,3).join(' ').trim();
+      }
     }
+
+    if (!text) {
+      // Step 2b: fall back to intro — fetch full plain-text extract, pick ID-rich sentences
+      const extR = await fetch(`https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&redirects=1&prop=extracts&explaintext=true&exsectionformat=plain&format=json&origin=*`);
+      if (extR.ok) {
+        const extD = await extR.json();
+        const extract = Object.values(extD.query.pages)[0]?.extract || '';
+        const skipPat = /\b(found in|native to|endemic to|range[sd]?( from| across| throughout)?|distribut|taxonom|classif|synonym|named (after|by|for)|family \w+idae|order \w+iformes|conspecific|iucn)\b/i;
+        const idPat = /\b(cm|mm|inch|length|wingspan|plumage|feather|crown|mantle|breast|belly|throat|nape|back|wing|tail|bill|beak|eye|leg|foot|colour|color|white|black|brown|grey|gray|green|blue|red|yellow|orange|rufous|chestnut|olive|buff|pale|dark|bright|glossy|streak|spot|stripe|band|patch|underpart|upperpart|adult|male|female|juvenile|immature)\b/i;
+        const sentences = extract.replace(/\n+/g,' ').split(/(?<=[.!?])\s+/);
+        const long = sentences.filter(s => s.trim().length > 40);
+        const idSents = long.filter(s => idPat.test(s) && !skipPat.test(s));
+        const fallback = long.filter(s => !skipPat.test(s));
+        text = (idSents.length ? idSents.slice(0,3) : fallback.length ? fallback.slice(0,2) : long.slice(0,2)).join(' ').trim();
+      }
+    }
+
     wikiSummaryCache[wikiUrl] = text || null;
     return wikiSummaryCache[wikiUrl];
-  } catch { wikiSummaryCache[wikiUrl]=null; return null; }
+  } catch { wikiSummaryCache[wikiUrl] = null; return null; }
 }
 
 // ── Xeno-canto bird calls (via Cloudflare Worker proxy — keeps API key secret) ──
@@ -885,7 +917,7 @@ function renderSpeciesList(app, header, sortMode) {
         <span class="sp-name">${bird.name}</span>
         ${samoanInline}
         <span class="sp-latin">${bird.latin||''}</span>
-        <button class="sp-chevron-btn" onclick="toggleSpDetail('${detailId}',this)" data-latin="${encodeURIComponent(bird.latin||bird.name)}" data-wiki="${encodeURIComponent(bird.wikiUrl||'')}" data-inat="${bird.inatId||''}" data-photo="${encodeURIComponent(bird.defaultPhoto||'')}" aria-label="Show details">&#8250;</button>
+        <button class="sp-chevron-btn" onclick="toggleSpDetail('${detailId}',this)" data-latin="${encodeURIComponent(bird.latin||bird.name)}" data-wiki="${encodeURIComponent(bird.wikiUrl||'')}" data-inat="${bird.inatId||''}" data-photo="${encodeURIComponent(bird.defaultPhoto||'')}" aria-label="Show details"><span class="sp-chevron-label">Info</span><span class="sp-chevron-arrow">&#8250;</span></button>
       </div>
       <div class="sp-meta-row">${rarityPill}${countBadge}${familyLabel}<a href="${inatUrl}" target="_blank" style="font-size:0.7rem;color:#9b9890;">iNat &#8594;</a></div>
       ${badges?`<div class="sp-badges">${badges}</div>`:''}

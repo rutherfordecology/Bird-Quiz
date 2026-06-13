@@ -185,9 +185,12 @@ body {
 .sp-note { font-size:0.78rem; color:#6b6960; line-height:1.5; margin-top:4px; }
 .sp-badges { display:flex; gap:5px; flex-wrap:wrap; margin-top:6px; }
 .sp-meta-row { display:flex; align-items:center; gap:10px; margin:5px 0 3px; }
-.sp-chevron-btn { background:none; border:none; cursor:pointer; padding:2px 4px; margin-left:auto; color:#9b9890; font-size:0.85rem; line-height:1; transition:transform 0.2s,color 0.15s; flex-shrink:0; }
-.sp-chevron-btn:hover { color:#2a7a58; }
-.sp-chevron-btn.open { transform:rotate(90deg); color:#2a7a58; }
+.sp-chevron-btn { background:none; border:1.5px solid #dddbd3; border-radius:20px; cursor:pointer; padding:3px 9px 3px 8px; margin-left:auto; color:#6b6960; font-size:0.72rem; font-weight:700; line-height:1.4; transition:border-color 0.15s,color 0.15s,background 0.15s; flex-shrink:0; display:flex; align-items:center; gap:3px; }
+.sp-chevron-btn:hover { color:#2a7a58; border-color:#2a7a58; background:#e8f4ef; }
+.sp-chevron-btn.open { color:#2a7a58; border-color:#2a7a58; background:#e8f4ef; }
+.sp-chevron-btn.open .sp-chevron-arrow { display:inline-block; transform:rotate(90deg); }
+.sp-chevron-arrow { display:inline-block; transition:transform 0.2s; }
+.sp-chevron-label { font-size:0.68rem; }
 .sp-detail { display:none; margin-top:10px; border-top:2px solid #2a7a58; padding-top:12px; }
 .sp-detail.open { display:block; }
 .btn-sort-toggle { background:#e8f4ef; border:1.5px solid #6dba9a; color:#1a5940; font-size:0.72rem; font-weight:700; padding:4px 10px; border-radius:20px; cursor:pointer; white-space:nowrap; }
