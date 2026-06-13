@@ -1,5 +1,8 @@
 {
   "field": "samoan",
+  "blocklist": [
+    "Petroica multicolor"
+  ],
   "names": {
     "Aerodramus spodiopygius": "pe'ape'a",
     "Acridotheres fuscus": "maina",
